@@ -2,12 +2,15 @@
 // Licensed under the MIT License.
 
 import React, { useState } from 'react';
-import { Sparkles, X, Loader2, Clock, Zap, Brain } from 'lucide-react';
+import { Sparkles, X, Loader2, Clock, Zap, Brain, LayoutGrid, Network } from 'lucide-react';
 import { generateArchitectureWithAI, isAzureOpenAIConfigured, AIMetrics, analyzeArchitectureDiagramImage, ModelOverride } from '../services/azureOpenAI';
+import { generateReferenceArchitectureWithAI, referenceToTopology } from '../services/referenceArchitectureAI';
 import ImageUploader from './ImageUploader';
 import { useModelSettings, MODEL_CONFIG } from '../stores/modelSettingsStore';
 import { trackImageImport } from '../services/telemetryService';
 import './AIArchitectureGenerator.css';
+
+type GenerationMode = 'topology' | 'reference';
 
 interface AIArchitectureGeneratorProps {
   onGenerate: (architecture: any, prompt: string, autoSnapshot: boolean, referenceImageUrl?: string) => void;
@@ -27,6 +30,15 @@ const AIArchitectureGenerator: React.FC<AIArchitectureGeneratorProps> = ({ onGen
   const [isAnalyzingImage, setIsAnalyzingImage] = useState(false);
   const [imageAnalyzed, setImageAnalyzed] = useState(false);
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
+  const [mode, setMode] = useState<GenerationMode>(() => {
+    const saved = localStorage.getItem('aiGenerator.mode');
+    return saved === 'reference' ? 'reference' : 'topology';
+  });
+
+  const handleModeChange = (m: GenerationMode) => {
+    setMode(m);
+    localStorage.setItem('aiGenerator.mode', m);
+  };
   
   // Model settings from reactive hook (stays in sync with dropdown)
   const [modelSettings] = useModelSettings();
@@ -142,6 +154,23 @@ const AIArchitectureGenerator: React.FC<AIArchitectureGeneratorProps> = ({ onGen
     console.log(`🎯 Generate clicked: dropdown model=${modelSettings.model}, reasoning=${modelSettings.reasoningEffort}, overrides=${JSON.stringify(modelSettings.featureOverrides)}`);
 
     try {
+      // ── Reference (Editorial) mode — Week 1: emit new schema, transform to
+      // existing topology shape so the current renderer can display it for
+      // quality validation. Bespoke banded layout arrives in Week 2.
+      if (mode === 'reference') {
+        const ref = await generateReferenceArchitectureWithAI(description, currentModelSettings);
+        if (ref.metrics) setAiMetrics(ref.metrics);
+        const topology = referenceToTopology(ref);
+        onGenerate(topology, description, autoSnapshot, uploadedImageUrl || undefined);
+        setDescription('');
+        setTimeout(() => {
+          setIsOpen(false);
+          setAiMetrics(null);
+          setUploadedImageUrl(null);
+        }, 45000);
+        return;
+      }
+
       // Build context about existing architecture if present
       let contextPrompt = description;
       
@@ -247,11 +276,42 @@ IMPORTANT: Return the COMPLETE architecture JSON (all services, groups, connecti
             </div>
 
             <div className="modal-body">
+              <div className="mode-toggle" role="tablist" aria-label="Generation mode">
+                <button
+                  role="tab"
+                  aria-selected={mode === 'topology'}
+                  className={`mode-toggle-btn ${mode === 'topology' ? 'active' : ''}`}
+                  onClick={() => handleModeChange('topology')}
+                  disabled={isGenerating}
+                  type="button"
+                >
+                  <Network size={16} />
+                  <span className="mode-label">Topology</span>
+                  <span className="mode-sub">Deployable network diagram</span>
+                </button>
+                <button
+                  role="tab"
+                  aria-selected={mode === 'reference'}
+                  className={`mode-toggle-btn ${mode === 'reference' ? 'active' : ''}`}
+                  onClick={() => handleModeChange('reference')}
+                  disabled={isGenerating}
+                  type="button"
+                >
+                  <LayoutGrid size={16} />
+                  <span className="mode-label">Reference <span className="mode-badge-beta">BETA</span></span>
+                  <span className="mode-sub">Editorial swim-lane diagram</span>
+                </button>
+              </div>
+
               <p className="modal-description">
-                Describe your Azure architecture in plain English, and AI will automatically
-                generate a diagram with the appropriate services and connections.
-                You can also <strong>upload an existing diagram</strong> (screenshot, whiteboard photo, or export from other tools)
-                and AI will analyze it to create your architecture.
+                {mode === 'reference' ? (
+                  <>Describe the workload in plain English and AI will generate a <strong>publication-style reference architecture</strong> with stages (Ingest → Process → Serve), a foundation strip, and cross-cutting governance rails — in the style of the Azure Architecture Center.</>
+                ) : (
+                  <>Describe your Azure architecture in plain English, and AI will automatically
+                  generate a diagram with the appropriate services and connections.
+                  You can also <strong>upload an existing diagram</strong> (screenshot, whiteboard photo, or export from other tools)
+                  and AI will analyze it to create your architecture.</>
+                )}
               </p>
 
               <div className="form-group">

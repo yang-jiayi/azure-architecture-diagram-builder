@@ -28,7 +28,7 @@ export interface ModelOverride {
   reasoningEffort: ReasoningEffort;
 }
 
-async function callAzureOpenAI(messages: any[], modelOverride?: ModelOverride, jsonOutput = true): Promise<CallResult> {
+export async function callAzureOpenAI(messages: any[], modelOverride?: ModelOverride, jsonOutput = true): Promise<CallResult> {
   // Use explicit model override if provided, otherwise read from store
   const storeSettings = getModelSettingsForFeature('architectureGeneration');
   const rawStore = getModelSettings();
