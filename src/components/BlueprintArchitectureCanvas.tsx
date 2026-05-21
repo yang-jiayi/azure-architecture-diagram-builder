@@ -39,6 +39,84 @@ export interface BlueprintArchitectureCanvasProps {
 const NODE_W = 150;
 const NODE_H = 100;
 const ICON = 44;
+const ARROW_GAP = 6;          // pixels between path end and node edge so the arrowhead is never clipped
+const LABEL_LINE_H = 12;      // line height for wrapped service labels
+const LABEL_MAX_CHARS = 20;   // soft wrap target per line
+
+// Approved short aliases for noisy or commonly-truncated service names.
+// Applied only inside blueprint rendering so it does not affect topology /
+// validation paths or the underlying architecture data.
+const SERVICE_ALIASES: Record<string, string> = {
+  'Azure Database for PostgreSQL': 'Azure DB for PostgreSQL',
+  'Azure Database for MySQL': 'Azure DB for MySQL',
+  'Azure Database for MariaDB': 'Azure DB for MariaDB',
+  'Azure Content Delivery Network': 'Azure CDN',
+  'Azure Front Door': 'Azure Front Door',
+  'Azure Application Gateway': 'Application Gateway',
+  'Azure Static Web Apps': 'Static Web Apps',
+  'Azure App Service': 'App Service',
+  'Azure Functions': 'Azure Functions',
+  'Azure Container Apps': 'Container Apps',
+  'Azure Kubernetes Service': 'AKS',
+  'Azure Container Instances': 'Container Instances',
+  'Azure Data Lake Storage': 'Data Lake Storage',
+  'Azure Synapse Analytics': 'Synapse Analytics',
+  'Azure Data Factory': 'Data Factory',
+  'Azure Databricks': 'Databricks',
+  'Azure Blob Storage': 'Blob Storage',
+  'Azure Application Insights': 'Application Insights',
+  'Azure Monitor': 'Azure Monitor',
+  'Azure Log Analytics': 'Log Analytics',
+  'Azure Key Vault': 'Key Vault',
+  'Azure Cosmos DB': 'Cosmos DB',
+  'Azure SQL Database': 'Azure SQL DB',
+  'Azure SQL Managed Instance': 'SQL Managed Instance',
+  'Azure Service Bus': 'Service Bus',
+  'Azure Event Hubs': 'Event Hubs',
+  'Azure Event Grid': 'Event Grid',
+  'Azure Logic Apps': 'Logic Apps',
+  'Azure API Management': 'API Management',
+  'Azure Power BI Embedded': 'Power BI Embedded',
+  'Microsoft Power BI Embedded': 'Power BI Embedded',
+  'Azure Active Directory': 'Microsoft Entra ID',
+  'Azure AD B2C': 'Microsoft Entra External ID',
+  'Microsoft Entra ID': 'Microsoft Entra ID',
+};
+
+function displayLabel(name: string): string {
+  return SERVICE_ALIASES[name] ?? name;
+}
+
+/**
+ * Word-wrap a service label to at most 2 lines of ~LABEL_MAX_CHARS each.
+ * Falls back to ellipsis only if the label simply will not fit; never clips
+ * a single short word.
+ */
+function wrapLabel(name: string, maxChars = LABEL_MAX_CHARS): string[] {
+  const label = displayLabel(name);
+  if (label.length <= maxChars) return [label];
+
+  const words = label.split(/\s+/);
+  const lines: string[] = [];
+  let current = '';
+  for (const w of words) {
+    const candidate = current ? `${current} ${w}` : w;
+    if (candidate.length > maxChars && current) {
+      lines.push(current);
+      current = w;
+    } else {
+      current = candidate;
+    }
+  }
+  if (current) lines.push(current);
+
+  if (lines.length <= 2) return lines;
+
+  // More than 2 lines: keep first line, fold the rest into line 2 with ellipsis if needed.
+  const tail = lines.slice(1).join(' ');
+  const second = tail.length > maxChars ? `${tail.slice(0, maxChars - 1)}…` : tail;
+  return [lines[0], second];
+}
 
 const BlueprintArchitectureCanvas: React.FC<BlueprintArchitectureCanvasProps> = ({
   data,
@@ -114,10 +192,21 @@ const BlueprintArchitectureCanvas: React.FC<BlueprintArchitectureCanvasProps> = 
               pairCount.set(k, (pairCount.get(k) || 0) + 1);
             }
             const pairSeen = new Map<string, number>();
-            // Precompute badge centers so we can detect cross-pair collisions
-            // (different node pairs whose midpoints happen to land near each
-            // other) and nudge later badges along the perpendicular axis.
-            type Pre = { e: typeof data.edges[number]; a: BpNode; b: BpNode; parallelOffset: number; bx: number; by: number; horizontal: boolean; extra: number };
+            const tileH = NODE_H - 22;
+            // Precompute badge centers from the longest straight segment of each
+            // edge's orthogonal path (Tier-1 polish: bubbles never sit on elbows
+            // or arrowheads). Cross-pair collision detection still nudges later
+            // badges along the segment's perpendicular axis.
+            type Pre = {
+              e: typeof data.edges[number];
+              a: BpNode;
+              b: BpNode;
+              parallelOffset: number;
+              bx: number;            // badge x
+              by: number;            // badge y
+              segHorizontal: boolean; // longest-segment orientation
+              extra: number;
+            };
             const placed: Pre[] = [];
             for (const e of data.edges) {
               const a = nodeById.get(e.from);
@@ -128,36 +217,75 @@ const BlueprintArchitectureCanvas: React.FC<BlueprintArchitectureCanvasProps> = 
               pairSeen.set(k, idx + 1);
               const count = pairCount.get(k) || 1;
               const parallelOffset = count > 1 ? (idx - (count - 1) / 2) * 28 : 0;
-              const ax = a.x + NODE_W / 2;
-              const ay = a.y + NODE_H / 2;
-              const bxc = b.x + NODE_W / 2;
-              const byc = b.y + NODE_H / 2;
-              const horizontal = Math.abs(bxc - ax) >= Math.abs(byc - ay);
-              let mx = (ax + bxc) / 2;
-              let my = (ay + byc) / 2;
-              if (horizontal) my += parallelOffset; else mx += parallelOffset;
-              // Nudge against previously placed badges if within 26 px.
+
+              // Resolve anchor points the same way <Edge> does so the badge
+              // lands on the actual rendered path.
+              const aCx = a.x + NODE_W / 2;
+              const aCy = a.y + tileH / 2;
+              const bCx = b.x + NODE_W / 2;
+              const bCy = b.y + tileH / 2;
+              const horizontal = Math.abs(bCx - aCx) >= Math.abs(bCy - aCy);
+              let ax: number, ay: number, bx: number, by: number;
+              if (horizontal) {
+                if (bCx >= aCx) { ax = a.x + NODE_W; ay = aCy; bx = b.x;          by = bCy; }
+                else            { ax = a.x;          ay = aCy; bx = b.x + NODE_W; by = bCy; }
+              } else {
+                if (bCy >= aCy) { ax = aCx; ay = a.y + tileH; bx = bCx; by = b.y; }
+                else            { ax = aCx; ay = a.y;        bx = bCx; by = b.y + tileH; }
+              }
+
+              // Build the orthogonal path's three segments and pick the longest.
+              type Seg = { x1: number; y1: number; x2: number; y2: number; len: number; horiz: boolean };
+              let segs: Seg[];
+              if (horizontal) {
+                const mx = (ax + bx) / 2;
+                segs = [
+                  { x1: ax, y1: ay, x2: mx, y2: ay, len: Math.abs(mx - ax), horiz: true },
+                  { x1: mx, y1: ay, x2: mx, y2: by, len: Math.abs(by - ay), horiz: false },
+                  { x1: mx, y1: by, x2: bx, y2: by, len: Math.abs(bx - mx), horiz: true },
+                ];
+              } else {
+                const my = (ay + by) / 2;
+                segs = [
+                  { x1: ax, y1: ay, x2: ax, y2: my, len: Math.abs(my - ay), horiz: false },
+                  { x1: ax, y1: my, x2: bx, y2: my, len: Math.abs(bx - ax), horiz: true },
+                  { x1: bx, y1: my, x2: bx, y2: by, len: Math.abs(by - my), horiz: false },
+                ];
+              }
+              const longest = segs.reduce((p, c) => (c.len > p.len ? c : p));
+              let mx = (longest.x1 + longest.x2) / 2;
+              let my = (longest.y1 + longest.y2) / 2;
+              if (longest.horiz) my += parallelOffset; else mx += parallelOffset;
+
+              // Cross-pair collision avoidance: if our badge lands within 26 px
+              // of an already-placed one, nudge along the longest segment's
+              // perpendicular axis (alternating direction).
               let extra = 0;
               const threshold = 26;
               for (let iter = 0; iter < 6; iter++) {
                 let collided = false;
-                const tx = horizontal ? mx : mx + extra;
-                const ty = horizontal ? my + extra : my;
+                const tx = longest.horiz ? mx : mx + extra;
+                const ty = longest.horiz ? my + extra : my;
                 for (const p of placed) {
-                  const dx = tx - p.bx;
-                  const dy = ty - p.by;
-                  if (Math.hypot(dx, dy) < threshold) {
+                  const ddx = tx - p.bx;
+                  const ddy = ty - p.by;
+                  if (Math.hypot(ddx, ddy) < threshold) {
                     extra += extra >= 0 ? 28 : -28;
-                    extra = -extra; // alternate direction
+                    extra = -extra;
                     collided = true;
                     break;
                   }
                 }
                 if (!collided) break;
               }
-              const finalBx = horizontal ? mx : mx + extra;
-              const finalBy = horizontal ? my + extra : my;
-              placed.push({ e, a, b, parallelOffset, bx: finalBx, by: finalBy, horizontal, extra });
+              const finalBx = longest.horiz ? mx : mx + extra;
+              const finalBy = longest.horiz ? my + extra : my;
+              placed.push({
+                e, a, b, parallelOffset,
+                bx: finalBx, by: finalBy,
+                segHorizontal: longest.horiz,
+                extra,
+              });
             }
             return placed.map((p) => (
               <Edge
@@ -165,8 +293,8 @@ const BlueprintArchitectureCanvas: React.FC<BlueprintArchitectureCanvasProps> = 
                 a={p.a}
                 b={p.b}
                 edge={p.e}
-                parallelOffset={p.parallelOffset}
-                extraBadgeOffset={p.extra}
+                badgeX={p.bx}
+                badgeY={p.by}
                 allNodes={data.nodes}
               />
             ));
@@ -324,7 +452,19 @@ const Node: React.FC<{
         fontWeight={500}
         fill="#111827"
       >
-        {truncate(node.name, 24)}
+        {(() => {
+          const lines = wrapLabel(node.name);
+          if (lines.length === 1) return lines[0];
+          // Two lines: lift line 1 and let line 2 sit on the original baseline.
+          // The 8px overhang below the tile footprint is intentional and
+          // matches the slack reserved by the authored layout.
+          return (
+            <>
+              <tspan x={cx} dy={-LABEL_LINE_H}>{lines[0]}</tspan>
+              <tspan x={cx} dy={LABEL_LINE_H}>{lines[1]}</tspan>
+            </>
+          );
+        })()}
       </text>
     </g>
   );
@@ -375,10 +515,10 @@ const Edge: React.FC<{
   a: BpNode;
   b: BpNode;
   edge: { id: string; step?: number; label?: string; routing?: string; style?: string };
-  parallelOffset?: number;
-  extraBadgeOffset?: number;
+  badgeX: number;
+  badgeY: number;
   allNodes?: BpNode[];
-}> = ({ a, b, edge, parallelOffset = 0, extraBadgeOffset = 0, allNodes = [] }) => {
+}> = ({ a, b, edge, badgeX, badgeY, allNodes = [] }) => {
   // Edge endpoints anchor to the nearest side of each node tile.
   const tileH = NODE_H - 22;
   const aCx = a.x + NODE_W / 2;
@@ -407,38 +547,53 @@ const Edge: React.FC<{
   }
 
   const routing = edge.routing || 'orthogonal';
+
+  // Tier-1 polish: shorten the path by ARROW_GAP so the rendered arrowhead
+  // marker keeps clearance from the destination tile (no clipped tips).
+  let endX = bx;
+  let endY = by;
   let d: string;
   if (routing === 'orthogonal') {
     if (horizontal) {
       const mx = (ax + bx) / 2;
-      d = `M ${ax} ${ay} L ${mx} ${ay} L ${mx} ${by} L ${bx} ${by}`;
+      endX = bx - Math.sign(bx - mx) * ARROW_GAP;
+      endY = by;
+      d = `M ${ax} ${ay} L ${mx} ${ay} L ${mx} ${endY} L ${endX} ${endY}`;
     } else {
       const my = (ay + by) / 2;
-      d = `M ${ax} ${ay} L ${ax} ${my} L ${bx} ${my} L ${bx} ${by}`;
+      endX = bx;
+      endY = by - Math.sign(by - my) * ARROW_GAP;
+      d = `M ${ax} ${ay} L ${ax} ${my} L ${endX} ${my} L ${endX} ${endY}`;
     }
   } else if (routing === 'curve') {
+    const totalLen = Math.hypot(bx - ax, by - ay) || 1;
+    const ux = (bx - ax) / totalLen;
+    const uy = (by - ay) / totalLen;
+    endX = bx - ux * ARROW_GAP;
+    endY = by - uy * ARROW_GAP;
     const offset = Math.max(40, Math.min(120, Math.abs(horizontal ? dx : dy) / 2));
     if (horizontal) {
-      d = `M ${ax} ${ay} C ${ax + offset} ${ay}, ${bx - offset} ${by}, ${bx} ${by}`;
+      d = `M ${ax} ${ay} C ${ax + offset} ${ay}, ${endX - offset} ${endY}, ${endX} ${endY}`;
     } else {
-      d = `M ${ax} ${ay} C ${ax} ${ay + offset}, ${bx} ${by - offset}, ${bx} ${by}`;
+      d = `M ${ax} ${ay} C ${ax} ${ay + offset}, ${endX} ${endY - offset}, ${endX} ${endY}`;
     }
   } else {
-    d = `M ${ax} ${ay} L ${bx} ${by}`;
+    const totalLen = Math.hypot(bx - ax, by - ay) || 1;
+    const ux = (bx - ax) / totalLen;
+    const uy = (by - ay) / totalLen;
+    endX = bx - ux * ARROW_GAP;
+    endY = by - uy * ARROW_GAP;
+    d = `M ${ax} ${ay} L ${endX} ${endY}`;
   }
 
   const strokeDash =
     edge.style === 'dashed' ? '6 5' : edge.style === 'dotted' ? '2 4' : undefined;
 
-  // Midpoint for step badge + label, shifted perpendicular to dominant
-  // direction when this edge runs parallel to a sibling between the same pair.
-  let mx = (ax + bx) / 2;
-  let my = (ay + by) / 2;
-  if (horizontal) {
-    my += parallelOffset + extraBadgeOffset;
-  } else {
-    mx += parallelOffset + extraBadgeOffset;
-  }
+  // Badge position is computed in the parent pre-pass (longest straight
+  // segment of the orthogonal path) so it never lands on an elbow or
+  // arrowhead.
+  const mx = badgeX;
+  const my = badgeY;
 
   return (
     <g className="bp-edge">
