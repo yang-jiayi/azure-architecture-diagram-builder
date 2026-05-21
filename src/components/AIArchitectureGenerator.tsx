@@ -9,7 +9,7 @@ import { generateComponentManifest, ComponentManifest } from '../services/compon
 import { exportReferenceArchitectureAsPng } from '../utils/exportReferencePng';
 import { exportBlueprintArchitectureAsPng } from '../utils/exportBlueprintPng';
 import ImageUploader from './ImageUploader';
-import { useModelSettings, MODEL_CONFIG } from '../stores/modelSettingsStore';
+import { useModelSettings, MODEL_CONFIG, getAvailableModels, ModelType, ReasoningEffort } from '../stores/modelSettingsStore';
 import { trackImageImport } from '../services/telemetryService';
 import './AIArchitectureGenerator.css';
 
@@ -72,7 +72,7 @@ const AIArchitectureGenerator: React.FC<AIArchitectureGeneratorProps> = ({ onGen
 
   // Opt-in: also download an editorial PNG when generating in reference mode.
   // Model settings from reactive hook (stays in sync with dropdown)
-  const [modelSettings] = useModelSettings();
+  const [modelSettings, updateModelSettings] = useModelSettings();
   
   // Auto-snapshot preference (stored in localStorage)
   const [autoSnapshot, setAutoSnapshot] = useState<boolean>(() => {
@@ -585,11 +585,49 @@ IMPORTANT: Return the COMPLETE architecture JSON (all services, groups, connecti
             <div className="modal-footer">
               <div className="ai-modal-active-model">
                 <Brain size={20} />
-                <span>Using: <span className="model-badge">{MODEL_CONFIG[modelSettings.model].displayName}</span></span>
+                <span className="ai-modal-model-label">Model:</span>
+                <select
+                  className="ai-modal-model-select"
+                  value={modelSettings.model}
+                  onChange={(e) => {
+                    const next = e.target.value as ModelType;
+                    const cfg = MODEL_CONFIG[next];
+                    updateModelSettings({
+                      model: next,
+                      reasoningEffort: cfg.isReasoning
+                        ? (cfg.defaultReasoningEffort ?? modelSettings.reasoningEffort)
+                        : modelSettings.reasoningEffort,
+                    });
+                  }}
+                  disabled={isGenerating}
+                  aria-label="Select AI model"
+                >
+                  {getAvailableModels().map((m) => (
+                    <option key={m} value={m}>
+                      {MODEL_CONFIG[m].displayName}
+                    </option>
+                  ))}
+                </select>
                 {MODEL_CONFIG[modelSettings.model].isReasoning && (
-                  <span className="model-badge">({modelSettings.reasoningEffort})</span>
+                  <>
+                    <span className="ai-modal-model-label">Reasoning:</span>
+                    <select
+                      className="ai-modal-model-select"
+                      value={modelSettings.reasoningEffort}
+                      onChange={(e) =>
+                        updateModelSettings({ reasoningEffort: e.target.value as ReasoningEffort })
+                      }
+                      disabled={isGenerating}
+                      aria-label="Select reasoning effort"
+                    >
+                      <option value="none">none</option>
+                      <option value="low">low</option>
+                      <option value="medium">medium</option>
+                      <option value="high">high</option>
+                    </select>
+                  </>
                 )}
-                <span className="model-change-hint">Change in toolbar → AI Model</span>
+                <span className="model-change-hint">Also configurable in toolbar → AI Model</span>
               </div>
               {currentArchitecture && currentArchitecture.nodes.length > 0 && (
                 <div className="auto-snapshot-option">
