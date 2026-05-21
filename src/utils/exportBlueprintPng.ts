@@ -39,9 +39,10 @@ export async function exportBlueprintArchitectureAsPng(
   const titleSlug = shortSlug(data.title || 'blueprint');
   const stamp = formatStamp(new Date());
   const modelSuffix = getModelSuffix();
-  const downloadName = fileName
-    ? `${fileName}.png`
-    : `blueprint-${titleSlug}-${stamp}-${modelSuffix}.png`;
+  const baseName = fileName
+    ? fileName
+    : `blueprint-${titleSlug}-${stamp}-${modelSuffix}`;
+  const downloadName = `${baseName}.png`;
 
   const iconMap = await preloadIconMap(data);
   const personaIconUrl = await preloadPersonaIcon();
@@ -81,6 +82,18 @@ export async function exportBlueprintArchitectureAsPng(
       pixelRatio,
     });
     triggerDownload(dataUrl, downloadName);
+
+    // Drop a JSON sidecar AFTER the PNG. We delay one tick so the browser
+    // treats it as a separate download attempt instead of silently dropping
+    // it under multi-download throttling.
+    setTimeout(() => {
+      try {
+        console.log('📄 Blueprint JSON sidecar:', `${baseName}.json`);
+        exportBlueprintArchitectureAsJson(data, { fileName: baseName });
+      } catch (err) {
+        console.warn('Blueprint JSON sidecar failed:', err);
+      }
+    }, 600);
   } finally {
     if (root) root.unmount();
     if (host.parentNode) host.parentNode.removeChild(host);
@@ -164,6 +177,41 @@ function triggerDownload(dataUrl: string, fileName: string): void {
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
+}
+
+export interface ExportBlueprintJsonOptions {
+  fileName?: string;
+}
+
+/**
+ * Persist the blueprint as a JSON sidecar. Strips the (potentially large)
+ * `metrics` field's verbose objects only if they exist, but otherwise dumps
+ * the structure as-is so it round-trips back into the canvas if needed.
+ */
+export function exportBlueprintArchitectureAsJson(
+  data: BlueprintArchitecture,
+  options: ExportBlueprintJsonOptions = {},
+): void {
+  const { fileName } = options;
+  const titleSlug = shortSlug(data.title || 'blueprint');
+  const stamp = formatStamp(new Date());
+  const modelSuffix = getModelSuffix();
+  const baseName = fileName ?? `blueprint-${titleSlug}-${stamp}-${modelSuffix}`;
+  const downloadName = `${baseName}.json`;
+
+  const payload = {
+    ...data,
+    exportedAt: new Date().toISOString(),
+  };
+  const json = JSON.stringify(payload, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  try {
+    triggerDownload(url, downloadName);
+  } finally {
+    // Revoke after a tick so the browser has time to start the download.
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
 }
 
 async function waitForElement(

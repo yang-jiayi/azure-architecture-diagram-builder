@@ -114,17 +114,62 @@ const BlueprintArchitectureCanvas: React.FC<BlueprintArchitectureCanvasProps> = 
               pairCount.set(k, (pairCount.get(k) || 0) + 1);
             }
             const pairSeen = new Map<string, number>();
-            return data.edges.map((e) => {
+            // Precompute badge centers so we can detect cross-pair collisions
+            // (different node pairs whose midpoints happen to land near each
+            // other) and nudge later badges along the perpendicular axis.
+            type Pre = { e: typeof data.edges[number]; a: BpNode; b: BpNode; parallelOffset: number; bx: number; by: number; horizontal: boolean; extra: number };
+            const placed: Pre[] = [];
+            for (const e of data.edges) {
               const a = nodeById.get(e.from);
               const b = nodeById.get(e.to);
-              if (!a || !b) return null;
+              if (!a || !b) continue;
               const k = [e.from, e.to].sort().join('|');
               const idx = pairSeen.get(k) || 0;
               pairSeen.set(k, idx + 1);
               const count = pairCount.get(k) || 1;
               const parallelOffset = count > 1 ? (idx - (count - 1) / 2) * 28 : 0;
-              return <Edge key={e.id} a={a} b={b} edge={e} parallelOffset={parallelOffset} />;
-            });
+              const ax = a.x + NODE_W / 2;
+              const ay = a.y + NODE_H / 2;
+              const bxc = b.x + NODE_W / 2;
+              const byc = b.y + NODE_H / 2;
+              const horizontal = Math.abs(bxc - ax) >= Math.abs(byc - ay);
+              let mx = (ax + bxc) / 2;
+              let my = (ay + byc) / 2;
+              if (horizontal) my += parallelOffset; else mx += parallelOffset;
+              // Nudge against previously placed badges if within 26 px.
+              let extra = 0;
+              const threshold = 26;
+              for (let iter = 0; iter < 6; iter++) {
+                let collided = false;
+                const tx = horizontal ? mx : mx + extra;
+                const ty = horizontal ? my + extra : my;
+                for (const p of placed) {
+                  const dx = tx - p.bx;
+                  const dy = ty - p.by;
+                  if (Math.hypot(dx, dy) < threshold) {
+                    extra += extra >= 0 ? 28 : -28;
+                    extra = -extra; // alternate direction
+                    collided = true;
+                    break;
+                  }
+                }
+                if (!collided) break;
+              }
+              const finalBx = horizontal ? mx : mx + extra;
+              const finalBy = horizontal ? my + extra : my;
+              placed.push({ e, a, b, parallelOffset, bx: finalBx, by: finalBy, horizontal, extra });
+            }
+            return placed.map((p) => (
+              <Edge
+                key={p.e.id}
+                a={p.a}
+                b={p.b}
+                edge={p.e}
+                parallelOffset={p.parallelOffset}
+                extraBadgeOffset={p.extra}
+                allNodes={data.nodes}
+              />
+            ));
           })()}
         </g>
 
@@ -331,7 +376,9 @@ const Edge: React.FC<{
   b: BpNode;
   edge: { id: string; step?: number; label?: string; routing?: string; style?: string };
   parallelOffset?: number;
-}> = ({ a, b, edge, parallelOffset = 0 }) => {
+  extraBadgeOffset?: number;
+  allNodes?: BpNode[];
+}> = ({ a, b, edge, parallelOffset = 0, extraBadgeOffset = 0, allNodes = [] }) => {
   // Edge endpoints anchor to the nearest side of each node tile.
   const tileH = NODE_H - 22;
   const aCx = a.x + NODE_W / 2;
@@ -388,9 +435,9 @@ const Edge: React.FC<{
   let mx = (ax + bx) / 2;
   let my = (ay + by) / 2;
   if (horizontal) {
-    my += parallelOffset;
+    my += parallelOffset + extraBadgeOffset;
   } else {
-    mx += parallelOffset;
+    mx += parallelOffset + extraBadgeOffset;
   }
 
   return (
@@ -423,22 +470,64 @@ const Edge: React.FC<{
       {edge.label && (() => {
         const label = truncate(edge.label, 24);
         const labelW = Math.max(28, label.length * 6.2 + 10);
-        const labelY = edge.step !== undefined ? my - 20 : my - 8;
+        const labelH = 14;
+        let lx = mx;
+        const baseLy = edge.step !== undefined ? my - 20 : my - 8;
+        let ly = baseLy;
+
+        // Collision avoidance: if label rect overlaps any node tile, slide
+        // along the dominant axis toward whichever endpoint has more clearance.
+        const labelOverlapsNode = (cx: number, cy: number) => {
+          const rx1 = cx - labelW / 2 - 2;
+          const rx2 = cx + labelW / 2 + 2;
+          const ry1 = cy - labelH - 2;
+          const ry2 = cy + 2;
+          for (const n of allNodes) {
+            const nx1 = n.x;
+            const nx2 = n.x + NODE_W;
+            const ny1 = n.y;
+            const ny2 = n.y + (NODE_H - 22);
+            if (rx1 < nx2 && rx2 > nx1 && ry1 < ny2 && ry2 > ny1) return true;
+          }
+          return false;
+        };
+
+        if (labelOverlapsNode(lx, ly)) {
+          // Try sliding along the path axis in both directions, pick first clear.
+          const span = horizontal ? Math.abs(bx - ax) : Math.abs(by - ay);
+          const step = 16;
+          const maxSteps = Math.max(2, Math.floor(span / (step * 2)));
+          let placed = false;
+          for (let i = 1; i <= maxSteps && !placed; i++) {
+            const delta = i * step;
+            for (const dir of [1, -1]) {
+              const tryX = horizontal ? mx + dir * delta : mx;
+              const tryY = horizontal ? baseLy : baseLy + dir * delta;
+              if (!labelOverlapsNode(tryX, tryY)) {
+                lx = tryX;
+                ly = tryY;
+                placed = true;
+                break;
+              }
+            }
+          }
+        }
+
         return (
           <g>
             <rect
-              x={mx - labelW / 2}
-              y={labelY - 10}
+              x={lx - labelW / 2}
+              y={ly - 10}
               width={labelW}
-              height={14}
+              height={labelH}
               rx={3}
               ry={3}
               fill="#ffffff"
               fillOpacity={0.92}
             />
             <text
-              x={mx}
-              y={labelY}
+              x={lx}
+              y={ly}
               textAnchor="middle"
               fontSize={11}
               fill="#374151"

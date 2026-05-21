@@ -19,6 +19,8 @@
 import { callAzureOpenAI, ModelOverride, AIMetrics } from './azureOpenAI';
 import { getServiceIconMapping } from '../data/serviceIconMapping';
 import { MODEL_CONFIG, getModelSettings } from '../stores/modelSettingsStore';
+import type { ComponentManifest } from './componentManifestAI';
+import { renderManifestForPrompt } from './componentManifestAI';
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Schema
@@ -141,8 +143,10 @@ EXAMPLE — Async batch processing with Azure Functions + Service Bus + Cosmos D
 export async function generateBlueprintArchitectureWithAI(
   description: string,
   modelOverride?: ModelOverride,
+  manifest?: ComponentManifest,
 ): Promise<BlueprintArchitecture> {
-  const systemPrompt = `You are an expert Azure cloud architect who creates whiteboard-style BLUEPRINT architecture diagrams — the kind a senior architect sketches on a whiteboard when explaining a system end-to-end.
+  const manifestBlock = manifest ? '\n\n' + renderManifestForPrompt(manifest) : '';
+  const systemPrompt = `You are an expert Azure cloud architect who creates whiteboard-style BLUEPRINT architecture diagrams — the kind a senior architect sketches on a whiteboard when explaining a system end-to-end.${manifestBlock}
 
 Blueprint diagrams are NOT swim lanes. They use free positioning: services live inside nested "zones" (Azure subscription, VNet, on-prem network, resource groups), and flow is shown with numbered arrows carrying short labels ("POST /batch", "Trigger worker", "Persist result").
 
@@ -190,6 +194,18 @@ Layout rules — CRITICAL:
 8. Arrange nodes so arrows flow LEFT→RIGHT or TOP→BOTTOM. Avoid crossings.
 9. DEFAULT EVERY EDGE'S routing TO "orthogonal" unless a curved bypass is genuinely needed. Straight diagonal lines look messy on a blueprint — use right-angle paths.
 10. Keep edge labels short — ideally 1–3 words, hard maximum 24 characters. Longer descriptions belong in the workflow array.
+
+LAYOUT POLICY — tier-based row placement (apply rigorously):
+A. The MAIN data-plane pipeline (entry actor → ingress → processing → primary sinks) must occupy the MIDDLE horizontal band of the canvas and flow strictly LEFT→RIGHT. This is the diagram's backbone and must be visually dominant.
+B. Control-plane / management / provisioning services (e.g., Device Provisioning Service, Key Vault, deployment, Microsoft Entra ID when used for control) belong ABOVE the main pipeline. Their edges should drop DOWN into the pipeline.
+C. Monitoring / observability / governance services (Azure Monitor, Log Analytics, Application Insights, Microsoft Sentinel, Defender for Cloud) also belong ABOVE the main pipeline OR in a dedicated Observability zone to the side. Their edges should be dashed (style: "dashed").
+D. Storage / batch analytics / long-term data (Data Lake, Synapse, Cosmos DB, SQL, Blob, Time Series Insights for historical) belong BELOW the main pipeline. Their edges should come UP from the pipeline.
+E. ML / inference / feedback loops belong adjacent to analytics (typically bottom-right). Feedback edges back into the pipeline should be visually distinct (curve routing OK here).
+F. End-user dashboards / web apps belong on the FAR LEFT (if they trigger flow) or FAR RIGHT (if they consume outputs) — not in the middle row.
+G. On-premises zones sit on the LEFT, connected via an explicit boundary node (Private Link, ExpressRoute, VPN Gateway) before crossing into Azure.
+H. Anchor preference: inputs enter a node from its LEFT or TOP; outputs leave from its RIGHT or BOTTOM. Pick (from, to) order on edges accordingly so the natural arrow direction matches this convention.
+I. Prefer connecting nodes in ADJACENT zones. Avoid edges that span the entire canvas — if two services in far-apart zones must communicate, add an intermediate hop or place them closer together.
+J. Use SHORT VERB-FIRST labels: "Send telemetry", "Ingest stream", "Store raw", "Run batch", "Deploy model", "Update twins", "Publish metrics". Avoid noun-only labels like "Telemetry" when a verb fits.
 
 Content rules:
 9. Use ONLY OFFICIAL Microsoft product names that exist as Azure services ("Microsoft Entra ID", "Azure Cosmos DB", "Azure Functions", "Logic Apps", "Microsoft Sentinel", "Microsoft Defender for Cloud", "Azure Monitor", "Log Analytics", "Key Vault", "Application Insights", "API Management", "Service Bus", "Event Hubs", "Azure SQL Database", "Azure Cache for Redis", "Azure Kubernetes Service", "Azure Container Apps", etc.). Do NOT invent composite names like "Azure Workloads" or "Logic Apps Playbooks" — just use "Logic Apps". If you need a generic workloads tile, use kind: "cloud" with name "Azure Workloads" and category "compute" only as a last resort.
@@ -247,6 +263,13 @@ Now generate a blueprint architecture for the user's request. Return JSON only.`
 
   enforceSpacing(bp);
   validateStepNumbering(bp);
+
+  // Force orthogonal routing on every edge. The prompt asks the model to do
+  // this but it sometimes emits "straight"/"curved", which produces diagonal
+  // lines that cut through unrelated nodes.
+  for (const e of bp.edges) {
+    e.routing = 'orthogonal';
+  }
 
   bp.metrics = metrics;
   return bp;
