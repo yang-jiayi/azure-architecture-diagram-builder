@@ -2,18 +2,34 @@
 // Licensed under the MIT License.
 
 import React, { useState } from 'react';
-import { Sparkles, X, Loader2, Clock, Zap, Brain, LayoutGrid, Network } from 'lucide-react';
+import { Sparkles, X, Loader2, Clock, Zap, Brain, Network, PenTool } from 'lucide-react';
 import { generateArchitectureWithAI, isAzureOpenAIConfigured, AIMetrics, analyzeArchitectureDiagramImage, ModelOverride } from '../services/azureOpenAI';
-import { generateReferenceArchitectureWithAI, referenceToTopology } from '../services/referenceArchitectureAI';
+import { generateReferenceArchitectureWithAI } from '../services/referenceArchitectureAI';
+import { generateBlueprintArchitectureWithAI } from '../services/blueprintArchitectureAI';
+import { exportReferenceArchitectureAsPng } from '../utils/exportReferencePng';
+import { exportBlueprintArchitectureAsPng } from '../utils/exportBlueprintPng';
 import ImageUploader from './ImageUploader';
 import { useModelSettings, MODEL_CONFIG } from '../stores/modelSettingsStore';
 import { trackImageImport } from '../services/telemetryService';
 import './AIArchitectureGenerator.css';
 
-type GenerationMode = 'topology' | 'reference';
+type GenerationMode = 'topology' | 'reference' | 'blueprint';
 
 interface AIArchitectureGeneratorProps {
   onGenerate: (architecture: any, prompt: string, autoSnapshot: boolean, referenceImageUrl?: string) => void;
+  /**
+   * Called when a Reference Architecture has been generated. Reference mode
+   * intentionally does NOT push a topology onto the canvas (the transformed
+   * topology is low-fidelity and confuses users); the PNG is the deliverable.
+   * App uses this to stash the ref so the toolbar can re-export the PNG.
+   */
+  onReferenceArchitecture?: (ref: any) => void;
+  /**
+   * Called when a Blueprint Architecture has been generated. Like reference
+   * mode, blueprint mode does NOT push a topology onto the canvas; the PNG is
+   * the deliverable. App stashes the blueprint so the toolbar can re-export.
+   */
+  onBlueprintArchitecture?: (bp: any) => void;
   currentArchitecture?: {
     nodes: any[];
     edges: any[];
@@ -21,7 +37,7 @@ interface AIArchitectureGeneratorProps {
   };
 }
 
-const AIArchitectureGenerator: React.FC<AIArchitectureGeneratorProps> = ({ onGenerate, currentArchitecture }) => {
+const AIArchitectureGenerator: React.FC<AIArchitectureGeneratorProps> = ({ onGenerate, onReferenceArchitecture, onBlueprintArchitecture, currentArchitecture }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [description, setDescription] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -32,14 +48,18 @@ const AIArchitectureGenerator: React.FC<AIArchitectureGeneratorProps> = ({ onGen
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
   const [mode, setMode] = useState<GenerationMode>(() => {
     const saved = localStorage.getItem('aiGenerator.mode');
-    return saved === 'reference' ? 'reference' : 'topology';
+    if (saved === 'blueprint') return saved;
+    // Reference mode is hidden in the UI; migrate any stale persisted value.
+    if (saved === 'reference') return 'blueprint';
+    return 'topology';
   });
 
   const handleModeChange = (m: GenerationMode) => {
     setMode(m);
     localStorage.setItem('aiGenerator.mode', m);
   };
-  
+
+  // Opt-in: also download an editorial PNG when generating in reference mode.
   // Model settings from reactive hook (stays in sync with dropdown)
   const [modelSettings] = useModelSettings();
   
@@ -154,14 +174,51 @@ const AIArchitectureGenerator: React.FC<AIArchitectureGeneratorProps> = ({ onGen
     console.log(`🎯 Generate clicked: dropdown model=${modelSettings.model}, reasoning=${modelSettings.reasoningEffort}, overrides=${JSON.stringify(modelSettings.featureOverrides)}`);
 
     try {
-      // ── Reference (Editorial) mode — Week 1: emit new schema, transform to
-      // existing topology shape so the current renderer can display it for
-      // quality validation. Bespoke banded layout arrives in Week 2.
+      // ── Reference (Editorial) mode — PNG is the sole deliverable.
+      // We deliberately do NOT push a topology onto the canvas: the
+      // transformed network-flow view is low fidelity for editorial inputs
+      // and confuses users. Instead we notify App so it can enable the
+      // toolbar “Export Editorial PNG” action, then render + download.
       if (mode === 'reference') {
         const ref = await generateReferenceArchitectureWithAI(description, currentModelSettings);
         if (ref.metrics) setAiMetrics(ref.metrics);
-        const topology = referenceToTopology(ref);
-        onGenerate(topology, description, autoSnapshot, uploadedImageUrl || undefined);
+
+        // Stash the ref for the toolbar re-export button (if App provided it).
+        onReferenceArchitecture?.(ref);
+
+        // Always export the PNG — it is the only artifact produced in this mode.
+        try {
+          await exportReferenceArchitectureAsPng(ref);
+        } catch (err) {
+          console.warn('Reference architecture PNG export failed:', err);
+          setError('PNG export failed. See console for details.');
+        }
+
+        setDescription('');
+        setTimeout(() => {
+          setIsOpen(false);
+          setAiMetrics(null);
+          setUploadedImageUrl(null);
+        }, 45000);
+        return;
+      }
+
+      // ── Blueprint (Whiteboard) mode — PNG is the sole deliverable.
+      // Hand-drawn / sketchnote-style nested zones with numbered, labeled
+      // arrows. Like reference mode, we do not touch the ReactFlow canvas.
+      if (mode === 'blueprint') {
+        const bp = await generateBlueprintArchitectureWithAI(description, currentModelSettings);
+        if (bp.metrics) setAiMetrics(bp.metrics);
+
+        onBlueprintArchitecture?.(bp);
+
+        try {
+          await exportBlueprintArchitectureAsPng(bp);
+        } catch (err) {
+          console.warn('Blueprint architecture PNG export failed:', err);
+          setError('PNG export failed. See console for details.');
+        }
+
         setDescription('');
         setTimeout(() => {
           setIsOpen(false);
@@ -289,23 +346,26 @@ IMPORTANT: Return the COMPLETE architecture JSON (all services, groups, connecti
                   <span className="mode-label">Topology</span>
                   <span className="mode-sub">Deployable network diagram</span>
                 </button>
+                {/* Reference (swim-lane) mode hidden — Blueprint replaces it. Code path kept for now in case we want to restore. */}
                 <button
                   role="tab"
-                  aria-selected={mode === 'reference'}
-                  className={`mode-toggle-btn ${mode === 'reference' ? 'active' : ''}`}
-                  onClick={() => handleModeChange('reference')}
+                  aria-selected={mode === 'blueprint'}
+                  className={`mode-toggle-btn ${mode === 'blueprint' ? 'active' : ''}`}
+                  onClick={() => handleModeChange('blueprint')}
                   disabled={isGenerating}
                   type="button"
                 >
-                  <LayoutGrid size={16} />
-                  <span className="mode-label">Reference <span className="mode-badge-beta">BETA</span></span>
-                  <span className="mode-sub">Editorial swim-lane diagram</span>
+                  <PenTool size={16} />
+                  <span className="mode-label">Blueprint <span className="mode-badge-beta">BETA</span></span>
+                  <span className="mode-sub">Hand-drawn whiteboard diagram</span>
                 </button>
               </div>
 
               <p className="modal-description">
                 {mode === 'reference' ? (
                   <>Describe the workload in plain English and AI will generate a <strong>publication-style reference architecture</strong> with stages (Ingest → Process → Serve), a foundation strip, and cross-cutting governance rails — in the style of the Azure Architecture Center.</>
+                ) : mode === 'blueprint' ? (
+                  <>Describe the workload and AI will sketch a <strong>whiteboard-style blueprint</strong> with nested zones (Azure / VNet / On-prem) and numbered, labeled arrows showing the end-to-end flow — like an architect explaining a system at a whiteboard.</>
                 ) : (
                   <>Describe your Azure architecture in plain English, and AI will automatically
                   generate a diagram with the appropriate services and connections.
