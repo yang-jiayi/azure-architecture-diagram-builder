@@ -263,6 +263,18 @@ body.dark-mode .ai-architecture-modal .modal-col-left .form-group label {
   color: #fbbf24;
 }
 
+/* Match the ImageUploader header styling to the form label hierarchy */
+.ai-architecture-modal .modal-col-left .image-uploader-header {
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: #b45309;
+}
+
+body.dark-mode .ai-architecture-modal .modal-col-left .image-uploader-header {
+  color: #fbbf24;
+}
+
 .form-group {
   margin-bottom: 1.5rem;
 }
