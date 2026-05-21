@@ -95,6 +95,34 @@ type ExportHistoryItem = {
 
 const EXPORT_HISTORY_STORAGE_KEY = 'azure-diagram-builder.exportHistory.v1';
 
+// Derive a short, human-friendly architecture title from a free-form prompt
+// (used as a fallback when no manifest title is available). Strips common
+// prefixes like "MODIFY EXISTING ARCHITECTURE: ...", "Build a", "Design a",
+// then takes the first ~8 words and title-cases them.
+function deriveTitleFromPrompt(prompt: string | undefined | null): string | undefined {
+  if (!prompt) return undefined;
+  let p = String(prompt).trim();
+  // Strip our own context-prompt prefix if present.
+  const modMatch = p.match(/CHANGE REQUESTED:\s*(.+)$/is);
+  if (modMatch) p = modMatch[1].trim();
+  // Drop leading verbs / fillers.
+  p = p.replace(/^(please\s+)?(build|design|create|generate|make|draw|architect|show|produce)\s+(me\s+)?(a|an|the)?\s*/i, '');
+  // Take first sentence / line.
+  p = p.split(/[\n.!?]/)[0].trim();
+  if (!p) return undefined;
+  const words = p.split(/\s+/).slice(0, 8);
+  if (words.length === 0) return undefined;
+  const titled = words
+    .map((w) => {
+      if (w.length <= 3 && w === w.toUpperCase()) return w; // keep acronyms (IoT, AKS)
+      return w.charAt(0).toUpperCase() + w.slice(1);
+    })
+    .join(' ')
+    .replace(/[^\w\s\-/&]/g, '')
+    .trim();
+  return titled.length > 0 ? titled : undefined;
+}
+
 function App() {
   const [nodes, setNodes, onNodesChangeBase] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
@@ -1543,6 +1571,16 @@ function App() {
 
       // Store the prompt and workflow for display
       setArchitecturePrompt(prompt);
+
+      // Pick up an architecture name from the AI payload (manifest.title in
+      // Both mode) or derive a short title from the prompt so the banner
+      // doesn't read "Untitled Architecture" after every generation.
+      const incomingName: string | undefined = (architecture?.architectureName && String(architecture.architectureName).trim())
+        || deriveTitleFromPrompt(prompt);
+      if (incomingName && incomingName !== 'Untitled Architecture') {
+        setTitleBlockData((prev) => ({ ...prev, architectureName: incomingName }));
+      }
+
       if (workflowSteps && workflowSteps.length > 0) {
         setWorkflow(workflowSteps);
         // setShowWorkflow(true); // Automatically show workflow panel for new generations

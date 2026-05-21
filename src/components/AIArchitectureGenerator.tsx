@@ -309,6 +309,13 @@ const AIArchitectureGenerator: React.FC<AIArchitectureGeneratorProps> = ({ onGen
         }
 
         // Push topology to canvas first.
+        // Inject the manifest title (when available) so the canvas banner /
+        // title block stop reading "Untitled Architecture" after generation.
+        if (manifest?.title && topoResult && typeof topoResult === 'object') {
+          if (!topoResult.architectureName || /untitled/i.test(String(topoResult.architectureName))) {
+            topoResult.architectureName = manifest.title;
+          }
+        }
         onGenerate(topoResult, description, autoSnapshot, uploadedImageUrl || undefined);
         // Stash blueprint for the toolbar re-export button.
         onBlueprintArchitecture?.(bpResult);
