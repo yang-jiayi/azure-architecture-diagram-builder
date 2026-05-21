@@ -33,9 +33,15 @@ const WorkflowPanel: React.FC<WorkflowPanelProps> = ({
   const [avatarError, setAvatarError] = useState<string | null>(null);
   const [captionWords, setCaptionWords] = useState<string[]>([]);
   const [captionWordIdx, setCaptionWordIdx] = useState<number>(-1);
+  const [activeStepNum, setActiveStepNum] = useState<number | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const presenterRef = useRef<AvatarPresenter | null>(null);
+  // Word-index ranges per step, populated when narration starts; used by the
+  // wordBoundary callback (closure) to map current word -> active step.
+  const stepRangesRef = useRef<Array<{ step: number; start: number; end: number; services: string[] }>>([]);
+  const activeStepRef = useRef<number | null>(null);
+  const stepElRefs = useRef<Record<number, HTMLDivElement | null>>({});
   const isSpeechConfigured = !!import.meta.env.VITE_SPEECH_REGION;
 
   // Draggable + resizable avatar panel
@@ -53,8 +59,59 @@ const WorkflowPanel: React.FC<WorkflowPanelProps> = ({
     return () => { presenterRef.current?.disconnect(); };
   }, []);
 
-  const buildNarrationText = (): string =>
-    workflow.map(s => `Step ${s.step}: ${s.description}`).join('. ');
+  // Build narration text + per-step word-index ranges in one pass so the
+  // wordBoundary callback can derive the active step.
+  const buildNarration = (): { text: string; ranges: Array<{ step: number; start: number; end: number; services: string[] }> } => {
+    const ranges: Array<{ step: number; start: number; end: number; services: string[] }> = [];
+    const segments: string[] = [];
+    let wordCount = 0;
+    for (const s of workflow) {
+      const segment = `Step ${s.step}: ${s.description}`;
+      const segWords = segment.split(/\s+/).filter(Boolean).length;
+      ranges.push({
+        step: s.step,
+        start: wordCount,
+        end: wordCount + segWords - 1,
+        services: s.services ?? [],
+      });
+      wordCount += segWords;
+      segments.push(segment);
+    }
+    return { text: segments.join('. '), ranges };
+  };
+
+  // Single onWord handler used by the avatar presenter. Reads refs so it always
+  // sees the latest ranges without needing to be reconstructed per session.
+  const handleWord = (idx: number) => {
+    setCaptionWordIdx(idx);
+    if (idx < 0) {
+      if (activeStepRef.current !== null) {
+        activeStepRef.current = null;
+        setActiveStepNum(null);
+        onServiceLeave?.();
+      }
+      return;
+    }
+    const ranges = stepRangesRef.current;
+    const r = ranges.find(r => idx >= r.start && idx <= r.end);
+    const newStep = r?.step ?? null;
+    if (newStep !== activeStepRef.current) {
+      activeStepRef.current = newStep;
+      setActiveStepNum(newStep);
+      if (newStep !== null && r) {
+        onServiceHover?.(r.services);
+      } else {
+        onServiceLeave?.();
+      }
+    }
+  };
+
+  // Auto-scroll the active step into view as narration progresses.
+  useEffect(() => {
+    if (activeStepNum == null) return;
+    const el = stepElRefs.current[activeStepNum];
+    el?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }, [activeStepNum]);
 
   const startNarration = async () => {
     setAvatarStatus('connecting');
@@ -69,14 +126,17 @@ const WorkflowPanel: React.FC<WorkflowPanelProps> = ({
           voice: import.meta.env.VITE_AVATAR_VOICE || 'en-US-AvaMultilingualNeural',
           onStatus: setAvatarStatus,
           onError: (msg) => setAvatarError(msg),
-          onWord: (idx) => setCaptionWordIdx(idx),
+          onWord: handleWord,
         });
         presenterRef.current = presenter;
         await presenter.connect(videoRef.current, audioRef.current);
       }
-      const text = buildNarrationText();
+      const { text, ranges } = buildNarration();
+      stepRangesRef.current = ranges;
       setCaptionWords(text.split(/\s+/).filter(Boolean));
       setCaptionWordIdx(-1);
+      activeStepRef.current = null;
+      setActiveStepNum(null);
       await presenterRef.current!.speak(text);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -101,6 +161,10 @@ const WorkflowPanel: React.FC<WorkflowPanelProps> = ({
     setAvatarError(null);
     setCaptionWords([]);
     setCaptionWordIdx(-1);
+    activeStepRef.current = null;
+    setActiveStepNum(null);
+    stepRangesRef.current = [];
+    onServiceLeave?.();
     resetAvatarGeom();
   };
 
@@ -143,7 +207,8 @@ const WorkflowPanel: React.FC<WorkflowPanelProps> = ({
               {workflow.map((step) => (
                 <div
                   key={step.step}
-                  className="workflow-step"
+                  ref={(el) => { stepElRefs.current[step.step] = el; }}
+                  className={`workflow-step${step.step === activeStepNum ? ' is-narrating' : ''}`}
                   onMouseEnter={() => onServiceHover?.(step.services)}
                   onMouseLeave={() => onServiceLeave?.()}
                 >
