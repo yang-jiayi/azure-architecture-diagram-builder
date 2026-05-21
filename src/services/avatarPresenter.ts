@@ -92,7 +92,6 @@ export class AvatarPresenter {
         const tcpUrl = baseUrl.replace(':3478', ':443?transport=tcp');
         const urls = forceTcp ? [tcpUrl, baseUrl] : [baseUrl, tcpUrl];
         iceServers = [{ urls, username: ice.Username, credential: ice.Password }];
-        console.log('[avatar] ICE servers:', urls, '(forceTcp=' + forceTcp + ')');
       }
     } catch (err) {
       console.warn('[avatar] /api/ice-token failed:', err);
@@ -135,13 +134,6 @@ export class AvatarPresenter {
     // (the SDK always populates it for the avatar service) and fall back to a
     // synthesized MediaStream only when the implementation omits it.
     this.peerConnection.ontrack = (event: RTCTrackEvent) => {
-      console.log('[avatar] ontrack:', event.track.kind, {
-        id: event.track.id,
-        readyState: event.track.readyState,
-        muted: event.track.muted,
-        streams: event.streams.length,
-      });
-
       const stream = event.streams[0] ?? (() => {
         const s = new MediaStream();
         s.addTrack(event.track);
@@ -151,14 +143,10 @@ export class AvatarPresenter {
       if (event.track.kind === 'video') {
         this.videoStream = stream;
         videoEl.srcObject = stream;
-        const tryPlay = () => {
-          console.log('[avatar] video metadata:', videoEl.videoWidth, 'x', videoEl.videoHeight);
-          playMedia(videoEl);
-        };
+        const tryPlay = () => playMedia(videoEl);
         videoEl.onloadedmetadata = tryPlay;
         videoEl.onloadeddata = tryPlay;
-        event.track.onunmute = () => { console.log('[avatar] video unmuted'); playMedia(videoEl); };
-        event.track.onended = () => console.log('[avatar] video track ended');
+        event.track.onunmute = () => playMedia(videoEl);
         playMedia(videoEl);
       } else if (event.track.kind === 'audio') {
         this.audioStream = stream;
@@ -185,18 +173,12 @@ export class AvatarPresenter {
       }
     };
 
-    // Log ICE connection state changes for diagnostics
     this.peerConnection.oniceconnectionstatechange = () => {
       const state = this.peerConnection?.iceConnectionState;
-      console.log('[avatar] ICE state:', state);
       if (state === 'failed') {
         this.options.onError('WebRTC ICE connection failed. Check network/firewall.');
         this.options.onStatus('error');
       }
-    };
-
-    this.peerConnection.onconnectionstatechange = () => {
-      console.log('[avatar] peer state:', this.peerConnection?.connectionState);
     };
 
     // Wrap startAvatarAsync with a 30s timeout — it can hang silently on network issues
