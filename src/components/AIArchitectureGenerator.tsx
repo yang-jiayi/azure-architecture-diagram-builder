@@ -445,46 +445,8 @@ IMPORTANT: Return the COMPLETE architecture JSON (all services, groups, connecti
             </div>
 
             <div className="modal-body">
-              <div className="mode-toggle" role="tablist" aria-label="Generation mode">
-                <button
-                  role="tab"
-                  aria-selected={mode === 'topology'}
-                  className={`mode-toggle-btn ${mode === 'topology' ? 'active' : ''}`}
-                  onClick={() => handleModeChange('topology')}
-                  disabled={isGenerating}
-                  type="button"
-                >
-                  <Network size={16} />
-                  <span className="mode-label">Topology</span>
-                  <span className="mode-sub">Deployable network diagram</span>
-                </button>
-                {/* Reference (swim-lane) mode hidden — Blueprint replaces it. Code path kept for now in case we want to restore. */}
-                <button
-                  role="tab"
-                  aria-selected={mode === 'blueprint'}
-                  className={`mode-toggle-btn ${mode === 'blueprint' ? 'active' : ''}`}
-                  onClick={() => handleModeChange('blueprint')}
-                  disabled={isGenerating}
-                  type="button"
-                >
-                  <PenTool size={16} />
-                  <span className="mode-label">Blueprint <span className="mode-badge-beta">BETA</span></span>
-                  <span className="mode-sub">Hand-drawn whiteboard diagram</span>
-                </button>
-                <button
-                  role="tab"
-                  aria-selected={mode === 'both'}
-                  className={`mode-toggle-btn ${mode === 'both' ? 'active' : ''}`}
-                  onClick={() => handleModeChange('both')}
-                  disabled={isGenerating}
-                  type="button"
-                >
-                  <Layers size={16} />
-                  <span className="mode-label">Both <span className="mode-badge-beta">BETA</span></span>
-                  <span className="mode-sub">Topology + Blueprint</span>
-                </button>
-              </div>
-
+             <div className="modal-body-grid">
+              <div className="modal-col modal-col-left">
               <p className="modal-description">
                 {mode === 'reference' ? (
                   <>Describe the workload in plain English and AI will generate a <strong>publication-style reference architecture</strong> with stages (Ingest → Process → Serve), a foundation strip, and cross-cutting governance rails — in the style of the Azure Architecture Center.</>
@@ -551,7 +513,47 @@ IMPORTANT: Return the COMPLETE architecture JSON (all services, groups, connecti
                   </div>
                 </div>
               )}
-
+              </div>
+              <div className="modal-col modal-col-right">
+              <div className="mode-toggle" role="tablist" aria-label="Generation mode">
+                <button
+                  role="tab"
+                  aria-selected={mode === 'topology'}
+                  className={`mode-toggle-btn ${mode === 'topology' ? 'active' : ''}`}
+                  onClick={() => handleModeChange('topology')}
+                  disabled={isGenerating}
+                  type="button"
+                >
+                  <Network size={16} />
+                  <span className="mode-label">Topology</span>
+                  <span className="mode-sub">Deployable network diagram</span>
+                </button>
+                {/* Reference (swim-lane) mode hidden — Blueprint replaces it. Code path kept for now in case we want to restore. */}
+                <button
+                  role="tab"
+                  aria-selected={mode === 'blueprint'}
+                  className={`mode-toggle-btn ${mode === 'blueprint' ? 'active' : ''}`}
+                  onClick={() => handleModeChange('blueprint')}
+                  disabled={isGenerating}
+                  type="button"
+                >
+                  <PenTool size={16} />
+                  <span className="mode-label">Blueprint <span className="mode-badge-beta">BETA</span></span>
+                  <span className="mode-sub">Hand-drawn whiteboard diagram</span>
+                </button>
+                <button
+                  role="tab"
+                  aria-selected={mode === 'both'}
+                  className={`mode-toggle-btn ${mode === 'both' ? 'active' : ''}`}
+                  onClick={() => handleModeChange('both')}
+                  disabled={isGenerating}
+                  type="button"
+                >
+                  <Layers size={16} />
+                  <span className="mode-label">Both <span className="mode-badge-beta">BETA</span></span>
+                  <span className="mode-sub">Topology + Blueprint</span>
+                </button>
+              </div>
               <div className="example-prompts">
                 <h3>Example Prompts</h3>
                 <div className="example-list">
@@ -576,6 +578,8 @@ IMPORTANT: Return the COMPLETE architecture JSON (all services, groups, connecti
                   ))}
                 </div>
               </div>
+              </div>
+             </div>
             </div>
 
             <div className="modal-footer">

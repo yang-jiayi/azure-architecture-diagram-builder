@@ -130,12 +130,37 @@
   background: white;
   border-radius: 12px;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-  max-width: 900px;
-  width: 92%;
+  max-width: 1200px;
+  width: 94%;
   max-height: 90vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+.modal-body-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+@media (min-width: 900px) {
+  .modal-body-grid {
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  }
+}
+
+.modal-col {
+  min-width: 0;
+}
+
+@media (min-width: 900px) {
+  .modal-col-right .example-prompts {
+    max-height: 52vh;
+    overflow-y: auto;
+    padding-right: 0.5rem;
+  }
 }
 
 .modal-header {
