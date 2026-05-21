@@ -37,11 +37,10 @@ const WorkflowPanel: React.FC<WorkflowPanelProps> = ({
   const videoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const presenterRef = useRef<AvatarPresenter | null>(null);
-  // Word-index ranges per step, populated when narration starts; used by the
-  // wordBoundary callback (closure) to map current word -> active step.
-  const stepRangesRef = useRef<Array<{ step: number; start: number; end: number; services: string[] }>>([]);
   const activeStepRef = useRef<number | null>(null);
   const stepElRefs = useRef<Record<number, HTMLDivElement | null>>({});
+  // Cancellation flag for the per-step narration loop. Set by Stop / Dismiss.
+  const cancelledRef = useRef<boolean>(false);
   const isSpeechConfigured = !!import.meta.env.VITE_SPEECH_REGION;
 
   // Draggable + resizable avatar panel
@@ -58,53 +57,6 @@ const WorkflowPanel: React.FC<WorkflowPanelProps> = ({
   useEffect(() => {
     return () => { presenterRef.current?.disconnect(); };
   }, []);
-
-  // Build narration text + per-step word-index ranges in one pass so the
-  // wordBoundary callback can derive the active step.
-  const buildNarration = (): { text: string; ranges: Array<{ step: number; start: number; end: number; services: string[] }> } => {
-    const ranges: Array<{ step: number; start: number; end: number; services: string[] }> = [];
-    const segments: string[] = [];
-    let wordCount = 0;
-    for (const s of workflow) {
-      const segment = `Step ${s.step}: ${s.description}`;
-      const segWords = segment.split(/\s+/).filter(Boolean).length;
-      ranges.push({
-        step: s.step,
-        start: wordCount,
-        end: wordCount + segWords - 1,
-        services: s.services ?? [],
-      });
-      wordCount += segWords;
-      segments.push(segment);
-    }
-    return { text: segments.join('. '), ranges };
-  };
-
-  // Single onWord handler used by the avatar presenter. Reads refs so it always
-  // sees the latest ranges without needing to be reconstructed per session.
-  const handleWord = (idx: number) => {
-    setCaptionWordIdx(idx);
-    if (idx < 0) {
-      if (activeStepRef.current !== null) {
-        activeStepRef.current = null;
-        setActiveStepNum(null);
-        onServiceLeave?.();
-      }
-      return;
-    }
-    const ranges = stepRangesRef.current;
-    const r = ranges.find(r => idx >= r.start && idx <= r.end);
-    const newStep = r?.step ?? null;
-    if (newStep !== activeStepRef.current) {
-      activeStepRef.current = newStep;
-      setActiveStepNum(newStep);
-      if (newStep !== null && r) {
-        onServiceHover?.(r.services);
-      } else {
-        onServiceLeave?.();
-      }
-    }
-  };
 
   // Auto-scroll the active step into view as narration progresses.
   useEffect(() => {
@@ -126,18 +78,36 @@ const WorkflowPanel: React.FC<WorkflowPanelProps> = ({
           voice: import.meta.env.VITE_AVATAR_VOICE || 'en-US-AvaMultilingualNeural',
           onStatus: setAvatarStatus,
           onError: (msg) => setAvatarError(msg),
-          onWord: handleWord,
+          onWord: (idx) => setCaptionWordIdx(idx),
         });
         presenterRef.current = presenter;
         await presenter.connect(videoRef.current, audioRef.current);
       }
-      const { text, ranges } = buildNarration();
-      stepRangesRef.current = ranges;
-      setCaptionWords(text.split(/\s+/).filter(Boolean));
-      setCaptionWordIdx(-1);
+      cancelledRef.current = false;
       activeStepRef.current = null;
       setActiveStepNum(null);
-      await presenterRef.current!.speak(text);
+      // Speak each step in sequence; advance the highlight before each call.
+      // AvatarSynthesizer.speakTextAsync resolves when the segment finishes
+      // playing, giving us natural step-level sync without bookmark events.
+      for (const step of workflow) {
+        if (cancelledRef.current) break;
+        activeStepRef.current = step.step;
+        setActiveStepNum(step.step);
+        onServiceHover?.(step.services ?? []);
+        const segText = `Step ${step.step}. ${step.description}`;
+        setCaptionWords(segText.split(/\s+/).filter(Boolean));
+        setCaptionWordIdx(-1);
+        try {
+          await presenterRef.current!.speak(segText);
+        } catch {
+          // stopSpeaking or dismiss interrupts the SDK promise; bail out cleanly.
+          break;
+        }
+      }
+      activeStepRef.current = null;
+      setActiveStepNum(null);
+      onServiceLeave?.();
+      setCaptionWords([]);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       setAvatarError(msg);
@@ -148,13 +118,15 @@ const WorkflowPanel: React.FC<WorkflowPanelProps> = ({
   const handleNarrateClick = (e: React.MouseEvent) => {
     e.stopPropagation(); // prevent collapsing the panel
     if (avatarStatus === 'speaking') {
-      presenterRef.current?.stopSpeaking();
+      cancelledRef.current = true;
+      void presenterRef.current?.stopSpeaking();
     } else {
       void startNarration();
     }
   };
 
   const handleDismissAvatar = () => {
+    cancelledRef.current = true;
     presenterRef.current?.disconnect();
     presenterRef.current = null;
     setAvatarStatus('idle');
@@ -163,7 +135,6 @@ const WorkflowPanel: React.FC<WorkflowPanelProps> = ({
     setCaptionWordIdx(-1);
     activeStepRef.current = null;
     setActiveStepNum(null);
-    stepRangesRef.current = [];
     onServiceLeave?.();
     resetAvatarGeom();
   };
@@ -288,7 +259,7 @@ const WorkflowPanel: React.FC<WorkflowPanelProps> = ({
         {(avatarStatus === 'ready' || avatarStatus === 'speaking') && (
           <div className="workflow-avatar-panel-controls">
             {avatarStatus === 'speaking'
-              ? <button className="workflow-avatar-action-btn stop" onClick={() => presenterRef.current?.stopSpeaking()}><StopCircle size={13} /> Stop</button>
+              ? <button className="workflow-avatar-action-btn stop" onClick={() => { cancelledRef.current = true; void presenterRef.current?.stopSpeaking(); }}><StopCircle size={13} /> Stop</button>
               : <button className="workflow-avatar-action-btn" onClick={() => void startNarration()}><MonitorPlay size={13} /> Re-narrate</button>}
           </div>
         )}
