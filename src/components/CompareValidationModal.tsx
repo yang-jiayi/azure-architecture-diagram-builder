@@ -1,10 +1,12 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-import React, { useState } from 'react';
-import { X, Loader2, Clock, Zap, CheckCircle, AlertCircle, GitCompare, FileJson, FileText, Shield, AlertTriangle, Info } from 'lucide-react';
-import { isAzureOpenAIConfigured } from '../services/azureOpenAI';
+import React, { useState, useRef, useEffect } from 'react';
+import { X, Loader2, Clock, Zap, CheckCircle, AlertCircle, GitCompare, FileJson, FileText, Shield, AlertTriangle, Info, Brain, MonitorPlay, StopCircle } from 'lucide-react';
+import { isAzureOpenAIConfigured, generateValidationCritique, ModelOverride } from '../services/azureOpenAI';
 import { validateArchitecture, ArchitectureValidation, ValidationModelOverride, AIMetrics } from '../services/architectureValidator';
+import { useDraggableResizable } from '../hooks/useDraggableResizable';
+import { AvatarPresenter, AvatarStatus } from '../services/avatarPresenter';
 import {
   MODEL_CONFIG,
   ModelType,
@@ -13,6 +15,8 @@ import {
   getModelSettings,
 } from '../stores/modelSettingsStore';
 import './CompareValidationModal.css';
+// Critique + avatar panel styles live in CompareModelsModal.css (shared compare-* classes).
+import './CompareModelsModal.css';
 
 /** Abbreviate model name for filenames */
 function abbreviateModelForFile(model: ModelType): string {
@@ -72,6 +76,102 @@ const CompareValidationModal: React.FC<CompareValidationModalProps> = ({
   const [reasoningEffort, setReasoningEffort] = useState<ReasoningEffort>(currentSettings.reasoningEffort);
   const [isRunning, setIsRunning] = useState(false);
   const [results, setResults] = useState<ValidationComparisonResult[]>([]);
+
+  // --- AI Critique state ---
+  const [criticModel, setCriticModel] = useState<ModelType>(() => {
+    const avail = getAvailableModels();
+    return (avail.includes('gpt-5.4' as ModelType) ? 'gpt-5.4' : avail[avail.length - 1]) as ModelType;
+  });
+  const [critiqueText, setCritiqueText] = useState<string | null>(null);
+  const [critiqueByModel, setCritiqueByModel] = useState<ModelType | null>(null);
+  const [isCritiquing, setIsCritiquing] = useState(false);
+  const [critiqueError, setCritiqueError] = useState<string | null>(null);
+
+  // --- Avatar presenter state ---
+  const [avatarStatus, setAvatarStatus] = useState<AvatarStatus>('idle');
+  const [avatarError, setAvatarError] = useState<string | null>(null);
+  const [captionWords, setCaptionWords] = useState<string[]>([]);
+  const [captionWordIdx, setCaptionWordIdx] = useState<number>(-1);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const presenterRef = useRef<AvatarPresenter | null>(null);
+  const isSpeechConfigured = !!import.meta.env.VITE_SPEECH_REGION;
+
+  const { geom: avatarGeom, onDragStart, onResizeStart, reset: resetAvatarGeom } = useDraggableResizable({
+    initial: { x: Math.max(0, window.innerWidth - 420), y: Math.max(0, window.innerHeight - 420), w: 380, h: 360 },
+    minW: 260, minH: 220, maxW: 640, maxH: 600,
+  });
+
+  // Disconnect avatar when the modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      presenterRef.current?.disconnect();
+      presenterRef.current = null;
+      setAvatarStatus('idle');
+      setAvatarError(null);
+      setCaptionWords([]);
+      setCaptionWordIdx(-1);
+    }
+  }, [isOpen]);
+
+  /** Strip markdown syntax so TTS reads cleanly */
+  const stripMd = (s: string) =>
+    s.replace(/\*\*([^*]+)\*\*/g, '$1')
+     .replace(/\*([^*]+)\*/g, '$1')
+     .replace(/^#+\s*/gm, '')
+     .replace(/^[-*]\s/gm, '')
+     .trim();
+
+  /** Extract Ranking + Recommendation sections from the critique for TTS */
+  const extractPresentationText = (critique: string): string => {
+    const rankingMatch = critique.match(/##\s*Overall Ranking\s*([\s\S]*?)(?=\n##|$)/);
+    const recommendationMatch = critique.match(/##\s*Recommendation\s*([\s\S]*?)(?=\n##|$)/);
+    const parts: string[] = [];
+    if (rankingMatch) parts.push('Overall ranking. ' + stripMd(rankingMatch[1]));
+    if (recommendationMatch) parts.push('My recommendation: ' + stripMd(recommendationMatch[1]));
+    return parts.length > 0 ? parts.join('\n\n') : stripMd(critique.slice(0, 800));
+  };
+
+  const handlePresent = async () => {
+    if (!critiqueText) return;
+    setAvatarStatus('connecting');
+    await new Promise(resolve => setTimeout(resolve, 0));
+    if (!videoRef.current || !audioRef.current) return;
+    try {
+      if (!presenterRef.current?.isConnected) {
+        const presenter = new AvatarPresenter({
+          character: import.meta.env.VITE_AVATAR_CHARACTER || 'lisa',
+          style: import.meta.env.VITE_AVATAR_STYLE || 'casual-sitting',
+          voice: import.meta.env.VITE_AVATAR_VOICE || 'en-US-AvaMultilingualNeural',
+          onStatus: setAvatarStatus,
+          onError: (msg) => setAvatarError(msg),
+          onWord: (idx) => setCaptionWordIdx(idx),
+        });
+        presenterRef.current = presenter;
+        await presenter.connect(videoRef.current, audioRef.current);
+      }
+      const spokenText = extractPresentationText(critiqueText);
+      setCaptionWords(spokenText.split(/\s+/).filter(Boolean));
+      setCaptionWordIdx(-1);
+      await presenterRef.current!.speak(spokenText);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setAvatarError(msg);
+      setAvatarStatus('error');
+    }
+  };
+
+  const handleStopPresenting = () => presenterRef.current?.stopSpeaking();
+
+  const handleDismissAvatar = () => {
+    presenterRef.current?.disconnect();
+    presenterRef.current = null;
+    setAvatarStatus('idle');
+    setAvatarError(null);
+    setCaptionWords([]);
+    setCaptionWordIdx(-1);
+    resetAvatarGeom();
+  };
 
   const toggleModel = (model: ModelType) => {
     setSelectedModels(prev => {
@@ -160,6 +260,98 @@ const CompareValidationModal: React.FC<CompareValidationModalProps> = ({
       onApply(result.validation);
       onClose();
     }
+  };
+
+  /** Build a condensed text summary of all validation results for the critic model. */
+  const buildCritiqueSummary = (): string => {
+    const successful = results.filter(r => r.status === 'success');
+    return successful.map(r => {
+      const name = MODEL_CONFIG[r.model].displayName;
+      const pillars = (r.pillarScores || [])
+        .map(p => `${p.pillar} ${p.score}/100`).join(', ') || 'none';
+      const sevBreakdown = [
+        `${r.criticalCount || 0} critical`,
+        `${r.highCount || 0} high`,
+        `${r.mediumCount || 0} medium`,
+        `${r.lowCount || 0} low`,
+      ].join(', ');
+      // Top findings (cap to keep within token budget) — list every critical/high, sample mediums.
+      const topFindings: string[] = [];
+      for (const pillar of (r.validation?.pillars || [])) {
+        for (const f of (pillar.findings || [])) {
+          if (f.severity === 'critical' || f.severity === 'high') {
+            topFindings.push(`  - [${f.severity.toUpperCase()}] (${pillar.pillar}/${f.category}) ${f.issue} → ${f.recommendation}`);
+          }
+        }
+      }
+      // If no critical/high, surface a few mediums so the critic has something to evaluate.
+      if (topFindings.length === 0) {
+        for (const pillar of (r.validation?.pillars || [])) {
+          for (const f of (pillar.findings || []).slice(0, 2)) {
+            topFindings.push(`  - [${f.severity.toUpperCase()}] (${pillar.pillar}/${f.category}) ${f.issue} → ${f.recommendation}`);
+          }
+        }
+      }
+      const findingsBlock = topFindings.length > 0
+        ? `Top findings:\n${topFindings.slice(0, 12).join('\n')}`
+        : 'Top findings: (none surfaced)';
+      const quickWins = (r.validation?.quickWins || [])
+        .slice(0, 5)
+        .map(qw => `  - (${qw.category}) ${qw.recommendation}`)
+        .join('\n');
+      const quickWinsBlock = quickWins ? `Quick wins:\n${quickWins}` : 'Quick wins: (none)';
+      const summaryLine = r.validation?.summary ? `Summary: ${r.validation.summary}` : '';
+      return [
+        `### ${name}`,
+        `Overall score: ${r.overallScore}/100`,
+        `Pillar scores: ${pillars}`,
+        `Findings: ${r.totalFindings} total (${sevBreakdown})`,
+        summaryLine,
+        findingsBlock,
+        quickWinsBlock,
+      ].filter(Boolean).join('\n');
+    }).join('\n\n');
+  };
+
+  const runCritique = async () => {
+    setCritiqueText(null);
+    setCritiqueError(null);
+    setIsCritiquing(true);
+    const chosenModel = criticModel;
+    try {
+      const summary = buildCritiqueSummary();
+      const override: ModelOverride = {
+        model: chosenModel,
+        reasoningEffort: MODEL_CONFIG[chosenModel].isReasoning ? reasoningEffort : 'medium',
+      };
+      const { content } = await generateValidationCritique(
+        summary,
+        architectureDescription || '',
+        override
+      );
+      setCritiqueText(content);
+      setCritiqueByModel(chosenModel);
+    } catch (err: any) {
+      setCritiqueError(err.message || 'Failed to generate critique');
+    } finally {
+      setIsCritiquing(false);
+    }
+  };
+
+  /** Save only the AI critique as a standalone Markdown file. */
+  const saveCritiqueAsMd = () => {
+    if (!critiqueText || !critiqueByModel) return;
+    const ts = Date.now();
+    const reviewer = MODEL_CONFIG[critiqueByModel].displayName;
+    let md = `# AI Critique — Architecture Validation Comparison\n\n`;
+    md += `**Generated:** ${new Date().toISOString()}\n\n`;
+    if (architectureDescription) {
+      md += `**Architecture:** ${architectureDescription}\n\n`;
+    }
+    md += `**Reviewer Model:** ${reviewer}\n\n`;
+    md += `*AI-generated analysis — verify independently.*\n\n---\n\n`;
+    md += critiqueText;
+    downloadMarkdown(md, `validation-critique-${ts}-by-${reviewer.replace(/[^a-zA-Z0-9]/g, '')}.md`);
   };
 
   /** Download a single JSON blob */
@@ -314,6 +506,15 @@ const CompareValidationModal: React.FC<CompareValidationModalProps> = ({
         md += `\n`;
       }
       md += `---\n\n`;
+    }
+
+    // AI Critique (appended when generated)
+    if (critiqueText && critiqueByModel) {
+      md += `---\n\n`;
+      md += `## 🧠 AI Critique\n\n`;
+      md += `*Reviewer: ${MODEL_CONFIG[critiqueByModel].displayName} — AI-generated analysis, verify independently.*\n\n`;
+      md += critiqueText;
+      md += `\n\n`;
     }
 
     // Footer
@@ -501,7 +702,13 @@ const CompareValidationModal: React.FC<CompareValidationModalProps> = ({
                 {!isRunning && (
                   <button
                     className="compare-rerun-btn"
-                    onClick={() => { setResults([]); }}
+                    onClick={() => {
+                      setResults([]);
+                      setCritiqueText(null);
+                      setCritiqueError(null);
+                      setCritiqueByModel(null);
+                      handleDismissAvatar();
+                    }}
                     title="Clear results and try again"
                   >
                     New Comparison
@@ -624,6 +831,140 @@ const CompareValidationModal: React.FC<CompareValidationModalProps> = ({
               </div>
             </div>
           )}
+
+          {/* AI Critique section */}
+          {!isRunning && successResults.length >= 2 && (
+            <div className="compare-section">
+              <h3 className="compare-section-title">
+                <Brain size={16} style={{ marginRight: 6 }} />
+                AI Critique
+              </h3>
+              <div className="compare-critique-controls">
+                <span className="compare-critique-label">Critic model:</span>
+                <select
+                  className="compare-critique-model-select"
+                  value={criticModel}
+                  onChange={e => setCriticModel(e.target.value as ModelType)}
+                  disabled={isCritiquing}
+                >
+                  {availableModels.map(m => (
+                    <option key={m} value={m}>{MODEL_CONFIG[m].displayName}</option>
+                  ))}
+                </select>
+                <button
+                  className="compare-save-btn compare-critique-btn"
+                  onClick={runCritique}
+                  disabled={isCritiquing}
+                >
+                  {isCritiquing ? <Loader2 size={14} className="spinner" /> : <Brain size={14} />}
+                  {isCritiquing ? 'Analyzing...' : (critiqueText ? 'Regenerate Critique' : 'Generate AI Critique')}
+                </button>
+                {critiqueText && !isCritiquing && (
+                  <button
+                    className="compare-save-btn compare-save-report-btn"
+                    onClick={saveCritiqueAsMd}
+                    title="Save the AI critique as a standalone Markdown file"
+                  >
+                    <FileText size={14} />
+                    Save Critique
+                  </button>
+                )}
+                {critiqueText && !isCritiquing && isSpeechConfigured && (
+                  <button
+                    className={`compare-save-btn compare-avatar-btn${avatarStatus === 'speaking' ? ' active' : ''}`}
+                    onClick={avatarStatus === 'speaking' ? handleStopPresenting : handlePresent}
+                    disabled={avatarStatus === 'connecting'}
+                    title={avatarStatus === 'speaking' ? 'Stop the avatar presentation' : 'Have an AI avatar present the ranking and recommendation'}
+                  >
+                    {avatarStatus === 'connecting'
+                      ? <Loader2 size={14} className="spinner" />
+                      : avatarStatus === 'speaking'
+                      ? <StopCircle size={14} />
+                      : <MonitorPlay size={14} />}
+                    {avatarStatus === 'connecting' ? 'Connecting...' : avatarStatus === 'speaking' ? 'Stop' : 'Present'}
+                  </button>
+                )}
+              </div>
+              {critiqueError && (
+                <div className="compare-critique-error">{critiqueError}</div>
+              )}
+              {critiqueText && critiqueByModel && (
+                <div className="compare-critique-output">
+                  <div className="compare-critique-reviewer">
+                    Reviewed by {MODEL_CONFIG[critiqueByModel].displayName}
+                  </div>
+                  <pre className="compare-critique-text">{critiqueText}</pre>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Floating Avatar Presenter Panel — always in DOM so refs are populated */}
+        {/* eslint-disable-next-line @typescript-eslint/no-unnecessary-condition */}
+        <div
+          className="compare-avatar-panel"
+          style={avatarStatus === 'idle' ? { display: 'none' } : {
+            left: avatarGeom.x,
+            top: avatarGeom.y,
+            width: avatarGeom.w,
+            height: avatarGeom.h,
+          }}
+        >
+          <div className="compare-avatar-panel-header" onPointerDown={onDragStart}>
+            <span className="compare-avatar-panel-title">
+              {avatarStatus === 'connecting' && <Loader2 size={12} className="spinner" />}
+              {avatarStatus === 'connecting' ? ' Connecting...' :
+               avatarStatus === 'speaking' ? '▶ Presenting' :
+               avatarStatus === 'error' ? 'Error' : 'Ready'}
+            </span>
+            <button
+              className="compare-avatar-dismiss"
+              onClick={handleDismissAvatar}
+              onPointerDown={e => e.stopPropagation()}
+              title="Close"
+            >
+              ✕
+            </button>
+          </div>
+          <div className="compare-avatar-video-wrap">
+            {avatarStatus === 'connecting' && (
+              <div className="compare-avatar-connecting">
+                <Loader2 size={28} className="spinner" />
+                <span>Starting avatar session…</span>
+              </div>
+            )}
+            {avatarStatus === 'error' && (
+              <div className="compare-avatar-error-display">{avatarError}</div>
+            )}
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              className="compare-avatar-video"
+              style={{ display: avatarStatus === 'connecting' ? 'none' : 'block' }}
+            />
+            <audio ref={audioRef} autoPlay style={{ display: 'none' }} />
+          </div>
+          {captionWords.length > 0 && avatarStatus === 'speaking' && (
+            <div className="compare-avatar-captions">
+              {captionWords.map((word, i) => (
+                <span
+                  key={i}
+                  className={`compare-avatar-caption-word${i === captionWordIdx ? ' active' : ''}`}
+                >{word}{' '}</span>
+              ))}
+            </div>
+          )}
+          {(avatarStatus === 'ready' || avatarStatus === 'speaking') && critiqueText && (
+            <div className="compare-avatar-panel-controls">
+              {avatarStatus === 'speaking'
+                ? <button className="compare-avatar-action-btn stop" onClick={handleStopPresenting}><StopCircle size={13} /> Stop</button>
+                : <button className="compare-avatar-action-btn" onClick={handlePresent}><MonitorPlay size={13} /> Re-present</button>}
+            </div>
+          )}
+          <div className="avatar-resize-handle" onPointerDown={onResizeStart} title="Drag to resize" />
         </div>
       </div>
     </div>

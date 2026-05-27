@@ -1983,12 +1983,17 @@ function App() {
     setPanelsCollapsedSignal(prev => prev + 1);
 
     // Track architecture generation telemetry
+    const aiMetrics = (architecture as any)?.metrics || {};
     trackArchitectureGeneration({
+      model: aiMetrics.model,
+      reasoningEffort: aiMetrics.reasoningEffort,
       promptLength: prompt?.length,
       serviceCount: services?.length,
       connectionCount: connections?.length,
       groupCount: groups?.length,
       workflowStepCount: workflowSteps?.length,
+      elapsedTimeMs: aiMetrics.elapsedTimeMs,
+      totalTokens: aiMetrics.totalTokens,
       isModification: nodes.length > 0,
     });
 

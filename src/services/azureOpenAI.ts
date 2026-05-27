@@ -16,6 +16,7 @@ export interface AIMetrics {
   totalTokens: number;
   elapsedTimeMs: number;
   model?: string;
+  reasoningEffort?: string;
 }
 
 interface CallResult {
@@ -111,7 +112,8 @@ export async function callAzureOpenAI(messages: any[], modelOverride?: ModelOver
       completionTokens: parsed.completionTokens,
       totalTokens: parsed.totalTokens,
       elapsedTimeMs,
-      model: data.model
+      model: data.model || modelConfig.displayName,
+      reasoningEffort: modelConfig.isReasoning ? settings.reasoningEffort : 'none',
     };
     
     if (!content || content.trim().length === 0) {
@@ -340,6 +342,57 @@ specific architectural decisions that make it the right choice for these require
 Verify findings independently.*`;
 
   const userMessage = `Original requirements:\n${originalPrompt}\n\n---\n\n${summaryText}`;
+
+  const messages = [
+    { role: 'system', content: systemPrompt },
+    { role: 'user', content: userMessage },
+  ];
+
+  return callAzureOpenAI(messages, modelOverride, false);
+}
+
+/**
+ * Generate an AI critique of multiple WAF validation results for the SAME architecture.
+ * Unlike generateCritique (which ranks competing architectures), this function evaluates
+ * which reviewer model produced the most thorough, accurate, and actionable WAF validation.
+ * Returns plain-text / markdown content (not parsed as JSON).
+ */
+export async function generateValidationCritique(
+  summaryText: string,
+  architectureDescription: string,
+  modelOverride: ModelOverride
+): Promise<{ content: string; metrics: AIMetrics }> {
+  const systemPrompt = `You are a senior Azure cloud architect and impartial reviewer of \
+Well-Architected Framework (WAF) assessments. Multiple AI models have validated the SAME \
+Azure architecture against the five WAF pillars (Cost Optimization, Operational Excellence, \
+Performance Efficiency, Reliability, Security). Your job is to evaluate the QUALITY of each \
+model's validation — not the architecture itself.
+
+Your critique MUST use these exact markdown headings in order:
+
+## Overall Ranking
+Rank the reviewer models from best to worst based on the quality of their WAF assessment. \
+For each rank, give the model name in **bold** and one sentence explaining why (e.g., \
+thoroughness, accurate severity calibration, actionable recommendations, balanced pillar \
+coverage, or alignment with Microsoft WAF guidance).
+
+## Per-Model Analysis
+For each reviewer model, provide a brief analysis with exactly two bullet points:
+- **Strongest finding:** one specific, high-value issue the model surfaced that is clearly \
+correct and important
+- **Weakness or blind spot:** one specific gap — a missed risk, an over/under-rated severity, \
+a generic or vague recommendation, or a pillar that was under-analyzed
+
+## Recommendation
+State which model's validation you recommend adopting as the primary assessment, and why. \
+Provide 2–3 sentences citing specific findings, severity calibration, or pillar coverage \
+that make it the most trustworthy starting point for remediation work.
+
+---
+*This critique is AI-generated and may reflect the reviewer model's own architectural preferences. \
+Verify findings independently.*`;
+
+  const userMessage = `Architecture being validated:\n${architectureDescription || '(no description provided)'}\n\n---\n\n${summaryText}`;
 
   const messages = [
     { role: 'system', content: systemPrompt },
