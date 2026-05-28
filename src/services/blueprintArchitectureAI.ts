@@ -216,7 +216,7 @@ J. Use SHORT VERB-FIRST labels: "Send telemetry", "Ingest stream", "Store raw", 
 K. IDENTITY / OAUTH FLOW DIRECTION IS STRICT — Microsoft Entra ID is an IdP that workloads delegate to; end users do NOT sign in to Entra ID directly as their first hop unless Entra ID is the diagram's primary subject. For web apps, APIs, and any workload protected by Entra ID:
    • The user's first edge MUST go to the application entry point (Front Door, Application Gateway, API Management, App Service, Container Apps, etc.) — NOT directly to Microsoft Entra ID.
    • The application (or its ingress) is what calls Entra ID for sign-in / token validation. Use an edge FROM the workload TO Microsoft Entra ID with a label like "Authenticate user", "Validate token", or "Acquire token". This is the OAuth/OIDC redirect or on-behalf-of pattern, not a direct user-to-IdP step.
-   • An edge `user → Microsoft Entra ID` labeled "Sign in" is INVALID for any diagram whose subject is a web app, API, or enterprise workload. The correct shape is `user → app-ingress` (step 1, label "Browse app" / "HTTPS request") then `app-ingress → Microsoft Entra ID` (step 2, label "Authenticate user" / "Validate token").
+   • An edge 'user → Microsoft Entra ID' labeled "Sign in" is INVALID for any diagram whose subject is a web app, API, or enterprise workload. The correct shape is 'user → app-ingress' (step 1, label "Browse app" / "HTTPS request") then 'app-ingress → Microsoft Entra ID' (step 2, label "Authenticate user" / "Validate token").
    • Exception: if the diagram's explicit subject is identity itself (e.g., "Entra ID Conditional Access flow", "Entra ID B2C onboarding"), then user → Entra ID IS the correct first hop.
 
 Content rules:
