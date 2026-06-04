@@ -680,3 +680,109 @@ body.dark-mode .finding-item.selected {
 body.dark-mode .finding-item.selected .finding-header {
   background-color: rgba(59, 130, 246, 0.15);
 }
+
+/* --------------------------------------------------------------------------
+   Maturity view - band pills, gaps summary, numeric-score toggle
+   -------------------------------------------------------------------------- */
+
+.modal-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.score-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #6b7280;
+  cursor: pointer;
+  user-select: none;
+}
+
+.score-toggle input {
+  cursor: pointer;
+  margin: 0;
+}
+
+/* Band mark shown inside the score circle when numeric score is hidden */
+.score-band-mark {
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.1;
+  text-align: center;
+  padding: 0 8px;
+  max-width: 100%;
+  overflow-wrap: break-word;
+}
+
+/* Overall maturity headline row */
+.maturity-headline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 4px 0 10px 0;
+}
+
+.maturity-band-pill {
+  display: inline-flex;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 3px 12px;
+  border: 1.5px solid currentColor;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.maturity-band-pill.small {
+  font-size: 12px;
+  padding: 2px 10px;
+}
+
+.gaps-summary {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.numeric-score-aside {
+  font-size: 13px;
+  font-weight: 600;
+  color: #9ca3af;
+}
+
+/* Per-pillar assessment cluster (band + gaps + optional score) */
+.pillar-assessment {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.pillar-gaps {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* Dark mode */
+body.dark-mode .score-toggle {
+  color: #9ca3af;
+}
+
+body.dark-mode .gaps-summary,
+body.dark-mode .pillar-gaps {
+  color: #9ca3af;
+}
+
+body.dark-mode .numeric-score-aside {
+  color: #7a8599;
+}
+
+body.dark-mode .score-band-mark {
+  /* color is set inline from the band descriptor */
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
