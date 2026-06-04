@@ -5,6 +5,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { X, Loader2, Clock, Zap, CheckCircle, AlertCircle, GitCompare, FileJson, FileText, Shield, AlertTriangle, Info, Brain, MonitorPlay, StopCircle } from 'lucide-react';
 import { isAzureOpenAIConfigured, generateValidationCritique, ModelOverride } from '../services/azureOpenAI';
 import { validateArchitecture, ArchitectureValidation, ValidationModelOverride, AIMetrics } from '../services/architectureValidator';
+import { bandLabel } from '../services/wafMaturity';
 import { useDraggableResizable } from '../hooks/useDraggableResizable';
 import { AvatarPresenter, AvatarStatus } from '../services/avatarPresenter';
 import {
@@ -425,15 +426,16 @@ const CompareValidationModal: React.FC<CompareValidationModalProps> = ({
 
     // Summary table
     md += `## 📊 Overall Comparison\n\n`;
-    md += `| Model | Score | Findings | Critical | High | Medium | Low | Quick Wins | Time | Tokens |\n`;
-    md += `|-------|-------|----------|----------|------|--------|-----|------------|------|--------|\n`;
+    md += `| Model | Maturity | Score | Findings | Critical | High | Medium | Low | Quick Wins | Time | Tokens |\n`;
+    md += `|-------|----------|-------|----------|----------|------|--------|-----|------------|------|--------|\n`;
     for (const r of successful) {
       const name = MODEL_CONFIG[r.model].displayName;
       const scoreIcon = (r.overallScore || 0) >= 80 ? '🟢' : (r.overallScore || 0) >= 60 ? '🟡' : '🔴';
+      const maturity = bandLabel(r.overallScore || 0);
       const time = r.metrics ? `${(r.metrics.elapsedTimeMs / 1000).toFixed(1)}s` : '-';
       const tokens = r.metrics?.totalTokens?.toLocaleString() || '-';
       const best = r.overallScore === highestScore ? ' ⭐' : '';
-      md += `| ${name}${best} | ${scoreIcon} ${r.overallScore}/100 | ${r.totalFindings} | ${r.criticalCount} | ${r.highCount} | ${r.mediumCount} | ${r.lowCount} | ${r.quickWinCount} | ${time} | ${tokens} |\n`;
+      md += `| ${name}${best} | ${maturity} | ${scoreIcon} ${r.overallScore}/100 | ${r.totalFindings} | ${r.criticalCount} | ${r.highCount} | ${r.mediumCount} | ${r.lowCount} | ${r.quickWinCount} | ${time} | ${tokens} |\n`;
     }
     md += `\n`;
 
@@ -476,7 +478,7 @@ const CompareValidationModal: React.FC<CompareValidationModalProps> = ({
     md += `## 📋 Detailed Findings by Model\n\n`;
     for (const r of successful) {
       const name = MODEL_CONFIG[r.model].displayName;
-      md += `### ${name} — Score: ${r.overallScore}/100\n\n`;
+      md += `### ${name} — ${bandLabel(r.overallScore || 0)} (${r.overallScore}/100)\n\n`;
 
       if (r.validation?.summary) {
         md += `**Summary:** ${r.validation.summary}\n\n`;
@@ -746,6 +748,9 @@ const CompareValidationModal: React.FC<CompareValidationModalProps> = ({
                             <span className="cv-score-value">{result.overallScore}</span>
                             <span className="cv-score-label">/ 100</span>
                           </div>
+                          <span className="cv-score-band" style={{ color: scoreColor(result.overallScore || 0) }}>
+                            {bandLabel(result.overallScore || 0)}
+                          </span>
                           {result.overallScore === highestScore && (
                             <span className="compare-badge cv-badge-score">Best Score</span>
                           )}

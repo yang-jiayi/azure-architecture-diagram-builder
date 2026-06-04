@@ -5,6 +5,8 @@ import React, { useState } from 'react';
 import { X, AlertTriangle, CheckCircle, Info, Download, RefreshCw, Clock, Zap, Database, Cpu } from 'lucide-react';
 import { ArchitectureValidation, ValidationFinding, formatValidationReport } from '../services/architectureValidator';
 import { generateModelFilename } from '../utils/modelNaming';
+import { scoreToBand, summarizeGaps, formatGapsSummary, formatPillarGaps } from '../services/wafMaturity';
+import { useValidationDisplayPrefs } from '../stores/validationDisplayStore';
 import './ValidationModal.css';
 
 /**
@@ -27,6 +29,8 @@ interface ValidationModalProps {
 const ValidationModal: React.FC<ValidationModalProps> = ({ validation, isOpen, onClose, isLoading, onApplyRecommendations, onRevalidate }) => {
   // Track selected findings for applying recommendations
   const [selectedFindings, setSelectedFindings] = useState<Set<string>>(new Set());
+  // Display preference: show the raw 0-100 score alongside the maturity band
+  const [displayPrefs, setDisplayPrefs] = useValidationDisplayPrefs();
   
   if (!isOpen) return null;
 
@@ -102,21 +106,6 @@ const ValidationModal: React.FC<ValidationModalProps> = ({ validation, isOpen, o
   };
 
   /**
-   * Returns color based on validation score (0-100)
-   * Green: 80+, Yellow: 60-79, Orange: 40-59, Red: <40
-   */
-  /**
-   * Returns color based on validation score (0-100)
-   * Green: 80+, Yellow: 60-79, Orange: 40-59, Red: <40
-   */
-  const getScoreColor = (score: number) => {
-    if (score >= 80) return '#10b981'; // Green
-    if (score >= 60) return '#f59e0b'; // Yellow
-    if (score >= 40) return '#f97316'; // Orange
-    return '#ef4444'; // Red
-  };
-
-  /**
    * Downloads validation results as markdown file with timestamp
    */
   const handleDownload = () => {
@@ -151,9 +140,21 @@ const ValidationModal: React.FC<ValidationModalProps> = ({ validation, isOpen, o
       <div className="modal-content validation-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2>🔍 Architecture Validation</h2>
-          <button className="modal-close" onClick={onClose} title="Hide">
-            <X size={24} />
-          </button>
+          <div className="modal-header-actions">
+            {validation && (
+              <label className="score-toggle" title="Show the underlying 0-100 numeric score alongside the maturity band">
+                <input
+                  type="checkbox"
+                  checked={displayPrefs.showNumericScore}
+                  onChange={(e) => setDisplayPrefs({ showNumericScore: e.target.checked })}
+                />
+                <span>Show numeric score</span>
+              </label>
+            )}
+            <button className="modal-close" onClick={onClose} title="Hide">
+              <X size={24} />
+            </button>
+          </div>
         </div>
 
         {isLoading ? (
@@ -193,21 +194,44 @@ const ValidationModal: React.FC<ValidationModalProps> = ({ validation, isOpen, o
         ) : validation ? (
           <>
             <div className="modal-body">
-            {/* Overall Score Section - Circular progress indicator with score */}
+            {/* Overall Assessment - maturity band (numeric score optional) */}
+            {(() => {
+              const overall = scoreToBand(validation.overallScore);
+              const allFindings = validation.pillars.flatMap(p => p.findings);
+              const gaps = summarizeGaps(allFindings);
+              return (
             <div className="validation-score">
               <div 
                 className="score-circle" 
                 style={{ 
-                  background: `conic-gradient(${getScoreColor(validation.overallScore)} ${validation.overallScore * 3.6}deg, #e5e7eb 0deg)` 
+                  background: `conic-gradient(${overall.color} ${validation.overallScore * 3.6}deg, #e5e7eb 0deg)` 
                 }}
+                title={displayPrefs.showNumericScore ? undefined : 'Diagram-only, design-time signal — not a deployed-environment audit'}
               >
                 <div className="score-inner">
-                  <span className="score-value">{validation.overallScore}</span>
-                  <span className="score-label">/100</span>
+                  {displayPrefs.showNumericScore ? (
+                    <>
+                      <span className="score-value">{validation.overallScore}</span>
+                      <span className="score-label">/100</span>
+                    </>
+                  ) : (
+                    <span className="score-band-mark" style={{ color: overall.color }}>
+                      {overall.short}
+                    </span>
+                  )}
                 </div>
               </div>
               <div className="score-summary">
                 <h3>Overall Assessment</h3>
+                <div className="maturity-headline">
+                  <span className="maturity-band-pill" style={{ borderColor: overall.color, color: overall.color }}>
+                    {overall.label}
+                  </span>
+                  <span className="gaps-summary">{formatGapsSummary(gaps)}</span>
+                  {displayPrefs.showNumericScore && (
+                    <span className="numeric-score-aside">{validation.overallScore}/100</span>
+                  )}
+                </div>
                 <p>{validation.summary}</p>
                 {validation.metrics && (
                   <div className="ai-metrics-validation">
@@ -229,20 +253,36 @@ const ValidationModal: React.FC<ValidationModalProps> = ({ validation, isOpen, o
                 )}
               </div>
             </div>
+              );
+            })()}
 
             {/* Five Pillars Section - Individual assessments for each WAF pillar */}
             <div className="pillars-section">
               <h3>Five Pillars Assessment</h3>
-              {validation.pillars.map((pillar, index) => (
+              {validation.pillars.map((pillar, index) => {
+                const pillarBand = scoreToBand(pillar.score);
+                const pillarGaps = summarizeGaps(pillar.findings);
+                return (
                 <div key={index} className="pillar-card">
                   <div className="pillar-header">
                     <h4>{pillar.pillar}</h4>
-                    <span 
-                      className="pillar-score"
-                      style={{ color: getScoreColor(pillar.score) }}
-                    >
-                      {pillar.score}/100
-                    </span>
+                    <div className="pillar-assessment">
+                      <span
+                        className="maturity-band-pill small"
+                        style={{ borderColor: pillarBand.color, color: pillarBand.color }}
+                      >
+                        {pillarBand.label}
+                      </span>
+                      <span className="pillar-gaps">{formatPillarGaps(pillarGaps)}</span>
+                      {displayPrefs.showNumericScore && (
+                        <span 
+                          className="pillar-score"
+                          style={{ color: pillarBand.color }}
+                        >
+                          {pillar.score}/100
+                        </span>
+                      )}
+                    </div>
                   </div>
                   
                   {pillar.findings.length > 0 && (
@@ -289,7 +329,8 @@ const ValidationModal: React.FC<ValidationModalProps> = ({ validation, isOpen, o
                     </div>
                   )}
                 </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Quick Wins Section - High-priority actionable items */}
