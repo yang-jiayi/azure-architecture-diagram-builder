@@ -398,7 +398,7 @@
         "y": 1155
       },
       "data": {
-        "label": "r2d2-foundry-001",
+        "label": "my-foundry-resource",
         "iconPath": "/Azure_Public_Service_Icons/Icons/ai + machine learning/cognitive-services.svg"
       },
       "parentNode": "cognitive",

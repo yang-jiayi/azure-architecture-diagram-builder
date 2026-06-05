@@ -28,7 +28,8 @@ cd "$ROOT"
 
 WITH_MCP=0
 SKIP_AZ_CHECK=0
-EXPECTED_SUB="7a28b21e-0d3e-4435-a686-d92889d4ee96"
+# Optional: set AZURE_SUBSCRIPTION_ID (e.g. in .env) to warn when the active
+# Azure CLI subscription differs from the expected one. No ID is hardcoded.
 
 for arg in "$@"; do
   case "$arg" in
@@ -84,7 +85,8 @@ if [ "$SKIP_AZ_CHECK" -eq 0 ]; then
     SUB_ID=$(az account show --query id -o tsv)
     USER=$(az account show --query user.name -o tsv)
     TENANT=$(az account show --query tenantId -o tsv)
-    if [ "$SUB_ID" != "$EXPECTED_SUB" ]; then
+    EXPECTED_SUB="${AZURE_SUBSCRIPTION_ID:-}"
+    if [ -n "$EXPECTED_SUB" ] && [ "$SUB_ID" != "$EXPECTED_SUB" ]; then
       warn "Active subscription is $SUB_ID, expected $EXPECTED_SUB"
       warn "Run: az account set --subscription $EXPECTED_SUB"
     fi

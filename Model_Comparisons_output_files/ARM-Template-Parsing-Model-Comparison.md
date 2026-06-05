@@ -44,7 +44,7 @@ After GPT-5.2 (Low) generated the initial diagram with orthogonal edges, the dia
 
 | Azure Service | GPT-4.1 Mini | GPT-4.1 | GPT-5.2 Low | +GPT-4.1 Labels |
 |---|:---:|:---:|:---:|:---:|
-| **Azure OpenAI / Cognitive Services** (r2d2-foundry-001) | ✅ | ✅ | ✅ | ✅ |
+| **Azure OpenAI / Cognitive Services** (my-foundry-resource) | ✅ | ✅ | ✅ | ✅ |
 | **Azure OpenAI** (r2d2-hosted-agents) | ✅ | ✅ | ✅ | ✅ |
 | **Azure OpenAI** (r2d2-sweden-central) | ✅ | ✅ | ✅ | ✅ |
 | **Document Intelligence** (AQ-DOC-INTEL) | ✅ | ✅ | ✅ | ✅ |

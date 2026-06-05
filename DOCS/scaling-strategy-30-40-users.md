@@ -28,7 +28,7 @@ A single architecture generation consumes **3,000–8,000+ tokens** (prompt + re
 
 #### Current Model Deployments & TPM Quotas (as of March 4, 2026)
 
-All deployments are **GlobalStandard** on `r2d2-foundry-001.cognitiveservices.azure.com` (AQ-FOUNDRY-RG).
+All deployments are **GlobalStandard** on `my-foundry-resource.cognitiveservices.azure.com` (MY-FOUNDRY-RG).
 
 | Model | Deployment Name | TPM | RPM | Retirement | Est. Concurrent Users* |
 |---|---|---|---|---|---|

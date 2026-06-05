@@ -182,7 +182,7 @@
                             "env": [
                                 {
                                     "name": "AZURE_OPENAI_ENDPOINT",
-                                    "value": "https://r2d2-foundry-001.openai.azure.com/"
+                                    "value": "https://my-foundry-resource.openai.azure.com/"
                                 },
                                 {
                                     "name": "AZURE_OPENAI_API_VERSION",
@@ -198,7 +198,7 @@
                                 },
                                 {
                                     "name": "AZURE_DOC_INTELLIGENCE_ENDPOINT",
-                                    "value": "https://aq-doc-intel.cognitiveservices.azure.com/"
+                                    "value": "https://my-doc-intel.cognitiveservices.azure.com/"
                                 }
                             ],
                             "resources": {

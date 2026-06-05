@@ -85,7 +85,7 @@ User sees the Azure Diagram Builder UI
 
 | Resource | Value |
 |----------|-------|
-| **Subscription ID** | `7a28b21e-0d3e-4435-a686-d92889d4ee96` |
+| **Subscription ID** | `00000000-0000-0000-0000-000000000000` |
 | **Resource Group** | `azure-diagrams-rg` |
 | **Container App** | `azure-diagram-builder` |
 | **Container App Environment** | `aca-env-azure-diagrams` |
@@ -100,11 +100,11 @@ User sees the Azure Diagram Builder UI
 |----------|-------|
 | **Display Name** | Azure Diagram Builder Auth |
 | **Application (client) ID** | `aa379890-05eb-476c-a0f5-6c2c75ab4328` |
-| **Directory (tenant) ID** | `a172a259-b1c7-4944-b2e1-6d551f954711` |
+| **Directory (tenant) ID** | `11111111-1111-1111-1111-111111111111` |
 | **Sign-in audience** | `AzureADMyOrg` (single tenant) |
 | **Redirect URI** | `https://azure-diagram-builder.yellowmushroom-f11e57c2.eastus2.azurecontainerapps.io/.auth/login/aad/callback` |
 | **Client secret setting** | `microsoft-provider-authentication-secret` (stored in ACA secrets) |
-| **OpenID issuer** | `https://login.microsoftonline.com/a172a259-b1c7-4944-b2e1-6d551f954711/v2.0` |
+| **OpenID issuer** | `https://login.microsoftonline.com/11111111-1111-1111-1111-111111111111/v2.0` |
 
 ### Portal Links
 

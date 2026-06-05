@@ -280,14 +280,14 @@
       "dragging": false
     },
     {
-      "id": "svc-ext-openai-r2d2-foundry-001",
+      "id": "svc-ext-openai-my-foundry-resource",
       "type": "azureNode",
       "position": {
         "x": 365.3196843404878,
         "y": 1338.7079771411984
       },
       "data": {
-        "label": "r2d2-foundry-001 (Azure OpenAI endpoint)",
+        "label": "my-foundry-resource (Azure OpenAI endpoint)",
         "iconPath": "/Azure_Public_Service_Icons/Icons/ai + machine learning/03438-icon-service-Azure-OpenAI.svg"
       },
       "width": 171,
@@ -606,7 +606,7 @@
     {
       "id": "edge-13",
       "source": "svc-aca-customer-backend",
-      "target": "svc-ext-openai-r2d2-foundry-001",
+      "target": "svc-ext-openai-my-foundry-resource",
       "sourceHandle": "bottom",
       "targetHandle": "top",
       "animated": true,
@@ -629,7 +629,7 @@
     {
       "id": "edge-14",
       "source": "svc-aca-seller-backend",
-      "target": "svc-ext-openai-r2d2-foundry-001",
+      "target": "svc-ext-openai-my-foundry-resource",
       "sourceHandle": "bottom",
       "targetHandle": "top",
       "animated": true,

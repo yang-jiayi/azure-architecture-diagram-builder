@@ -31,6 +31,7 @@ import argparse
 import csv
 import datetime as dt
 import json
+import os
 import subprocess
 import sys
 import time
@@ -41,7 +42,8 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 OUT_DIR = REPO_ROOT / "Azure_cost_breakdowns" / "llm-cost-reports"
 
 # Defaults (overridable via CLI flags).
-DEFAULT_SUBSCRIPTION = "7a28b21e-0d3e-4435-a686-d92889d4ee96"
+# Subscription is read from the AZURE_SUBSCRIPTION_ID env var (no hardcoded ID).
+DEFAULT_SUBSCRIPTION = os.environ.get("AZURE_SUBSCRIPTION_ID", "")
 DEFAULT_RG = "AQ-FOUNDRY-RG"
 DEFAULT_APPINSIGHTS = "aq-app-insights-001"
 COST_API_VERSION = "2023-11-01"
@@ -91,6 +93,20 @@ def load_env_deployments(env_path: Path) -> dict[str, str]:
         if key in ENVVAR_TO_DISPLAY and val:
             raw[ENVVAR_TO_DISPLAY[key]] = val
     return raw
+
+
+def read_env_var(env_path: Path, name: str) -> str:
+    """Read a single ``NAME=value`` entry from a .env file (or "" if absent)."""
+    if not env_path.exists():
+        return ""
+    for line in env_path.read_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, val = line.partition("=")
+        if key.strip() == name:
+            return val.strip().strip('"').strip("'")
+    return ""
 
 
 def classify_meter(meter: str) -> str:
@@ -456,11 +472,20 @@ def build_report(args, env_deployments, cost_by_dep, cost_by_meter,
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--days", type=int, default=30, help="rolling window (default 30)")
-    ap.add_argument("--subscription", default=DEFAULT_SUBSCRIPTION)
+    ap.add_argument("--subscription", default=DEFAULT_SUBSCRIPTION,
+                    help="Azure subscription ID (default: $AZURE_SUBSCRIPTION_ID)")
     ap.add_argument("--rg", default=DEFAULT_RG)
     ap.add_argument("--app", default=DEFAULT_APPINSIGHTS)
     ap.add_argument("--env", default=str(REPO_ROOT / ".env"))
     args = ap.parse_args()
+
+    # Fall back to AZURE_SUBSCRIPTION_ID in .env if not set in the environment.
+    if not args.subscription:
+        args.subscription = read_env_var(Path(args.env), "AZURE_SUBSCRIPTION_ID")
+    if not args.subscription:
+        print("❌ No subscription ID. Set AZURE_SUBSCRIPTION_ID (env or .env) or pass "
+              "--subscription <id>.", file=sys.stderr)
+        return 2
 
     env_deployments = load_env_deployments(Path(args.env))
     if not env_deployments:
