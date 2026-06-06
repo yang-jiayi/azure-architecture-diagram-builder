@@ -1,0 +1,185 @@
+AI-generated content may be incorrect
+
+Akshay Kakar started transcription
+
+Ben Brauer
+0 minutes 3 seconds0:03
+Ben Brauer 0 minutes 3 seconds
+There are a set of technical workshops that Microsoft is developing for the conversations. And what this particular agent does is it helps to give kind of a score or reviews and then scores an architecture.
+
+Chris DePalma
+0 minutes 9 seconds0:09
+Chris DePalma 0 minutes 9 seconds
+And.
+Chris DePalma 0 minutes 10 seconds
+Teh.
+
+Ben Brauer
+0 minutes 23 seconds0:23
+Ben Brauer 0 minutes 23 seconds
+And so, these architectures, and these architectures, or this particular agent, could be used for within the unified, what is it? The.
+Ben Brauer 0 minutes 35 seconds
+A ubiquitous innovation conversation, and the and and so why this seemed relatively interesting for this technical workshop is that's part of the that's part of the this project is to come up with an architecture and then decide if this is.
+
+Sara Kandil
+0 minutes 36 seconds0:36
+Sara Kandil 0 minutes 36 seconds
+Ubiquitous, yeah, ubiquitous.
+
+Arturo Quiroga
+0 minutes 37 seconds0:37
+Arturo Quiroga 0 minutes 37 seconds
+Okay.
+
+Ben Brauer
+0 minutes 55 seconds0:55
+Ben Brauer 0 minutes 55 seconds
+what they really want to go put into production or start to build on, implement. And so this is an interesting way to think about the architecture and it enables this given workshop. If we already have something summer, great, let's talk about it.
+
+Arturo Quiroga
+0 minutes 57 seconds0:57
+Arturo Quiroga 0 minutes 57 seconds
+Mm-hmm.
+
+Ben Brauer
+1 minute 15 seconds1:15
+Ben Brauer 1 minute 15 seconds
+Also take a close look at the score. We'll talk a bit about that as well. And last thing I'll say along these lines is Arturo had developed a or had written A blog post on this particular agent.
+Arturo Quiroga 26 minutes 47 seconds
+It's not too high right now with 160 users, it's about $25 a month, but it can get higher, right?
+Arturo Quiroga 26 minutes 56 seconds
+If it is used by a lot of people, my leadership team already knows about it and they're willing to put it into another landing zone that is, you know, falls into the right budget.
+Arturo Quiroga 27 minutes 11 seconds
+Yeah, but right now, yeah, it the cost is not that much, but it wasn't later.
+
+Sara Kandil
+27 minutes 12 seconds27:12
+Sara Kandil 27 minutes 12 seconds
+Kol.
+
+Arturo Quiroga
+27 minutes 19 seconds27:19
+Arturo Quiroga 27 minutes 19 seconds
+But certainly, I'm open to more sessions with more people and explaining more about the details, and definitely, you know, collaborating with people on this.
+
+Sara Kandil
+27 minutes 20 seconds27:20
+Sara Kandil 27 minutes 20 seconds
+Teh.
+Sara Kandil 27 minutes 21 seconds
+Yes.
+Sara Kandil 27 minutes 29 seconds
+And you're the one currently maintaining this, right?
+
+Arturo Quiroga
+27 minutes 34 seconds27:34
+Arturo Quiroga 27 minutes 34 seconds
+Yes, I'm maintaining. I'm the only right now person maintaining it right now.
+
+Ben Brauer
+27 minutes 40 seconds27:40
+Ben Brauer 27 minutes 40 seconds
+Yeah, so as I was mentioning, I didn't mention at the beginning, but I have through the chat, is there's, this is an opportunity to showcase another really interesting agent that is just coming into fruition. We have a number of other agents as well that we.
+Ben Brauer 28 minutes 2 seconds
+We've been kind of demoing, if you will, and showcasing, so it's all mainly for inspiration and to, you know, get you interested in where we could potentially use these agents in your in technical workshops and also to figure out.
+Ben Brauer 28 minutes 21 seconds
+How we best kind of string them together, and it, you know, in the conversation we just had on this call.
+Ben Brauer 28 minutes 28 seconds
+One other thing that I'll point out is there is a platform that the the Learn team is building as an the ecosystems team is building that we could and should port this this type of agent onto mainly as a skill and Arturo I I meant I.
+Ben Brauer 28 minutes 48 seconds
+put that in our chat earlier. There's this new platform called the Learn Companion. It basically goes about creating a playground for skills that can then be interacting within the platform. And so
+
+Arturo Quiroga
+28 minutes 54 seconds28:54
+Arturo Quiroga 28 minutes 54 seconds
+Mm.
+
+Ben Brauer
+29 minutes 7 seconds29:07
+Ben Brauer 29 minutes 7 seconds
+Most of it's based on Learn MCP Server. So it actually has a nice integration with the various data. All the APIs that you mentioned earlier, like with the pricing API, for instance, that also is integrated as a skill into Playground. And so that gives you two things.
+
+Arturo Quiroga
+29 minutes 23 seconds29:23
+Arturo Quiroga 29 minutes 23 seconds
+Mm.
+Arturo Quiroga 29 minutes 25 seconds
+Mhm.
+
+Ben Brauer
+29 minutes 28 seconds29:28
+Ben Brauer 29 minutes 28 seconds
+One is a kind of a one platform on which to develop. And the 2nd is it gives consistency and sponsorship for this project.
+
+Arturo Quiroga
+29 minutes 33 seconds29:33
+Arturo Quiroga 29 minutes 33 seconds
+Mhm.
+Arturo Quiroga 29 minutes 40 seconds
+Correct.
+Arturo Quiroga 29 minutes 42 seconds
+So, got it, got it. Yeah, I got, I got. Let me, let me, let me get into that URL that you shared, and yeah, and let's continue the conversation on that, definitely.
+
+Ben Brauer
+29 minutes 43 seconds29:43
+Ben Brauer 29 minutes 43 seconds
+Teh.
+Ben Brauer 29 minutes 54 seconds
+Okay. All right.
+
+Arturo Quiroga
+29 minutes 56 seconds29:56
+Arturo Quiroga 29 minutes 56 seconds
+Teh.
+
+Sara Kandil
+29 minutes 56 seconds29:56
+Sara Kandil 29 minutes 56 seconds
+Ben, can you actually send this link to us? The, you said that it was, it's, it's learned, yeah, learned agent or?
+
+Ben Brauer
+30 minutes 3 seconds30:03
+Ben Brauer 30 minutes 3 seconds
+To learn.
+Ben Brauer 30 minutes 5 seconds
+Yellow and companion. Yeah, it was just announced today as a private preview for partner teams, internal partner teams to use. So partner not meaning like external partners, et cetera, et cetera, but like internal Microsoft teams. So, but yeah, I'll put this, put that in the chat as well.
+
+Sara Kandil
+30 minutes 13 seconds30:13
+Sara Kandil 30 minutes 13 seconds
+Okay.
+Sara Kandil 30 minutes 16 seconds
+Yeah, yeah.
+Sara Kandil 30 minutes 20 seconds
+Got it.
+Sara Kandil 30 minutes 24 seconds
+Okay.
+
+Ben Brauer
+30 minutes 24 seconds30:24
+Ben Brauer 30 minutes 24 seconds
+I'm sure you already have it.
+
+Arturo Quiroga
+30 minutes 25 seconds30:25
+Arturo Quiroga 30 minutes 25 seconds
+Yeah.
+Arturo Quiroga 30 minutes 27 seconds
+Yes, no, I do. Thank you so much for sending this up, Ben.
+
+Ben Brauer
+30 minutes 28 seconds30:28
+Ben Brauer 30 minutes 28 seconds
+Okay. All right, thanks. Yep. Talk to you all later. Bye.
+
+Sara Kandil
+30 minutes 31 seconds30:31
+Sara Kandil 30 minutes 31 seconds
+Thank you. Appreciate it.
+
+Arturo Quiroga
+30 minutes 32 seconds30:32
+Arturo Quiroga 30 minutes 32 seconds
+Thank you.
+
+Akshay Kakar stopped transcription
