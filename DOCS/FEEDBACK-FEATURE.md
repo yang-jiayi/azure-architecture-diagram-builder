@@ -65,7 +65,15 @@ For at-a-glance trends (no comment text), open the Application Insights workbook
 It is defined as code in [../infra/feedback-workbook.json](../infra/feedback-workbook.json)
 (idempotent ARM template — re-deploying updates the same workbook). Tiles: KPIs,
 average rating over time, rating distribution, feedback by category, comment
-engagement, and a recent-feedback grid.
+engagement, a recent-feedback grid, and a **Geography** section (feedback by
+location, external users by country, and a world map of sessions).
+
+> Geo note: App Insights auto-captures `client_CountryOrRegion` / `client_City`.
+> The "overall reach" tiles exclude the `Boydton` (Azure East US) cluster and
+> masked `0.0.0.0` IPs to filter out internal/test traffic — including the author's
+> own sessions, which route through Microsoft's network (Global Secure Access) and
+> therefore appear as Azure IPs rather than their real location. Raw IPs are treated
+> as PII and not surfaced; only country/city aggregates are shown.
 
 Re-deploy:
 

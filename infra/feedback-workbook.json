@@ -161,6 +161,77 @@
             }
           },
           "name": "recent-feedback"
+        },
+        {
+          "type": 1,
+          "content": {
+            "json": "## 🌍 Geography\nWhere usage and feedback come from. The **overall reach** tiles exclude the Azure datacenter cluster (`Boydton` / Microsoft network egress) and masked IPs, so they reflect genuine external users. Raw IPs are intentionally not shown (PII) — only country/city aggregates."
+          },
+          "name": "geo-header"
+        },
+        {
+          "type": 3,
+          "content": {
+            "version": "KqlItem/1.0",
+            "query": "customEvents\n| where name == 'User_Feedback'\n| where timestamp {TimeRange}\n| summarize Count = count(), ['Avg rating'] = round(avg(toint(customMeasurements.rating)), 2) by Country = client_CountryOrRegion, ['City/Region'] = strcat(client_City, ', ', client_StateOrProvince)\n| order by Count desc",
+            "size": 0,
+            "title": "Feedback by location",
+            "queryType": 0,
+            "resourceType": "microsoft.insights/components",
+            "visualization": "table"
+          },
+          "customWidth": "50",
+          "name": "feedback-by-location"
+        },
+        {
+          "type": 3,
+          "content": {
+            "version": "KqlItem/1.0",
+            "query": "union pageViews, customEvents\n| where timestamp {TimeRange}\n| where client_City != 'Boydton' and client_IP != '0.0.0.0' and isnotempty(client_CountryOrRegion)\n| summarize Sessions = dcount(session_Id), ['Distinct IPs'] = dcount(client_IP), Events = count() by Country = client_CountryOrRegion\n| order by Sessions desc\n| take 50",
+            "size": 0,
+            "title": "Overall reach — external users by country",
+            "queryType": 0,
+            "resourceType": "microsoft.insights/components",
+            "visualization": "table",
+            "gridSettings": {
+              "formatters": [
+                {
+                  "columnMatch": "Sessions",
+                  "formatter": 8,
+                  "formatOptions": { "palette": "blue" }
+                }
+              ]
+            }
+          },
+          "customWidth": "50",
+          "name": "reach-by-country"
+        },
+        {
+          "type": 3,
+          "content": {
+            "version": "KqlItem/1.0",
+            "query": "union pageViews, customEvents\n| where timestamp {TimeRange}\n| where client_City != 'Boydton' and client_IP != '0.0.0.0' and isnotempty(client_CountryOrRegion)\n| summarize Sessions = dcount(session_Id) by client_CountryOrRegion\n| order by Sessions desc",
+            "size": 1,
+            "title": "Overall reach — world map (sessions)",
+            "queryType": 0,
+            "resourceType": "microsoft.insights/components",
+            "visualization": "map",
+            "mapSettings": {
+              "locInfo": "CountryRegion",
+              "locInfoColumn": "client_CountryOrRegion",
+              "sizeSettings": "Sessions",
+              "sizeAggregation": "Sum",
+              "legendMetric": "Sessions",
+              "legendAggregation": "Sum",
+              "itemColorSettings": {
+                "type": "heatmap",
+                "colorAggregation": "Sum",
+                "nodeColorField": "Sessions",
+                "heatmapPalette": "greenRed"
+              }
+            }
+          },
+          "name": "reach-map"
         }
       ],
       "fallbackResourceIds": ["[parameters('appInsightsResourceId')]"]
