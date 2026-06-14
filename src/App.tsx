@@ -74,6 +74,8 @@ import { exportToAzPrototype, serializeManifest, type ImportResult } from './ser
 import AzPrototypeExportModal from './components/AzPrototypeExportModal';
 import AzPrototypeImportModal from './components/AzPrototypeImportModal';
 import FeedbackModal from './components/FeedbackModal';
+import FeedbackToast from './components/FeedbackToast';
+import { FEEDBACK_DONE_KEY } from './services/feedbackService';
 import microsoftLogoWhite from './assets/microsoft-logo-white.avif';
 import './App.css';
 
@@ -178,6 +180,12 @@ function App() {
   const [isAzPrototypeExportOpen, setIsAzPrototypeExportOpen] = useState(false);
   const [isAzPrototypeImportOpen, setIsAzPrototypeImportOpen] = useState(false);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
+  const [isFeedbackToastOpen, setIsFeedbackToastOpen] = useState(false);
+  const [feedbackPreselectedRating, setFeedbackPreselectedRating] = useState<number | undefined>(undefined);
+  const [feedbackFabPulse, setFeedbackFabPulse] = useState(false);
+  // Counts successful AI generations this session so we can ask for feedback
+  // after a "success moment" (the 2nd diagram) rather than nagging up front.
+  const generationCountRef = useRef(0);
   const [referenceImageUrl, setReferenceImageUrl] = useState<string | null>(null);
   const [lastReferenceArchitecture, setLastReferenceArchitecture] = useState<ReferenceArchitecture | null>(null);
   const [lastBlueprintArchitecture, setLastBlueprintArchitecture] = useState<BlueprintArchitecture | null>(null);
@@ -234,6 +242,24 @@ function App() {
       // ignore
     }
   }, [exportHistory]);
+
+  // One-time gentle pulse on the feedback button ~15s after load so it earns a
+  // glance without looping/nagging. Suppressed once feedback has been given.
+  useEffect(() => {
+    let alreadyDone = false;
+    try {
+      alreadyDone = sessionStorage.getItem(FEEDBACK_DONE_KEY) === '1';
+    } catch {
+      /* sessionStorage unavailable — ignore */
+    }
+    if (alreadyDone) return;
+    const startT = window.setTimeout(() => setFeedbackFabPulse(true), 15000);
+    const stopT = window.setTimeout(() => setFeedbackFabPulse(false), 19500);
+    return () => {
+      window.clearTimeout(startT);
+      window.clearTimeout(stopT);
+    };
+  }, []);
 
   const recordExport = useCallback((kind: ExportHistoryKind, fileName: string) => {
     const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -2000,6 +2026,21 @@ function App() {
       isModification: nodes.length > 0,
     });
 
+    // ── Success-moment feedback ask ──────────────────────────────────────
+    // After the 2nd successful generation this session, surface the one-click
+    // toast — the user now has a real opinion. Fires once and only if they
+    // haven't already given feedback.
+    generationCountRef.current += 1;
+    let feedbackAlreadyDone = false;
+    try {
+      feedbackAlreadyDone = sessionStorage.getItem(FEEDBACK_DONE_KEY) === '1';
+    } catch {
+      /* sessionStorage unavailable — ignore */
+    }
+    if (!feedbackAlreadyDone && generationCountRef.current === 2 && !isFeedbackModalOpen) {
+      setIsFeedbackToastOpen(true);
+    }
+
     // Fit view after a short delay to allow nodes to render
     setTimeout(() => {
       if (reactFlowInstance) {
@@ -2010,7 +2051,7 @@ function App() {
       console.error('Error in handleAIGenerate:', error);
       alert('Failed to generate diagram. Check console for details.');
     }
-  }, [setNodes, setEdges, reactFlowInstance, nodes, edges, titleBlockData, architecturePrompt, validationResult, workflow]);
+  }, [setNodes, setEdges, reactFlowInstance, nodes, edges, titleBlockData, architecturePrompt, validationResult, workflow, isFeedbackModalOpen]);
 
   // ── az prototype import ──────────────────────────────────────────────
   const handleAzPrototypeImport = useCallback((result: ImportResult) => {
@@ -3466,16 +3507,34 @@ Return the IMPROVED architecture in the same JSON format as before with proper g
       />
 
       <button
-        className="feedback-fab"
+        className={`feedback-fab${feedbackFabPulse ? ' pulse-once' : ''}`}
         onClick={() => setIsFeedbackModalOpen(true)}
         title="Share feedback"
       >
         <MessageSquare size={18} />
         Feedback
       </button>
+      <FeedbackToast
+        isOpen={isFeedbackToastOpen}
+        onClose={() => setIsFeedbackToastOpen(false)}
+        onAddComment={(rating) => {
+          setIsFeedbackToastOpen(false);
+          setFeedbackPreselectedRating(rating);
+          setIsFeedbackModalOpen(true);
+        }}
+        context={{
+          diagramName: titleBlockData.architectureName,
+          serviceCount: nodes.filter(n => n.type === 'azureNode').length,
+          model: generatedWithModel?.name,
+        }}
+      />
       <FeedbackModal
         isOpen={isFeedbackModalOpen}
-        onClose={() => setIsFeedbackModalOpen(false)}
+        onClose={() => {
+          setIsFeedbackModalOpen(false);
+          setFeedbackPreselectedRating(undefined);
+        }}
+        preselectedRating={feedbackPreselectedRating}
         context={{
           diagramName: titleBlockData.architectureName,
           serviceCount: nodes.filter(n => n.type === 'azureNode').length,

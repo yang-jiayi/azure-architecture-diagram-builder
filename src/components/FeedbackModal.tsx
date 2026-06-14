@@ -1,21 +1,17 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, MessageSquare, Send, CheckCircle2 } from 'lucide-react';
-import { trackFeedback } from '../services/telemetryService';
+import { submitFeedback, FeedbackContext } from '../services/feedbackService';
 import './FeedbackModal.css';
-
-interface FeedbackContext {
-  diagramName?: string;
-  serviceCount?: number;
-  model?: string;
-}
 
 interface FeedbackModalProps {
   isOpen: boolean;
   onClose: () => void;
   context?: FeedbackContext;
+  /** Pre-selected rating carried over from the quick toast, if any. */
+  preselectedRating?: number;
 }
 
 const RATINGS: { value: number; emoji: string; label: string }[] = [
@@ -35,13 +31,21 @@ const CATEGORIES = [
   'Other',
 ];
 
-const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose, context }) => {
+const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose, context, preselectedRating }) => {
   const [rating, setRating] = useState<number | null>(null);
   const [category, setCategory] = useState(CATEGORIES[0]);
   const [comment, setComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // When the modal is opened from the quick toast, seed the rating the user
+  // already gave so they don't have to pick it twice.
+  useEffect(() => {
+    if (isOpen && preselectedRating != null) {
+      setRating(preselectedRating);
+    }
+  }, [isOpen, preselectedRating]);
 
   const reset = () => {
     setRating(null);
@@ -65,49 +69,12 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose, context 
     setError(null);
     setIsSubmitting(true);
 
-    const payload = {
-      rating,
-      category,
-      comment: comment.trim(),
-      context: {
-        diagramName: context?.diagramName ?? '',
-        serviceCount: context?.serviceCount ?? 0,
-        model: context?.model ?? '',
-        url: window.location.href,
-        userAgent: navigator.userAgent,
-      },
-    };
+    // Shared helper: records sentiment in App Insights, then best-effort
+    // durable storage via /api/feedback. Never throws.
+    await submitFeedback({ rating, category, comment, context });
 
-    // Always record sentiment in Application Insights (analytics / alerting),
-    // independent of whether the durable storage endpoint is configured.
-    trackFeedback({
-      rating,
-      category,
-      hasComment: comment.trim().length > 0,
-      commentLength: comment.trim().length,
-    });
-
-    try {
-      // Durable storage via the token server (Cosmos DB, keyless).
-      const res = await fetch('/api/feedback', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      // A 503 means storage isn't configured yet — the telemetry above still
-      // captured the sentiment, so we treat this as a soft success.
-      if (!res.ok && res.status !== 503) {
-        throw new Error(`Feedback endpoint returned ${res.status}`);
-      }
-      setSubmitted(true);
-    } catch (err) {
-      console.error('[feedback] submit failed:', err);
-      // Telemetry already captured the rating; don't block the user on a
-      // storage hiccup. Show a soft confirmation instead of an error.
-      setSubmitted(true);
-    } finally {
-      setIsSubmitting(false);
-    }
+    setSubmitted(true);
+    setIsSubmitting(false);
   };
 
   if (!isOpen) return null;
