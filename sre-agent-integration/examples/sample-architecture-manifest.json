@@ -1,0 +1,30 @@
+{
+  "$comment": "Reference manifest shape for the Azure Diagram Builder MCP tools (generate_manifest / validate_architecture / render_diagram / estimate_costs). Attach this file as a supporting file on the SRE Agent skill so the agent has a known-good example of the expected input structure. Values below depict a typical web app footprint involved in an incident.",
+  "title": "Contoso Web App - Incident Snapshot",
+  "zones": [
+    { "id": "internet", "label": "Internet" },
+    { "id": "azure", "label": "Azure" },
+    { "id": "vnet", "label": "VNet (spoke)" },
+    { "id": "data", "label": "Data tier" }
+  ],
+  "services": [
+    { "name": "Front Door", "type": "Azure Front Door", "tier": "Premium", "zoneId": "internet" },
+    { "name": "App Gateway (WAF)", "type": "Application Gateway", "tier": "WAF_v2", "zoneId": "vnet" },
+    { "name": "Web App", "type": "App Service", "tier": "P1v3", "zoneId": "azure" },
+    { "name": "Orders API", "type": "Container Apps", "tier": "Consumption", "zoneId": "azure" },
+    { "name": "Postgres", "type": "Azure Database for PostgreSQL", "tier": "GP_Standard_D2s_v3", "zoneId": "data" },
+    { "name": "Redis", "type": "Azure Cache for Redis", "tier": "Standard C1", "zoneId": "data" },
+    { "name": "Key Vault", "type": "Key Vault", "tier": "Standard", "zoneId": "azure" },
+    { "name": "App Insights", "type": "Application Insights", "tier": "Standard", "zoneId": "azure" }
+  ],
+  "connections": [
+    { "from": "Front Door", "to": "App Gateway (WAF)", "label": "HTTPS ingress", "type": "sync" },
+    { "from": "App Gateway (WAF)", "to": "Web App", "label": "routes /", "type": "sync" },
+    { "from": "App Gateway (WAF)", "to": "Orders API", "label": "routes /api", "type": "sync" },
+    { "from": "Web App", "to": "Orders API", "label": "server-side calls", "type": "sync" },
+    { "from": "Orders API", "to": "Postgres", "label": "reads/writes orders", "type": "sync" },
+    { "from": "Orders API", "to": "Redis", "label": "session + cache", "type": "async" },
+    { "from": "Orders API", "to": "Key Vault", "label": "secrets at startup", "type": "optional" },
+    { "from": "Orders API", "to": "App Insights", "label": "telemetry", "type": "async" }
+  ]
+}

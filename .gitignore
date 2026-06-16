@@ -4,6 +4,7 @@
 .env.*.local
 .env.appinsights
 .env.build
+.env.mcp-instance
 
 # Logs
 logs

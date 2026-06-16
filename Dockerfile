@@ -67,11 +67,21 @@ RUN if [ -f .env.build ]; then \
       export $(cat .env.appinsights) && echo "App Insights: $VITE_APPINSIGHTS_CONNECTION_STRING" | cut -c1-60; \
     fi && npm run build
 
+# Build MCP server (TypeScript -> dist/) so it can ship in the runtime image.
+# The MCP server has its own package.json and is independent of the Vite app.
+WORKDIR /app/mcp-server
+COPY mcp-server/package*.json ./
+RUN npm ci
+COPY mcp-server/tsconfig.json ./
+COPY mcp-server/src ./src
+COPY mcp-server/scripts ./scripts
+RUN npm run build
+
 # Production stage
 FROM nginx:alpine
 
-# Install Node.js for the speech token server
-# (uses DefaultAzureCredential / managed identity where applicable).
+# Install Node.js for the speech token server and the MCP HTTP server
+# (both use DefaultAzureCredential / managed identity where applicable).
 RUN apk add --no-cache nodejs npm
 
 # Set up the speech token server
@@ -79,6 +89,12 @@ WORKDIR /srv/token-server
 COPY server/package.json ./
 RUN npm install --omit=dev
 COPY server/token-server.js ./
+
+# Set up the MCP HTTP server (streamable HTTP transport on port 3030).
+WORKDIR /srv/mcp-server
+COPY mcp-server/package*.json ./
+RUN npm ci --omit=dev
+COPY --from=build /app/mcp-server/dist ./dist
 
 # Copy static build output
 COPY --from=build /app/dist /usr/share/nginx/html
