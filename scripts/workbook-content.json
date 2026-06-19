@@ -45,6 +45,20 @@
             "value": {
               "durationMs": 2592000000
             }
+          },
+          {
+            "id": "b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e",
+            "version": "KqlParameterItem/1.0",
+            "name": "Granularity",
+            "label": "Granularity",
+            "type": 2,
+            "isRequired": true,
+            "typeSettings": {
+              "additionalResourceOptions": [],
+              "showDefault": false
+            },
+            "jsonData": "[{\"value\":\"1d\",\"label\":\"Per Day\"},{\"value\":\"7d\",\"label\":\"Per Week\",\"selected\":true},{\"value\":\"30d\",\"label\":\"Per Month\"}]",
+            "value": "7d"
           }
         ],
         "style": "pills",
@@ -237,6 +251,33 @@
         }
       },
       "name": "events-over-time"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "let DB_EVENTS = customEvents | where name in (\"Architecture_Generated\", \"Architecture_Validated\", \"DeploymentGuide_Generated\", \"Diagram_Exported\", \"Template_Imported\", \"ARM_Template_Imported\", \"Image_Imported\", \"Models_Compared\", \"Recommendations_Applied\", \"Version_Operation\", \"Region_Changed\", \"Start_Fresh\", \"AI_Model_Usage\");\nDB_EVENTS\n| summarize [\"Active Users\"] = dcount(user_Id) by bin(timestamp, {Granularity})\n| order by timestamp asc",
+        "size": 0,
+        "title": "Active Users Over Time ({Granularity:label})",
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "visualization": "barchart",
+        "chartSettings": {
+          "xAxis": "timestamp",
+          "yAxis": [
+            "Active Users"
+          ],
+          "showLegend": true,
+          "seriesLabelSettings": [
+            {
+              "seriesName": "Active Users",
+              "color": "blue"
+            }
+          ]
+        }
+      },
+      "name": "active-users-per-week"
     },
     {
       "type": 1,

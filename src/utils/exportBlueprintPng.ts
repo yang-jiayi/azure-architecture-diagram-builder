@@ -28,7 +28,7 @@ export interface ExportBlueprintPngOptions {
   legendPosition?: 'bottom' | 'right' | 'auto';
 }
 
-const LEGEND_RIGHT_WIDTH = 340;
+const LEGEND_RIGHT_WIDTH = 400;
 
 function resolveLegendForExport(
   position: 'bottom' | 'right' | 'auto' | undefined,
