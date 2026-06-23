@@ -1,0 +1,124 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
+/**
+ * Shared helper that turns the live canvas state + a natural-language request
+ * into a "MODIFY EXISTING ARCHITECTURE" prompt for the architecture generator.
+ *
+ * Used by both the one-shot AI Architecture Generator modal and the persistent
+ * Architecture Chat panel so the two surfaces produce identical context and
+ * stay in sync over time.
+ */
+
+export interface CurrentArchitecture {
+  nodes: any[];
+  edges: any[];
+  architectureName: string;
+}
+
+/**
+ * Build the prompt sent to `generateArchitectureWithAI`.
+ *
+ * When the canvas is empty, the user's request is returned verbatim (a fresh
+ * generation). When the canvas has content, the request is wrapped with a
+ * compact snapshot of the current services, groups, and connections plus
+ * instructions to return the COMPLETE architecture with only the requested
+ * change applied.
+ *
+ * @param current        Live canvas nodes/edges/name.
+ * @param request        The new natural-language instruction from the user.
+ * @param recentRequests Optional prior user instructions (most recent last),
+ *                       included so references like "make it bigger" or "undo
+ *                       that" can be resolved against the conversation.
+ */
+export function buildModificationPrompt(
+  current: CurrentArchitecture | undefined,
+  request: string,
+  recentRequests: string[] = [],
+): string {
+  if (!current || current.nodes.length === 0) {
+    return request;
+  }
+
+  const groups = current.nodes
+    .filter((n) => n.type === 'groupNode')
+    .map((n) => ({ name: n.data.label, id: n.id }));
+
+  const groupNameMap = new Map(groups.map((g) => [g.id, g.name]));
+
+  const services = current.nodes
+    .filter((n) => n.type === 'azureNode')
+    .map((n) => {
+      const groupName = n.parentNode ? groupNameMap.get(n.parentNode) : null;
+      return {
+        name: n.data.label,
+        group: groupName || null,
+      };
+    });
+
+  const connections = current.edges.map((e) => {
+    const fromNode = current.nodes.find((n) => n.id === e.source);
+    const toNode = current.nodes.find((n) => n.id === e.target);
+    return `${fromNode?.data.label || e.source} → ${toNode?.data.label || e.target}${e.label ? ` (${e.label})` : ''}`;
+  });
+
+  const servicesList = services
+    .map((s) => `${s.name}${s.group ? ` [${s.group}]` : ''}`)
+    .join(', ');
+
+  const recentBlock = recentRequests.length > 0
+    ? `\nRecent requests (oldest to newest): ${recentRequests.map((r) => `"${r}"`).join('; ')}`
+    : '';
+
+  return `MODIFY EXISTING ARCHITECTURE: "${current.architectureName}"
+Services: ${servicesList}
+${groups.length > 0 ? `Groups: ${groups.map((g) => g.name).join(', ')}` : ''}
+${connections.length > 0 ? `Connections: ${connections.join('; ')}` : ''}${recentBlock}
+
+CHANGE REQUESTED: ${request}
+
+IMPORTANT: Return the COMPLETE architecture JSON (all services, groups, connections, workflow). Keep everything unchanged EXCEPT what the user requested. Only add, modify, or remove what was asked.`;
+}
+
+/**
+ * Produce a short human-readable summary of what changed between the previous
+ * canvas services and a freshly generated architecture, by diffing service
+ * labels. Used by the chat panel to post an assistant reply.
+ */
+export function summarizeArchitectureChange(
+  previous: CurrentArchitecture | undefined,
+  nextArchitecture: any,
+): string {
+  const prevNames = new Set(
+    (previous?.nodes || [])
+      .filter((n) => n.type === 'azureNode')
+      .map((n) => String(n.data.label).trim()),
+  );
+
+  const nextServices: any[] = Array.isArray(nextArchitecture?.services)
+    ? nextArchitecture.services
+    : [];
+  const nextNames = nextServices
+    .map((s) => String(s.label ?? s.name ?? s.service ?? '').trim())
+    .filter(Boolean);
+  const nextSet = new Set(nextNames);
+
+  const added = nextNames.filter((n) => !prevNames.has(n));
+  const removed = [...prevNames].filter((n) => !nextSet.has(n));
+
+  const parts: string[] = [];
+  if (added.length > 0) {
+    parts.push(`added ${added.slice(0, 8).join(', ')}${added.length > 8 ? `, +${added.length - 8} more` : ''}`);
+  }
+  if (removed.length > 0) {
+    parts.push(`removed ${removed.slice(0, 8).join(', ')}${removed.length > 8 ? `, +${removed.length - 8} more` : ''}`);
+  }
+
+  if (parts.length === 0) {
+    return `Updated the diagram (${nextSet.size} service${nextSet.size === 1 ? '' : 's'}). Reconnections or labels may have changed.`;
+  }
+
+  // Capitalize first word.
+  const sentence = parts.join('; ');
+  return sentence.charAt(0).toUpperCase() + sentence.slice(1) + '.';
+}

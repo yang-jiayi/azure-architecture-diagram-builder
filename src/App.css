@@ -326,6 +326,24 @@ body.dark-mode .toolbar-dropdown-separator {
   }
 }
 
+/* Conversational refinement (Chat) toolbar button */
+.btn-ai-chat {
+  background: linear-gradient(135deg, #8B5CF6 0%, #6366F1 100%);
+  color: white;
+  border: 1px solid rgba(139, 92, 246, 0.5);
+}
+
+.btn-ai-chat:hover {
+  background: linear-gradient(135deg, #7C3AED 0%, #4F46E5 100%);
+  border-color: rgba(124, 58, 237, 0.7);
+  transform: translateY(-1px);
+}
+
+.btn-ai-chat.active {
+  background: linear-gradient(135deg, #6D28D9 0%, #4338CA 100%);
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.45);
+}
+
 /* Parsing state - pulsating button */
 .btn-parsing {
   background: linear-gradient(135deg, #0078d4 0%, #00b4d8 100%) !important;

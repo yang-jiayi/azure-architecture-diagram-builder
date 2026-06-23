@@ -17,11 +17,12 @@ import ReactFlow, {
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { captureDiagramAsPng, captureDiagramAsSvg } from './utils/captureCanvas';
-import { Download, Save, Upload, DollarSign, Shield, FileText, FileCode, ChevronDown, Clock, Camera, Loader, GitCompare, RefreshCw, PanelLeftClose, Minimize2, Maximize2, Presentation, Terminal, MessageSquare } from 'lucide-react';
+import { Download, Save, Upload, DollarSign, Shield, FileText, FileCode, ChevronDown, Clock, Camera, Loader, GitCompare, RefreshCw, PanelLeftClose, Minimize2, Maximize2, Presentation, Terminal, MessageSquare, MessagesSquare } from 'lucide-react';
 import IconPalette from './components/IconPalette';
 import AzureNode from './components/AzureNode';
 import GroupNode from './components/GroupNode';
 import AIArchitectureGenerator from './components/AIArchitectureGenerator';
+import ArchitectureChatPanel from './components/ArchitectureChatPanel';
 import { exportReferenceArchitectureAsPng } from './utils/exportReferencePng';
 import type { ReferenceArchitecture } from './services/referenceArchitectureAI';
 import { exportBlueprintArchitectureAsPng } from './utils/exportBlueprintPng';
@@ -178,6 +179,7 @@ function App() {
   const [isVersionHistoryModalOpen, setIsVersionHistoryModalOpen] = useState(false);
   const [isSaveSnapshotModalOpen, setIsSaveSnapshotModalOpen] = useState(false);
   const [isCompareModelsOpen, setIsCompareModelsOpen] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const [isCompareValidationOpen, setIsCompareValidationOpen] = useState(false);
   const [isAzPrototypeExportOpen, setIsAzPrototypeExportOpen] = useState(false);
   const [isAzPrototypeImportOpen, setIsAzPrototypeImportOpen] = useState(false);
@@ -2579,6 +2581,14 @@ function App() {
                   }}
                 />
                 <button
+                  className={`btn btn-ai-chat${isChatOpen ? ' active' : ''}`}
+                  onClick={() => setIsChatOpen((v) => !v)}
+                  title="Refine the diagram conversationally"
+                >
+                  <MessagesSquare size={18} />
+                  Chat
+                </button>
+                <button
                   className="btn btn-compare-models"
                   onClick={() => setIsCompareModelsOpen(true)}
                   title="Compare architecture output across multiple AI models"
@@ -3654,6 +3664,16 @@ Return the IMPROVED architecture in the same JSON format as before with proper g
         <MessageSquare size={18} />
         Feedback
       </button>
+      <ArchitectureChatPanel
+        isOpen={isChatOpen}
+        onClose={() => setIsChatOpen(false)}
+        currentArchitecture={{
+          nodes,
+          edges,
+          architectureName: titleBlockData.architectureName,
+        }}
+        onApply={handleAIGenerate}
+      />
       <FeedbackToast
         isOpen={isFeedbackToastOpen}
         onClose={() => setIsFeedbackToastOpen(false)}

@@ -11,6 +11,7 @@ import { exportBlueprintArchitectureAsPng } from '../utils/exportBlueprintPng';
 import ImageUploader from './ImageUploader';
 import { useModelSettings, MODEL_CONFIG, getAvailableModels, ModelType, ReasoningEffort } from '../stores/modelSettingsStore';
 import { trackImageImport } from '../services/telemetryService';
+import { buildModificationPrompt } from '../services/modificationPrompt';
 import './AIArchitectureGenerator.css';
 
 type GenerationMode = 'topology' | 'reference' | 'blueprint' | 'both';
@@ -386,47 +387,7 @@ const AIArchitectureGenerator: React.FC<AIArchitectureGeneratorProps> = ({ onGen
       let contextPrompt = description;
       
       if (currentArchitecture && currentArchitecture.nodes.length > 0) {
-        const groups = currentArchitecture.nodes
-          .filter(n => n.type === 'groupNode')
-          .map(n => ({
-            name: n.data.label,
-            id: n.id
-          }));
-        
-        // Build a group ID → name map for resolving parentNode references
-        const groupNameMap = new Map(groups.map(g => [g.id, g.name]));
-        
-        const services = currentArchitecture.nodes
-          .filter(n => n.type === 'azureNode')
-          .map(n => {
-            const groupName = n.parentNode ? groupNameMap.get(n.parentNode) : null;
-            return {
-              name: n.data.label,
-              type: n.data.serviceName || n.data.service || n.data.label,
-              group: groupName || null
-            };
-          });
-        
-        const connections = currentArchitecture.edges
-          .map(e => {
-            const fromNode = currentArchitecture.nodes.find(n => n.id === e.source);
-            const toNode = currentArchitecture.nodes.find(n => n.id === e.target);
-            return `${fromNode?.data.label || e.source} → ${toNode?.data.label || e.target}${e.label ? ` (${e.label})` : ''}`;
-          });
-        
-        // Build a compact representation for modifications
-        const servicesList = services.map(s => 
-          `${s.name}${s.group ? ` [${s.group}]` : ''}`
-        ).join(', ');
-        
-        contextPrompt = `MODIFY EXISTING ARCHITECTURE: "${currentArchitecture.architectureName}"
-Services: ${servicesList}
-${groups.length > 0 ? `Groups: ${groups.map(g => g.name).join(', ')}` : ''}
-${connections.length > 0 ? `Connections: ${connections.join('; ')}` : ''}
-
-CHANGE REQUESTED: ${description}
-
-IMPORTANT: Return the COMPLETE architecture JSON (all services, groups, connections, workflow). Keep everything unchanged EXCEPT what the user requested. Only add, modify, or remove what was asked.`;
+        contextPrompt = buildModificationPrompt(currentArchitecture, description);
       }
       
       // Call Azure OpenAI to generate architecture
