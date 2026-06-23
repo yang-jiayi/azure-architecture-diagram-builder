@@ -270,8 +270,9 @@ message queue, and Redis cache
 
 ### Environment Variables
 ```bash
+# Build-time (non-secret): endpoint flag + deployment names. The API key is
+# NOT bundled — Azure OpenAI is proxied server-side via /api/openai.
 VITE_AZURE_OPENAI_ENDPOINT=https://your-openai.openai.azure.com/
-VITE_AZURE_OPENAI_API_KEY=your-api-key
 VITE_AZURE_OPENAI_DEPLOYMENT=your-default-deployment
 VITE_AZURE_OPENAI_DEPLOYMENT_GPT52=your-gpt52-deployment
 VITE_AZURE_OPENAI_DEPLOYMENT_GPT41=your-gpt41-deployment

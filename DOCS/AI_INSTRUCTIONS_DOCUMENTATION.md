@@ -12,8 +12,8 @@ This document details the AI instructions (system prompts) for all three agents 
 The three agents support **multiple AI models** selected at runtime via `ModelSelector` dropdown, with per-feature overrides stored in localStorage.
 
 ### Environment Variables
-- `VITE_AZURE_OPENAI_ENDPOINT` - Azure OpenAI endpoint URL
-- `VITE_AZURE_OPENAI_API_KEY` - API authentication key
+- `VITE_AZURE_OPENAI_ENDPOINT` - Azure OpenAI endpoint URL (non-secret build-time flag)
+- `AZURE_OPENAI_ENDPOINT` / `AZURE_OPENAI_API_KEY` - server-side runtime config for the `/api/openai` proxy (the key is never bundled; managed identity preferred)
 - `VITE_AZURE_OPENAI_DEPLOYMENT` - Default deployment name
 - `VITE_AZURE_OPENAI_DEPLOYMENT_GPT52` - GPT-5.2 deployment
 - `VITE_AZURE_OPENAI_DEPLOYMENT_GPT41` - GPT-4.1 deployment

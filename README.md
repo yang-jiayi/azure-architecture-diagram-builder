@@ -69,6 +69,15 @@ Describe your architecture in plain English and let any of **12 AI models** (GPT
 ### 🖼️ Architecture Image Import
 Upload an existing architecture diagram image (screenshot, whiteboard photo, or exported PNG) and let AI analyze it to recreate the architecture as an editable, interactive diagram with proper Azure service mapping.
 
+### 💬 Architecture Chat (Conversational Refinement)
+Refine your diagram through a natural back-and-forth conversation instead of one-shot prompts. Click the **Chat** button in the toolbar to open a docked side panel where you can iterate in plain English:
+
+- Type changes like *"add Azure Front Door with WAF"* → *"now make it zone-redundant"* → *"add a Redis cache between the API and the database"*
+- Each turn reads the **live canvas** as the source of truth, so follow-up requests naturally build on previous ones
+- The assistant replies with a concise summary of what changed (services added/removed)
+- Every change is **auto-saved to version history**, so you can step back at any time
+- Suggestion chips help you get started, and the panel shows which model is active
+
 ### ✏️ Blueprint Diagrams (BETA)
 Generate a hand-drawn, **whiteboard-style blueprint** of your architecture — nested zones (Azure / VNet / On-prem) with numbered, labeled arrows that trace the end-to-end flow, just like an architect explaining a system at a whiteboard. Three generation modes are available in the AI Generator modal:
 
@@ -133,6 +142,7 @@ Generate comprehensive deployment documentation including:
 - **Bicep templates** for each service (Infrastructure as Code)
 - Post-deployment verification steps
 - Security configuration recommendations
+- **Grounded in Microsoft Learn** — before generating, the app searches official Microsoft Learn documentation for your services (via a server-side proxy to the Microsoft Learn MCP endpoint) and feeds the results into the model so commands, API versions, and Bicep schemas reflect current docs. A **“Grounded with Microsoft Learn”** references section lists the cited pages, which are also included in the exported Markdown. Grounding is best-effort: if docs are unavailable the guide still generates.
 
 ### 💰 Real-Time Multi-Region Cost Estimation
 Get instant cost estimates across **8 Azure regions**:
@@ -464,8 +474,17 @@ Create a `.env` file in the project root:
 
 ```bash
 # Azure OpenAI Configuration (Required)
+#
+# SECURITY: Azure OpenAI calls are proxied server-side by the co-located token
+# server (server/token-server.js) via the /api/openai endpoint. The API key is
+# NEVER shipped to the browser. Keyless auth (managed identity / `az login`) is
+# preferred; a key is only used as a fallback when AZURE_OPENAI_API_KEY is set.
+#
+# VITE_AZURE_OPENAI_ENDPOINT is a non-secret build-time flag that signals the
+# UI that AI is configured. In dev, scripts/start-token-server.sh bridges the
+# VITE_ values to the server-side names (AZURE_OPENAI_ENDPOINT / _API_KEY).
 VITE_AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com/
-VITE_AZURE_OPENAI_API_KEY=your-api-key-here
+VITE_AZURE_OPENAI_API_KEY=your-api-key-here   # optional fallback; bridged to the server only, never bundled
 VITE_AZURE_OPENAI_DEPLOYMENT=your-default-deployment
 
 # Multi-model deployments (12 models)
@@ -543,10 +562,13 @@ Navigate to `http://localhost:3000`
 ### Docker Deployment (Local)
 
 ```bash
-# Build the image (Vite vars must be build args, not runtime env vars)
+# Build the image. Vite vars are build args (deployment NAMES and the endpoint
+# are non-secret). The Azure OpenAI API key is intentionally NOT a build arg —
+# it is supplied at RUNTIME to the token server (AZURE_OPENAI_ENDPOINT and,
+# optionally, AZURE_OPENAI_API_KEY) and proxied via /api/openai. Prefer managed
+# identity (Cognitive Services OpenAI User role) and leave the key unset.
 docker build -t azure-diagram-builder \
   --build-arg VITE_AZURE_OPENAI_ENDPOINT="..." \
-  --build-arg VITE_AZURE_OPENAI_API_KEY="..." \
   --build-arg VITE_AZURE_OPENAI_DEPLOYMENT_GPT51="..." \
   --build-arg VITE_AZURE_OPENAI_DEPLOYMENT_GPT52="..." \
   --build-arg VITE_AZURE_OPENAI_DEPLOYMENT_GPT52CODEX="..." \
@@ -565,7 +587,12 @@ docker build -t azure-diagram-builder \
 #   --build-arg VITE_APPINSIGHTS_CONNECTION_STRING="..." \
 
 # Run locally
-docker run -p 80:80 azure-diagram-builder
+#   Supply Azure OpenAI to the token server at runtime (managed identity
+#   preferred; key optional). The /api/openai and /api/docs-search routes are
+#   served by the co-located token server behind nginx.
+docker run -p 80:80 \
+  -e AZURE_OPENAI_ENDPOINT="https://your-resource.openai.azure.com/" \
+  azure-diagram-builder
 ```
 
 ### Azure Container Apps Deployment
@@ -747,7 +774,7 @@ azure-diagrams/
 │   │   └── modelNaming.ts    # Model display names
 │   └── App.tsx               # Main application
 ├── server/                   # Token server (co-located with nginx in the container)
-│   └── token-server.js       # Express.js: /api/speech-token + /api/ice-token (Managed Identity, keyless)
+│   └── token-server.js       # Express.js: /api/speech-token + /api/ice-token + /api/openai + /api/docs-search (Managed Identity, keyless)
 ├── scripts/                  # Deployment scripts
 │   ├── deploy_aca.sh         # Configurable ACA deployment (reads from .env)
 │   └── update_aca.sh         # Author's ACA deployment (hardcoded resources)
@@ -821,6 +848,12 @@ Compare AI model critiques, then click **"Present"** to have a photorealistic **
 - **Keyless authentication** — no API keys stored: `server/token-server.js` (Express.js, port 3001) runs co-located with nginx. On each `/api/speech-token` request it acquires an AAD token via `DefaultAzureCredential` and returns `aad#{resourceId}#{aadToken}` directly to the Speech SDK
 - **ICE relay** — `/api/ice-token` endpoint fetches WebRTC relay credentials from Azure so avatar video works through corporate firewalls
 - **Build-time feature flag** — the "Present" button is only rendered when `VITE_SPEECH_REGION` is set at image build time
+
+#### 🔒 Server-side AI proxy
+The same token server also brokers Azure OpenAI so credentials never reach the browser:
+
+- **`/api/openai`** — proxies architecture generation, chat refinement, validation, and deployment-guide calls to Azure OpenAI. Prefers managed identity (`DefaultAzureCredential`) and falls back to `AZURE_OPENAI_API_KEY` when set. Requires `AZURE_OPENAI_ENDPOINT` at runtime. The client only sends the request body, deployment name, and API format — the key is never bundled.
+- **`/api/docs-search`** — grounds deployment guides in official Microsoft Learn documentation by calling the Microsoft Learn MCP endpoint server-side and returning citable `{title, url, excerpt}` results. Best-effort (soft-fails to empty).
 
 #### 🔧 Infrastructure
 - `server/token-server.js` — new Express.js token server started by `start.sh` before nginx

@@ -516,10 +516,16 @@ scripts/fetch-multi-region-pricing.sh
 
 ## Environment Variables
 
+> **Security note:** Azure OpenAI is proxied server-side via `server/token-server.js`
+> (`/api/openai`). The API key is never embedded in the client bundle. The
+> `VITE_AZURE_OPENAI_ENDPOINT` build-time value is a non-secret flag that tells
+> the UI that AI is configured; the real endpoint and credentials are read at
+> runtime by the token server.
+
 ```env
-# Build-time variables (embedded by Vite via import.meta.env)
-VITE_AZURE_OPENAI_ENDPOINT=<Azure OpenAI endpoint URL>
-VITE_AZURE_OPENAI_API_KEY=<API key>
+# Build-time variables (embedded by Vite via import.meta.env) — NON-SECRET.
+# Deployment NAMES and the endpoint are safe to embed. The API key is NOT.
+VITE_AZURE_OPENAI_ENDPOINT=<Azure OpenAI endpoint URL — non-secret flag>
 VITE_AZURE_OPENAI_DEPLOYMENT=<Default deployment name>
 VITE_AZURE_OPENAI_DEPLOYMENT_GPT51=<GPT-5.1 deployment>
 VITE_AZURE_OPENAI_DEPLOYMENT_GPT52=<GPT-5.2 deployment>
@@ -530,11 +536,24 @@ VITE_AZURE_OPENAI_DEPLOYMENT_GROK4FAST=<Grok 4.1 Fast deployment>
 VITE_APPINSIGHTS_CONNECTION_STRING=<Application Insights connection string (optional)>
 VITE_REASONING_EFFORT=<medium|low|high|none>
 
-# Runtime variables (for server/container)
+# Runtime variables (for server/container) — read by token-server.js
+AZURE_OPENAI_ENDPOINT=<Azure OpenAI endpoint URL — REQUIRED for /api/openai>
+AZURE_OPENAI_API_KEY=<Azure OpenAI key — OPTIONAL fallback; prefer managed identity>
+LEARN_MCP_URL=<override for the Microsoft Learn MCP endpoint (optional)>
 AZURE_COSMOS_ENDPOINT=<Cosmos DB endpoint>
 COSMOS_DATABASE_ID=<Cosmos DB database ID>
 COSMOS_CONTAINER_ID=<Cosmos DB container ID>
 ```
+
+### Server-side endpoints (token-server.js)
+
+| Endpoint | Purpose |
+|----------|---------|
+| `/api/speech-token` | Keyless AAD token for the Speech SDK (avatar) |
+| `/api/ice-token` | WebRTC ICE relay credentials for avatar video |
+| `/api/openai` | Proxies Azure OpenAI calls (managed identity, key fallback) |
+| `/api/docs-search` | Microsoft Learn docs grounding for deployment guides |
+| `/api/feedback` | Stores user feedback in Cosmos DB |
 
 ## Known Limitations
 
