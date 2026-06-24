@@ -19,6 +19,7 @@ export const iconCategories = [
   'containers',
   'databases',
   'devops',
+  'fabric',
   'general',
   'hybrid + multicloud',
   'identity',

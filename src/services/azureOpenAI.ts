@@ -166,13 +166,14 @@ KNOWN SERVICES (use these exact names for "name" and "type" fields):
 ${knownServices}
 
 Icon categories (use for "category" field):
-"app services", "databases", "storage", "networking", "compute", "containers", "ai + machine learning", "analytics", "identity", "monitor", "iot", "integration", "devops", "security", "web", "management + governance"
+"app services", "databases", "storage", "networking", "compute", "containers", "ai + machine learning", "analytics", "identity", "monitor", "iot", "integration", "devops", "security", "web", "management + governance", "fabric"
 
 Rules:
 1. Create 2-5 logical groups. Max 6 services per group.
 2. Use EXACT service names from the KNOWN SERVICES list above for both "name" and "type". If a required service is NOT in the list, use its official Azure service name and set category to the closest match.
 3. For identity/auth, use "Microsoft Entra ID" (never "Azure Active Directory" or "AAD").
 4. Connection labels MUST be specific and action-oriented (e.g., "Submit batch job per tenant"), NOT generic ("Request", "Data").
+5. MICROSOFT FABRIC: When the solution uses Microsoft Fabric, put Fabric items (Lakehouse, Warehouse, Eventhouse, Eventstream, KQL Database, Fabric Notebook, Fabric Data Pipeline, Dataflow Gen2, Semantic Model, Power BI Report, Mirrored Database, Real-Time Dashboard) in a group named "Microsoft Fabric" and set their category to "fabric". Include "Microsoft Fabric Capacity" (the billed F SKU) and "OneLake" (storage) in that group — individual Fabric items consume the shared capacity, so the capacity carries the cost.
 5. Do NOT specify sourcePosition or targetPosition.
 6. Connection types: "sync" (solid, HTTP/SQL), "async" (dashed, queues/events), "optional" (dotted, fallback).
 7. Provide 5-10 workflow steps following the data flow chronologically. Each step's "services" array MUST list ALL service IDs involved in that step (typically 2-3 services per step, not just one).

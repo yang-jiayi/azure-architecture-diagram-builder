@@ -15,7 +15,7 @@ export interface ServiceIconMapping {
   /** Icon filename (without path or extension) */
   iconFile: string;
   /** Category/folder in icon library */
-  category: 'ai + machine learning' | 'app services' | 'compute' | 'databases' | 'storage' | 'networking' | 'web' | 'analytics' | 'containers' | 'integration' | 'identity' | 'management + governance' | 'iot' | 'monitor' | 'security' | 'other';
+  category: 'ai + machine learning' | 'app services' | 'compute' | 'databases' | 'storage' | 'networking' | 'web' | 'analytics' | 'containers' | 'integration' | 'identity' | 'management + governance' | 'iot' | 'monitor' | 'security' | 'fabric' | 'other';
   /** Whether we have real pricing data for this service */
   hasPricingData: boolean;
   /** Service name used in pricing files (if hasPricingData is true) */
@@ -882,6 +882,179 @@ export const SERVICE_ICON_MAP: Record<string, ServiceIconMapping> = {
     hasPricingData: false,
     isUsageBased: true,
     costRange: '$0.02-0.15 per GB/mo'
+  },
+
+  // ========================================
+  // Microsoft Fabric
+  // ----------------------------------------
+  // Fabric's cost model: a provisioned CAPACITY (F SKU) carries the fixed cost;
+  // OneLake storage is usage-based (per GB); all other Fabric items consume the
+  // shared capacity, so they are modeled as $0 (like AML endpoints rolling up to
+  // compute). Icons are the official v6.1.0 Fabric product icons.
+  // ========================================
+  'Microsoft Fabric': {
+    displayName: 'Microsoft Fabric',
+    aliases: ['Fabric', 'MS Fabric', 'Fabric Platform'],
+    iconFile: 'microsoft-fabric',
+    category: 'fabric',
+    hasPricingData: false,
+    costRange: 'Platform (see Fabric Capacity)'
+  },
+  'Microsoft Fabric Capacity': {
+    displayName: 'Microsoft Fabric Capacity',
+    aliases: ['Fabric Capacity', 'Fabric F SKU', 'Fabric F64', 'Fabric F2', 'Capacity Unit', 'F SKU'],
+    iconFile: 'fabric-capacity',
+    category: 'fabric',
+    hasPricingData: true,
+    pricingServiceName: 'Microsoft Fabric Capacity',
+    isUsageBased: false,
+    costRange: '$263-8,410/mo (F2-F64, PAYG)'
+  },
+  'OneLake': {
+    displayName: 'OneLake',
+    aliases: ['One Lake', 'Fabric OneLake', 'OneLake Storage'],
+    iconFile: 'onelake',
+    category: 'fabric',
+    hasPricingData: true,
+    pricingServiceName: 'OneLake Storage',
+    isUsageBased: true,
+    costRange: '~$0.023 per GB/mo'
+  },
+  'Lakehouse': {
+    displayName: 'Lakehouse',
+    aliases: ['Fabric Lakehouse', 'Lake House', 'Lakehouse (Bronze)', 'Lakehouse (Silver)', 'Lakehouse (Gold)'],
+    iconFile: 'fabric-lakehouse',
+    category: 'fabric',
+    hasPricingData: false,
+    costRange: '$0 (consumes Fabric capacity)'
+  },
+  'Warehouse': {
+    displayName: 'Warehouse',
+    aliases: ['Fabric Warehouse', 'Data Warehouse (Fabric)', 'Warehouse (Gold)'],
+    iconFile: 'fabric-warehouse',
+    category: 'fabric',
+    hasPricingData: false,
+    costRange: '$0 (consumes Fabric capacity)'
+  },
+  'Eventhouse': {
+    displayName: 'Eventhouse',
+    aliases: ['Fabric Eventhouse', 'Event House'],
+    iconFile: 'fabric-eventhouse',
+    category: 'fabric',
+    hasPricingData: false,
+    costRange: '$0 (consumes Fabric capacity)'
+  },
+  'Eventstream': {
+    displayName: 'Eventstream',
+    aliases: ['Fabric Eventstream', 'Event Stream'],
+    iconFile: 'fabric-eventstream',
+    category: 'fabric',
+    hasPricingData: false,
+    costRange: '$0 (consumes Fabric capacity)'
+  },
+  'KQL Database': {
+    displayName: 'KQL Database',
+    aliases: ['Fabric KQL Database', 'Kusto Database (Fabric)'],
+    iconFile: 'fabric-kql-database',
+    category: 'fabric',
+    hasPricingData: false,
+    costRange: '$0 (consumes Fabric capacity)'
+  },
+  'Fabric Notebook': {
+    displayName: 'Fabric Notebook',
+    aliases: ['Fabric Spark Notebook'],
+    iconFile: 'fabric-notebook',
+    category: 'fabric',
+    hasPricingData: false,
+    costRange: '$0 (consumes Fabric capacity)'
+  },
+  'Fabric Data Pipeline': {
+    displayName: 'Fabric Data Pipeline',
+    aliases: ['Fabric Pipeline', 'Data Pipeline (Fabric)'],
+    iconFile: 'fabric-data-pipeline',
+    category: 'fabric',
+    hasPricingData: false,
+    costRange: '$0 (consumes Fabric capacity)'
+  },
+  'Fabric Data Factory': {
+    displayName: 'Fabric Data Factory',
+    aliases: ['Data Factory (Fabric)'],
+    iconFile: 'fabric-data-factory',
+    category: 'fabric',
+    hasPricingData: false,
+    costRange: '$0 (consumes Fabric capacity)'
+  },
+  'Dataflow Gen2': {
+    displayName: 'Dataflow Gen2',
+    aliases: ['Fabric Dataflow', 'Dataflow Gen 2'],
+    iconFile: 'fabric-dataflow-gen2',
+    category: 'fabric',
+    hasPricingData: false,
+    costRange: '$0 (consumes Fabric capacity)'
+  },
+  'Datamart': {
+    displayName: 'Datamart',
+    aliases: ['Fabric Datamart'],
+    iconFile: 'fabric-datamart',
+    category: 'fabric',
+    hasPricingData: false,
+    costRange: '$0 (consumes Fabric capacity)'
+  },
+  'Semantic Model': {
+    displayName: 'Semantic Model',
+    aliases: ['Power BI Semantic Model', 'Power BI Dataset', 'Direct Lake Semantic Model'],
+    iconFile: 'fabric-semantic-model',
+    category: 'fabric',
+    hasPricingData: false,
+    costRange: '$0 (consumes Fabric capacity)'
+  },
+  'Power BI Report': {
+    displayName: 'Power BI Report',
+    aliases: ['Fabric Report', 'Power BI Dashboard', 'Power BI'],
+    iconFile: 'fabric-power-bi-report',
+    category: 'fabric',
+    hasPricingData: false,
+    costRange: '$0 (consumes Fabric capacity)'
+  },
+  'Fabric SQL Database': {
+    displayName: 'Fabric SQL Database',
+    aliases: ['SQL Database (Fabric)', 'Fabric SQL DB'],
+    iconFile: 'fabric-sql-database',
+    category: 'fabric',
+    hasPricingData: false,
+    costRange: '$0 (consumes Fabric capacity)'
+  },
+  'Mirrored Database': {
+    displayName: 'Mirrored Database',
+    aliases: ['Fabric Mirroring', 'Database Mirroring (Fabric)', 'Mirrored DB'],
+    iconFile: 'fabric-mirrored-database',
+    category: 'fabric',
+    hasPricingData: false,
+    costRange: '$0 (free mirroring up to capacity size)'
+  },
+  'Real-Time Dashboard': {
+    displayName: 'Real-Time Dashboard',
+    aliases: ['Fabric Real-Time Dashboard', 'Real Time Dashboard', 'Real-Time Intelligence'],
+    iconFile: 'fabric-real-time-dashboard',
+    category: 'fabric',
+    hasPricingData: false,
+    costRange: '$0 (consumes Fabric capacity)'
+  },
+  'Fabric Spark Job': {
+    displayName: 'Fabric Spark Job',
+    aliases: ['Spark Job Definition', 'Fabric Spark'],
+    iconFile: 'fabric-spark-job',
+    category: 'fabric',
+    hasPricingData: false,
+    costRange: '$0 (consumes Fabric capacity)'
+  },
+  'Fabric Data Agent': {
+    displayName: 'Fabric Data Agent',
+    aliases: ['Data Agent (Fabric)', 'Fabric AI Skill'],
+    iconFile: 'fabric-data-agent',
+    category: 'fabric',
+    hasPricingData: false,
+    costRange: '$0 (consumes Fabric capacity)'
   },
 };
 

@@ -221,6 +221,8 @@ export const SERVICE_NAME_MAPPING: Record<string, string> = {
  */
 export const USAGE_BASED_SERVICES = [
   'Storage',
+  'OneLake',
+  'OneLake Storage',
   'Storage Account',
   'Storage Accounts',
   'Storage Accounts (Classic)',
@@ -415,6 +417,23 @@ export const FALLBACK_PRICING: Record<string, {
   premium: number;
   unit: string;
 }> = {
+  // ── Microsoft Fabric ──────────────────────────────────────────────────────
+  // Capacity is provisioned (fixed). PAYG ~$0.18 per CU per hour x 730 hrs:
+  //   F2 = 2*0.18*730 = 262.80, F8 = 1051.20, F64 = 8409.60. Reserved ~41% less.
+  'Microsoft Fabric Capacity': {
+    basic: 262.80,    // F2
+    standard: 1051.20, // F8
+    premium: 8409.60,  // F64
+    unit: 'per capacity/month (F SKU, PAYG)'
+  },
+  // OneLake storage is usage-based (per GB/mo, ~$0.023 hot). Flat monthly
+  // estimates here assume ~200 GB / ~1 TB / ~10 TB.
+  'OneLake Storage': {
+    basic: 4.71,
+    standard: 23.55,
+    premium: 235.52,
+    unit: 'per month (storage, ~$0.023/GB)'
+  },
   'App Service': {
     basic: 13.14,
     standard: 69.35,

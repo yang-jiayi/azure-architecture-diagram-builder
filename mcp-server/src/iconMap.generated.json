@@ -290,5 +290,85 @@
   "Data Lake Storage": {
     "iconFile": "10090-icon-service-Data-Lake-Storage-Gen1",
     "category": "storage"
+  },
+  "Microsoft Fabric": {
+    "iconFile": "microsoft-fabric",
+    "category": "fabric"
+  },
+  "Microsoft Fabric Capacity": {
+    "iconFile": "fabric-capacity",
+    "category": "fabric"
+  },
+  "OneLake": {
+    "iconFile": "onelake",
+    "category": "fabric"
+  },
+  "Lakehouse": {
+    "iconFile": "fabric-lakehouse",
+    "category": "fabric"
+  },
+  "Warehouse": {
+    "iconFile": "fabric-warehouse",
+    "category": "fabric"
+  },
+  "Eventhouse": {
+    "iconFile": "fabric-eventhouse",
+    "category": "fabric"
+  },
+  "Eventstream": {
+    "iconFile": "fabric-eventstream",
+    "category": "fabric"
+  },
+  "KQL Database": {
+    "iconFile": "fabric-kql-database",
+    "category": "fabric"
+  },
+  "Fabric Notebook": {
+    "iconFile": "fabric-notebook",
+    "category": "fabric"
+  },
+  "Fabric Data Pipeline": {
+    "iconFile": "fabric-data-pipeline",
+    "category": "fabric"
+  },
+  "Fabric Data Factory": {
+    "iconFile": "fabric-data-factory",
+    "category": "fabric"
+  },
+  "Dataflow Gen2": {
+    "iconFile": "fabric-dataflow-gen2",
+    "category": "fabric"
+  },
+  "Datamart": {
+    "iconFile": "fabric-datamart",
+    "category": "fabric"
+  },
+  "Semantic Model": {
+    "iconFile": "fabric-semantic-model",
+    "category": "fabric"
+  },
+  "Power BI Report": {
+    "iconFile": "fabric-power-bi-report",
+    "category": "fabric"
+  },
+  "Fabric SQL Database": {
+    "iconFile": "fabric-sql-database",
+    "category": "fabric"
+  },
+  "Mirrored Database": {
+    "iconFile": "fabric-mirrored-database",
+    "category": "fabric"
+  },
+  "Real-Time Dashboard": {
+    "iconFile": "fabric-real-time-dashboard",
+    "category": "fabric"
+  },
+  "Fabric Spark Job": {
+    "iconFile": "fabric-spark-job",
+    "category": "fabric"
+  },
+  "Fabric Data Agent": {
+    "iconFile": "fabric-data-agent",
+    "category": "fabric"
   }
 }
