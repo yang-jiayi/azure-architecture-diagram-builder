@@ -230,6 +230,14 @@ export function trackVersionOperation(operation: 'save' | 'restore' | 'auto-snap
 }
 
 /**
+ * Track Help & Learn panel opens and section views so the usage workbook can
+ * report engagement with in-app guidance.
+ */
+export function trackHelpOpened(section?: string): void {
+  trackEvent('Help_Opened', section ? { section } : {});
+}
+
+/**
  * Track region change.
  */
 export function trackRegionChange(region: string): void {

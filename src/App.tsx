@@ -17,12 +17,13 @@ import ReactFlow, {
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { captureDiagramAsPng, captureDiagramAsSvg } from './utils/captureCanvas';
-import { Download, Save, Upload, DollarSign, Shield, FileText, FileCode, ChevronDown, Clock, Camera, Loader, GitCompare, RefreshCw, PanelLeftClose, Minimize2, Maximize2, Presentation, MessageSquare, MessagesSquare } from 'lucide-react';
+import { Download, Save, Upload, DollarSign, Shield, FileText, FileCode, ChevronDown, Clock, Camera, Loader, GitCompare, RefreshCw, PanelLeftClose, Minimize2, Maximize2, Presentation, MessageSquare, MessagesSquare, HelpCircle } from 'lucide-react';
 import IconPalette from './components/IconPalette';
 import AzureNode from './components/AzureNode';
 import GroupNode from './components/GroupNode';
 import AIArchitectureGenerator from './components/AIArchitectureGenerator';
 import ArchitectureChatPanel from './components/ArchitectureChatPanel';
+import HelpLearnPanel from './components/HelpLearnPanel';
 import { exportReferenceArchitectureAsPng } from './utils/exportReferencePng';
 import type { ReferenceArchitecture } from './services/referenceArchitectureAI';
 import { exportBlueprintArchitectureAsPng } from './utils/exportBlueprintPng';
@@ -177,6 +178,9 @@ function App() {
   const [isSaveSnapshotModalOpen, setIsSaveSnapshotModalOpen] = useState(false);
   const [isCompareModelsOpen, setIsCompareModelsOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
+  // First-run nudge: pulse the Help button until it has been opened once.
+  const [helpSeen, setHelpSeen] = useState<boolean>(() => localStorage.getItem('help.seen') === '1');
   const [isCompareValidationOpen, setIsCompareValidationOpen] = useState(false);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
   const [isFeedbackToastOpen, setIsFeedbackToastOpen] = useState(false);
@@ -2548,6 +2552,20 @@ function App() {
                   Chat
                 </button>
                 <button
+                  className={`btn btn-help${helpSeen ? '' : ' nudge'}`}
+                  onClick={() => {
+                    setIsHelpOpen(true);
+                    if (!helpSeen) {
+                      setHelpSeen(true);
+                      localStorage.setItem('help.seen', '1');
+                    }
+                  }}
+                  title="How to use the tool &amp; learn the features"
+                >
+                  <HelpCircle size={18} />
+                  Help
+                </button>
+                <button
                   className="btn btn-compare-models"
                   onClick={() => setIsCompareModelsOpen(true)}
                   title="Compare architecture output across multiple AI models"
@@ -3596,6 +3614,10 @@ Return the IMPROVED architecture in the same JSON format as before with proper g
           architectureName: titleBlockData.architectureName,
         }}
         onApply={handleAIGenerate}
+      />
+      <HelpLearnPanel
+        isOpen={isHelpOpen}
+        onClose={() => setIsHelpOpen(false)}
       />
       <FeedbackToast
         isOpen={isFeedbackToastOpen}
