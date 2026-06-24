@@ -193,7 +193,6 @@ Features include:
 | **PPTX Slide** | Single PowerPoint slide, dark or light theme matching the canvas |
 | **Interactive HTML** | Self-contained HTML with pan, zoom, and tooltips |
 | **Draw.io** | Edit in diagrams.net |
-| **az prototype manifest** | Round-trips with Import Manifest for production IaC generation |
 | **JSON** | Backup, version control |
 | **CSV** | Cost analysis in Excel (single region) |
 | **ZIP (All Formats)** | CSV + JSON + TXT summary + intelligent analysis + multi-region comparison |
@@ -429,6 +428,14 @@ azd up
 | Cosmos DB *(optional)* | Diagram persistence — set `deployCosmos=true` in `infra/main.parameters.json` |
 
 After `azd up` completes, the app URL is printed and captured in `SERVICE_APP_URL`.
+
+> **Keyless Azure OpenAI (optional).** `azd up` passes your OpenAI key to the
+> container as a runtime value used by the `/api/openai` proxy, so it works out
+> of the box. To drop the key entirely, grant the app's managed identity the
+> **Cognitive Services OpenAI User** role on your Azure OpenAI resource and clear
+> `AZURE_OPENAI_API_KEY` from the Container App. (The Bicep already assigns the
+> *Cognitive Services Speech User* and *Cosmos DB Data Contributor* roles, but
+> not OpenAI, because the OpenAI resource is bring-your-own / external.)
 
 ### GitHub Actions CI/CD
 
@@ -813,7 +820,6 @@ The model lineup grew from 7 to **12**, adding **GPT-5.4 Mini**, **DeepSeek V4 P
 #### 📤 New Export Formats
 - **Interactive HTML** — self-contained page with pan, zoom, and tooltips
 - **Blueprint PNG** — re-export the whiteboard-style blueprint
-- **az prototype manifest** — round-trips with **Import Manifest** for production IaC generation
 
 ---
 
