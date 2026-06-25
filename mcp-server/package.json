@@ -10,7 +10,7 @@
   "scripts": {
     "sync:icons": "node scripts/sync-icon-map.mjs",
     "prebuild": "npm run sync:icons",
-    "build": "tsc && cp src/iconMap.generated.json dist/iconMap.generated.json",
+    "build": "tsc && cp src/iconMap.generated.json dist/iconMap.generated.json && cp src/iconSvgs.generated.json dist/iconSvgs.generated.json",
     "start": "node dist/index.js",
     "start:http": "node dist/index.js --http",
     "dev": "tsc --watch"

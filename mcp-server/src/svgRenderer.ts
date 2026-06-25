@@ -16,7 +16,47 @@
  *   - Responsive viewBox for any diagram size
  */
 
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, resolve as resolvePath } from 'node:path';
+
 import type { LayoutResult, PositionedNode, PositionedEdge, PositionedGroup } from './layoutEngine.js';
+
+// ── Real Azure icon glyphs ─────────────────────────────────────────────
+// iconMap: service name/aliases → { iconFile, category }
+// iconSvgs: iconFile → data:image/svg+xml;base64,... (the official glyph)
+// Loaded at runtime via fs to avoid ESM JSON-import-attribute friction.
+const __iconDir = dirname(fileURLToPath(import.meta.url));
+
+function loadJson<T>(file: string, fallback: T): T {
+  try {
+    return JSON.parse(readFileSync(resolvePath(__iconDir, file), 'utf8')) as T;
+  } catch {
+    return fallback;
+  }
+}
+
+const ICON_MAP = loadJson<Record<string, { iconFile: string; category: string; aliases?: string[] }>>(
+  'iconMap.generated.json', {},
+);
+const ICON_SVGS = loadJson<Record<string, string>>('iconSvgs.generated.json', {});
+
+// Build a case-insensitive lookup from every service name + alias to its icon
+// data URI, so any real-world type string resolves to the official glyph.
+const ICON_BY_NAME: Record<string, string> = (() => {
+  const out: Record<string, string> = {};
+  for (const [key, entry] of Object.entries(ICON_MAP)) {
+    const dataUri = ICON_SVGS[entry.iconFile];
+    if (!dataUri) continue;
+    const names = [key, ...(entry.aliases ?? [])];
+    for (const n of names) out[n.toLowerCase()] = dataUri;
+  }
+  return out;
+})();
+
+function resolveIconHref(serviceType: string): string | null {
+  return ICON_BY_NAME[serviceType.trim().toLowerCase()] ?? null;
+}
 
 // ── Category abbreviations for type badges ─────────────────────────────
 
@@ -133,9 +173,20 @@ function escapeXml(str: string): string {
 }
 
 function renderNode(node: PositionedNode): string {
-  const icon = pickIcon(node);
+  const iconHref = resolveIconHref(node.type) ?? resolveIconHref(node.name);
   const typeAbbr = abbreviateType(node.type);
   const rx = 8;
+
+  // With a real glyph: render an <image> on the left and shift text right.
+  // Without one: fall back to an emoji prefix in the name line.
+  const textX = iconHref ? node.x + 50 : node.x + 18;
+  const iconSvg = iconHref
+    ? `<image x="${node.x + 14}" y="${node.y + 21}" width="28" height="28"
+            href="${iconHref}" preserveAspectRatio="xMidYMid meet" />`
+    : '';
+  const nameLine = iconHref
+    ? escapeXml(node.name)
+    : `${pickIcon(node)} ${escapeXml(node.name)}`;
 
   return `
     <!-- ${escapeXml(node.name)} -->
@@ -149,13 +200,14 @@ function renderNode(node: PositionedNode): string {
       <!-- Color accent bar -->
       <rect x="${node.x}" y="${node.y}" width="6" height="${node.height}"
             rx="3" fill="${node.color}" />
+      ${iconSvg}
       <!-- Icon + Name -->
-      <text x="${node.x + 18}" y="${node.y + 28}" font-family="Segoe UI, system-ui, sans-serif"
+      <text x="${textX}" y="${node.y + 28}" font-family="Segoe UI, system-ui, sans-serif"
             font-size="13" font-weight="600" fill="#1B1B1B">
-        ${icon} ${escapeXml(node.name)}
+        ${nameLine}
       </text>
       <!-- Type badge -->
-      <text x="${node.x + 18}" y="${node.y + 48}" font-family="Segoe UI, system-ui, sans-serif"
+      <text x="${textX}" y="${node.y + 48}" font-family="Segoe UI, system-ui, sans-serif"
             font-size="11" fill="${node.color}">
         ${escapeXml(typeAbbr)}
       </text>

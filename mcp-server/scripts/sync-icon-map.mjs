@@ -40,9 +40,16 @@ while ((match = entryRe.exec(text)) !== null) {
   const iconFileMatch = block.match(/iconFile:\s*'([^']+)'/);
   const categoryMatch = block.match(/category:\s*'([^']+)'/);
   if (iconFileMatch && categoryMatch) {
+    // Capture aliases so the MCP renderer can resolve real-world type variants
+    // (e.g. "Blob Storage", "Azure Cache for Redis") to the right icon.
+    const aliasesMatch = block.match(/aliases:\s*\[([^\]]*)\]/);
+    const aliases = aliasesMatch
+      ? [...aliasesMatch[1].matchAll(/'([^']+)'/g)].map(m => m[1])
+      : [];
     map[key] = {
       iconFile: iconFileMatch[1],
       category: categoryMatch[1],
+      aliases,
     };
   }
 }
@@ -55,3 +62,37 @@ if (count === 0) {
 
 writeFileSync(outPath, JSON.stringify(map, null, 2) + '\n', 'utf8');
 console.log(`[sync-icon-map] wrote ${count} entries to ${outPath}`);
+
+// ── Embed real Azure icon SVGs as data URIs ────────────────────────────
+// For each referenced icon file, read the SVG, lightly minify, and base64
+// encode into a data URI. The renderer inlines these via <image> so diagrams
+// use the official Azure glyphs instead of emoji. <image> data URIs avoid the
+// gradient-id collisions that inlining raw <svg> would cause.
+const iconsRoot = resolve(repoRoot, 'Azure_Public_Service_Icons', 'Icons');
+const svgOutPath = resolve(here, '..', 'src', 'iconSvgs.generated.json');
+const svgs = {};
+let embedded = 0;
+let missing = 0;
+const seen = new Set();
+for (const entry of Object.values(map)) {
+  const { iconFile, category } = entry;
+  if (seen.has(iconFile)) continue;
+  seen.add(iconFile);
+  const svgPath = resolve(iconsRoot, category, `${iconFile}.svg`);
+  try {
+    let svg = readFileSync(svgPath, 'utf8');
+    svg = svg
+      .replace(/<\?xml[^>]*\?>/g, '')
+      .replace(/<!--[\s\S]*?-->/g, '')
+      .replace(/>\s+</g, '><')
+      .trim();
+    svgs[iconFile] = `data:image/svg+xml;base64,${Buffer.from(svg, 'utf8').toString('base64')}`;
+    embedded++;
+  } catch {
+    missing++;
+  }
+}
+
+writeFileSync(svgOutPath, JSON.stringify(svgs) + '\n', 'utf8');
+console.log(`[sync-icon-map] embedded ${embedded} icon SVGs (${missing} missing) to ${svgOutPath}`);
+
