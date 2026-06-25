@@ -918,7 +918,7 @@ export const SERVICE_ICON_MAP: Record<string, ServiceIconMapping> = {
     hasPricingData: true,
     pricingServiceName: 'OneLake Storage',
     isUsageBased: true,
-    costRange: '~$0.026 per GB/mo (Hot)'
+    costRange: '~$0.023–0.041 per GB/mo (Hot, region-dependent)'
   },
   'Lakehouse': {
     displayName: 'Lakehouse',

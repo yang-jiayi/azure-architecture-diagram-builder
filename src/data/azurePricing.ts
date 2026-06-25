@@ -426,15 +426,22 @@ export const FALLBACK_PRICING: Record<string, {
     premium: 8409.60,  // F64
     unit: 'per capacity/month (F SKU, PAYG)'
   },
-  // OneLake storage is usage-based. Verified via Azure Retail Prices API
-  // (serviceName 'Microsoft Fabric', eastus, 2026-06): OneLake Storage Hot =
-  // $0.026/GB/mo (Cool $0.019, Cold $0.004). Flat estimates assume Hot at
-  // ~200 GB / ~1 TB / ~10 TB.
+  // OneLake storage is usage-based and region-dependent. Verified via the
+  // Azure Retail Prices API (serviceName 'Microsoft Fabric'): Hot storage runs
+  // ~$0.023/GB (eastus2) up to ~$0.041/GB (brazilsouth). Per-region values are
+  // loaded from the regional Fabric data; these flat fallbacks use the eastus2
+  // baseline at ~200 GB / ~1 TB / ~10 TB.
   'OneLake Storage': {
-    basic: 5.20,
-    standard: 26.00,
-    premium: 260.00,
-    unit: 'per month (storage, ~$0.026/GB Hot)'
+    basic: 4.60,
+    standard: 23.00,
+    premium: 230.00,
+    unit: 'per month (storage, ~$0.023/GB Hot, eastus2)'
+  },
+  'OneLake': {
+    basic: 4.60,
+    standard: 23.00,
+    premium: 230.00,
+    unit: 'per month (storage, ~$0.023/GB Hot, eastus2)'
   },
   'App Service': {
     basic: 13.14,

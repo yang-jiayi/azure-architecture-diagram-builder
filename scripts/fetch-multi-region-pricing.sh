@@ -47,6 +47,7 @@ SERVICES=(
   "Azure Synapse Analytics"
   "Stream Analytics"
   "Azure Machine Learning"
+  "Microsoft Fabric"
   
   # AI & Cognitive Services
   "Cognitive Services"

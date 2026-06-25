@@ -82,6 +82,104 @@ function isAIService(serviceName: string): boolean {
   return AI_SERVICE_PRODUCT_MAP.hasOwnProperty(serviceName);
 }
 
+// ── Microsoft Fabric (region-aware) ─────────────────────────────────────────
+// Fabric is licensed by Capacity (F-SKUs) and OneLake storage is billed per GB.
+// Both vary slightly by region, so we read the true per-region rates from the
+// fetched microsoft_fabric.json instead of the static fallback ladder.
+
+function isFabricCapacityService(name: string): boolean {
+  return name === 'Microsoft Fabric Capacity';
+}
+
+function isOneLakeService(name: string): boolean {
+  return name === 'OneLake' || name === 'OneLake Storage';
+}
+
+/** Most common value in a list (mode), or a default when empty. */
+function modeOrDefault(values: number[], fallback: number): number {
+  if (values.length === 0) return fallback;
+  const counts = new Map<number, number>();
+  for (const v of values) counts.set(v, (counts.get(v) || 0) + 1);
+  let best = fallback;
+  let bestCount = -1;
+  for (const [v, c] of counts) {
+    if (c > bestCount) { bestCount = c; best = v; }
+  }
+  return best;
+}
+
+/**
+ * Build per-region Fabric pricing from the fetched microsoft_fabric.json.
+ * - Capacity: F-SKU monthly = (per-CU-hour rate) × CUs × 730 hours.
+ *   The per-CU-hour rate is the mode of the "Capacity Usage CU" consumption
+ *   meters (≈ $0.18, with small regional variance).
+ * - OneLake: uses the "OneLake Storage Hot Data Stored" per-GB meter.
+ */
+async function getFabricRegionalPricing(
+  serviceName: string,
+  region: AzureRegion
+): Promise<ServicePricing | null> {
+  const path = `/src/data/pricing/regions/${region}/microsoft_fabric.json`;
+  const loader = pricingModules[path];
+  if (!loader) {
+    console.warn(`⚠️ No Fabric pricing data bundled at ${path}`);
+    return null;
+  }
+  const data = (await loader()).default as RegionalPricingData;
+
+  if (isFabricCapacityService(serviceName)) {
+    const rates = data.Items
+      .filter(i => i.type === 'Consumption'
+        && (i as any).unitOfMeasure === '1 Hour'
+        && /Capacity Usage CU/i.test(i.meterName))
+      .map(i => i.retailPrice || i.unitPrice)
+      .filter(r => r > 0);
+    const rate = modeOrDefault(rates, 0.18);
+    const skus: Array<[string, number]> = [['F2', 2], ['F8', 8], ['F64', 64]];
+    const tiers: PricingTier[] = skus.map(([name, cu]) => ({
+      name,
+      skuName: name,
+      monthlyPrice: parseFloat((rate * cu * 730).toFixed(2)),
+      hourlyPrice: parseFloat((rate * cu).toFixed(4)),
+      unit: 'per capacity/month',
+      description: `${name} — ${cu} CU @ $${rate}/CU-hour (${region})`
+    }));
+    return {
+      serviceType: serviceName,
+      serviceName,
+      defaultTier: 'F2',
+      tiers,
+      calculationType: 'hourly',
+      lastUpdated: new Date().toISOString(),
+    };
+  }
+
+  if (isOneLakeService(serviceName)) {
+    const hot = data.Items.find(i =>
+      i.type === 'Consumption' && /OneLake Storage Hot Data Stored/i.test(i.meterName));
+    const perGB = (hot?.retailPrice ?? hot?.unitPrice) || 0.023;
+    const sizes: Array<[string, number]> = [['~200 GB', 200], ['~1 TB', 1000], ['~10 TB', 10000]];
+    const tiers: PricingTier[] = sizes.map(([name, gb]) => ({
+      name,
+      skuName: name,
+      monthlyPrice: parseFloat((perGB * gb).toFixed(2)),
+      hourlyPrice: perGB,
+      unit: 'per month (storage)',
+      description: `${gb} GB Hot @ $${perGB}/GB (${region})`
+    }));
+    return {
+      serviceType: serviceName,
+      serviceName,
+      defaultTier: '~1 TB',
+      tiers,
+      calculationType: 'usage',
+      lastUpdated: new Date().toISOString(),
+    };
+  }
+
+  return null;
+}
+
 /**
  * Set the active region for pricing queries
  */
@@ -287,6 +385,18 @@ export async function getRegionalServicePricing(
   }
   
   console.log(`📊 Getting pricing from regional data for ${serviceName} in ${targetRegion}...`);
+  
+  // Microsoft Fabric is region-aware but parsed specially from microsoft_fabric.json
+  if (isFabricCapacityService(serviceName) || isOneLakeService(serviceName)) {
+    const fabricPricing = await getFabricRegionalPricing(serviceName, targetRegion);
+    if (fabricPricing) {
+      parsedPricingCache.set(cacheKey, fabricPricing);
+      console.log(`✅ Loaded region-aware Fabric pricing for ${serviceName} in ${targetRegion}`);
+      return fabricPricing;
+    }
+    // fall through to static fallback if the regional file is missing
+    return null;
+  }
   
   // Load service data for the region
   const data = await loadServiceData(targetRegion, serviceName);
