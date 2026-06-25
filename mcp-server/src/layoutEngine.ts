@@ -10,6 +10,7 @@
  */
 
 import dagre from 'dagre';
+import { resolveServiceName, SERVICE_CATALOG } from './serviceCatalog.js';
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -291,5 +292,12 @@ const TYPE_TO_CATEGORY: Record<string, string> = {
 };
 
 function resolveCategory(serviceType: string): string {
-  return TYPE_TO_CATEGORY[serviceType.toLowerCase()] ?? 'other';
+  // Fast path / explicit overrides for exact lowercased type strings.
+  const direct = TYPE_TO_CATEGORY[serviceType.toLowerCase()];
+  if (direct) return direct;
+  // Alias-aware catalog resolution handles real-world type variants like
+  // "Cosmos DB", "Blob Storage", "Azure AI Search", "Azure Cache for Redis".
+  const canonical = resolveServiceName(serviceType);
+  if (canonical) return SERVICE_CATALOG[canonical].category;
+  return 'other';
 }

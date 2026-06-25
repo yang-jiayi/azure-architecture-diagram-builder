@@ -31,7 +31,7 @@ export const SERVICE_CATALOG: Record<string, ServiceInfo> = {
   'Language':               { displayName: 'Language',               aliases: ['Azure Language', 'Azure AI Language', 'Text Analytics', 'NLP'], category: 'ai + machine learning', hasPricingData: true, pricingServiceName: 'Language', isUsageBased: true, costRange: '$25-250/mo' },
   'Document Intelligence':  { displayName: 'Document Intelligence',  aliases: ['Form Recognizer', 'Azure Document Intelligence', 'Azure AI Document Intelligence', 'Form Processing'], category: 'ai + machine learning', hasPricingData: true, pricingServiceName: 'Document Intelligence', isUsageBased: true, costRange: '$0-500/mo' },
   'Azure Machine Learning': { displayName: 'Azure Machine Learning', aliases: ['Machine Learning', 'ML', 'AML', 'Azure ML', 'AML Workspace', 'Azure Machine Learning Workspace'], category: 'ai + machine learning', hasPricingData: true, pricingServiceName: 'Azure Machine Learning', isUsageBased: true, costRange: '$0-5000/mo' },
-  'Azure Cognitive Search': { displayName: 'Azure Cognitive Search', aliases: ['Cognitive Search', 'Azure Search', 'AI Search'],               category: 'ai + machine learning', hasPricingData: false, costRange: '$75-2500/mo' },
+  'Azure Cognitive Search': { displayName: 'Azure Cognitive Search', aliases: ['Cognitive Search', 'Azure Search', 'AI Search', 'Azure AI Search'],               category: 'ai + machine learning', hasPricingData: false, costRange: '$75-2500/mo' },
 
   // Compute
   'Virtual Machines':       { displayName: 'Virtual Machines',       aliases: ['VM', 'VMs', 'Virtual Machine', 'Azure VM'],                    category: 'compute', hasPricingData: true, pricingServiceName: 'Virtual Machines', costRange: '$13-17340/mo' },
@@ -47,7 +47,7 @@ export const SERVICE_CATALOG: Record<string, ServiceInfo> = {
   'SQL Database':           { displayName: 'SQL Database',           aliases: ['Azure SQL', 'Azure SQL Database', 'SQL DB'],                   category: 'databases', hasPricingData: true, pricingServiceName: 'SQL Database', costRange: '$5-43800/mo' },
   'PostgreSQL':             { displayName: 'Azure Database for PostgreSQL', aliases: ['PostgreSQL', 'Postgres', 'Azure PostgreSQL', 'Azure Database for PostgreSQL'], category: 'databases', hasPricingData: true, pricingServiceName: 'Azure Database for PostgreSQL', costRange: '$5-11240/mo' },
   'MySQL':                  { displayName: 'Azure Database for MySQL', aliases: ['MySQL', 'Azure MySQL', 'Azure Database for MySQL'],          category: 'databases', hasPricingData: true, pricingServiceName: 'Azure Database for MySQL', costRange: '$5-9800/mo' },
-  'Redis Cache':            { displayName: 'Azure Cache for Redis',  aliases: ['Redis', 'Redis Cache', 'Cache'],                               category: 'databases', hasPricingData: true, pricingServiceName: 'Redis Cache', costRange: '$16-13600/mo' },
+  'Redis Cache':            { displayName: 'Azure Cache for Redis',  aliases: ['Redis', 'Redis Cache', 'Cache', 'Azure Cache for Redis'],                               category: 'databases', hasPricingData: true, pricingServiceName: 'Redis Cache', costRange: '$16-13600/mo' },
 
   // Storage
   'Storage Account':        { displayName: 'Storage Account',        aliases: ['Storage', 'Blob Storage', 'Azure Storage', 'Storage Accounts'], category: 'storage', hasPricingData: true, pricingServiceName: 'Storage', isUsageBased: true, costRange: '$0.02-184/mo per GB' },

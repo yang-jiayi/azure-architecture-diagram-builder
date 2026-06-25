@@ -45,6 +45,7 @@ const TYPE_ABBREVIATIONS: Record<string, string> = {
   'event hubs': 'Event Hubs',
   'event grid': 'Event Grid',
   'redis cache': 'Redis',
+  'azure cache for redis': 'Redis',
   'logic apps': 'Logic Apps',
   'azure firewall': 'Firewall',
   'load balancer': 'LB',
@@ -52,6 +53,13 @@ const TYPE_ABBREVIATIONS: Record<string, string> = {
   'azure bastion': 'Bastion',
   'azure machine learning': 'Azure ML',
   'azure cognitive search': 'AI Search',
+  'azure ai search': 'AI Search',
+  'cosmos db': 'Cosmos DB',
+  'blob storage': 'Storage',
+  'storage': 'Storage',
+  'document intelligence': 'Doc Intel',
+  'azure ai document intelligence': 'Doc Intel',
+  'azure backup': 'Backup',
   'microsoft defender for cloud': 'Defender',
   'microsoft sentinel': 'Sentinel',
   'data factory': 'ADF',
@@ -66,7 +74,10 @@ const TYPE_ABBREVIATIONS: Record<string, string> = {
 };
 
 function abbreviateType(type: string): string {
-  return TYPE_ABBREVIATIONS[type.toLowerCase()] ?? type;
+  const mapped = TYPE_ABBREVIATIONS[type.toLowerCase()];
+  if (mapped) return mapped;
+  // Safety: keep badges from overflowing the card width.
+  return type.length > 18 ? type.slice(0, 17).trimEnd() + '\u2026' : type;
 }
 
 // ── Category icon symbols (simple Unicode) ─────────────────────────────
@@ -90,7 +101,19 @@ const CATEGORY_ICONS: Record<string, string> = {
   'other': '☁️',
 };
 
-// ── Edge styling ───────────────────────────────────────────────────────
+// Personas / clients aren't Azure services — give them a recognizable icon
+// instead of the generic cloud fallback.
+const PERSONA_TYPES = new Set([
+  'user', 'users', 'client', 'browser', 'user browser', 'end user', 'customer',
+  'actor', 'persona', 'mobile', 'mobile app', 'web browser',
+]);
+
+function pickIcon(node: PositionedNode): string {
+  if (PERSONA_TYPES.has(node.type.toLowerCase())) return '👤';
+  return CATEGORY_ICONS[node.category] ?? '☁️';
+}
+
+// ── Edge styling ───────────────────────────────────────────────────────────
 
 const EDGE_STYLES: Record<string, { color: string; dasharray: string }> = {
   sync: { color: '#0078D4', dasharray: '' },
@@ -110,7 +133,7 @@ function escapeXml(str: string): string {
 }
 
 function renderNode(node: PositionedNode): string {
-  const icon = CATEGORY_ICONS[node.category] ?? '☁️';
+  const icon = pickIcon(node);
   const typeAbbr = abbreviateType(node.type);
   const rx = 8;
 
