@@ -127,6 +127,10 @@ export interface CostBreakdown {
   region: string;
   currency: string;
   lastCalculated: string;
+  /** Date the underlying pricing data was last refreshed (YYYY-MM-DD). */
+  pricesAsOf?: string;
+  /** Billing term the costs reflect (e.g. "Pay-as-you-go", "Reserved (1-year)"). */
+  pricingTerm?: string;
 }
 
 /**

@@ -1275,6 +1275,13 @@ export function getReserved1yrDiscount(serviceType: string): number {
 }
 
 /**
+ * Date the bundled regional pricing data was last refreshed (YYYY-MM-DD).
+ * The `npm run pricing:refresh` script bumps this automatically after a
+ * successful fetch so cost exports can show an accurate "Prices as of" stamp.
+ */
+export const PRICING_DATA_AS_OF = '2026-06-25';
+
+/**
  * Check if service has pricing data available
  */
 export function hasPricingData(serviceType: string): boolean {

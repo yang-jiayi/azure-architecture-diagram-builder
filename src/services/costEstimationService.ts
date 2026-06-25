@@ -25,6 +25,7 @@ import {
   getFallbackDefaultLevel,
   getFallbackDefaultSku,
   getReserved1yrDiscount,
+  PRICING_DATA_AS_OF,
   hasPricingData,
   USAGE_BASED_SERVICES 
 } from '../data/azurePricing';
@@ -233,7 +234,9 @@ export function calculateCostBreakdown(
     byCategory: [],
     region: targetRegion,
     currency: 'USD',
-    lastCalculated: new Date().toISOString()
+    lastCalculated: new Date().toISOString(),
+    pricesAsOf: PRICING_DATA_AS_OF,
+    pricingTerm: pricingMode === 'reserved1yr' ? 'Reserved (1-year)' : 'Pay-as-you-go',
   };
 
   // Track costs by group and category
@@ -352,6 +355,8 @@ export function getCostSummaryText(breakdown: CostBreakdown): string {
   lines.push(`Total Monthly Cost: $${breakdown.totalMonthlyCost.toFixed(2)}`);
   lines.push(`Region: ${breakdown.region}`);
   lines.push(`Currency: ${breakdown.currency}`);
+  if (breakdown.pricingTerm) lines.push(`Pricing term: ${breakdown.pricingTerm}`);
+  if (breakdown.pricesAsOf) lines.push(`Prices as of: ${breakdown.pricesAsOf}`);
   lines.push(`Last Updated: ${new Date(breakdown.lastCalculated).toLocaleString()}`);
   lines.push('');
   
@@ -387,7 +392,7 @@ export function getCostSummaryMarkdown(breakdown: CostBreakdown): string {
 
   lines.push('# Azure Architecture — Cost Estimation Summary');
   lines.push('');
-  lines.push(`> **Total: \`$${breakdown.totalMonthlyCost.toFixed(2)}/mo\`** · **\`$${annual.toFixed(2)}/yr\`** · Region: \`${breakdown.region}\` · ${breakdown.currency}`);
+  lines.push(`> **Total: \`$${breakdown.totalMonthlyCost.toFixed(2)}/mo\`** · **\`$${annual.toFixed(2)}/yr\`** · Region: \`${breakdown.region}\` · ${breakdown.currency}${breakdown.pricingTerm ? ` · ${breakdown.pricingTerm}` : ''}`);
   lines.push('');
   lines.push('| Field | Value |');
   lines.push('| --- | --- |');
@@ -395,6 +400,8 @@ export function getCostSummaryMarkdown(breakdown: CostBreakdown): string {
   lines.push(`| Annual projection | $${annual.toFixed(2)} |`);
   lines.push(`| Region | ${breakdown.region} |`);
   lines.push(`| Currency | ${breakdown.currency} |`);
+  if (breakdown.pricingTerm) lines.push(`| Pricing term | ${breakdown.pricingTerm} |`);
+  if (breakdown.pricesAsOf) lines.push(`| Prices as of | ${breakdown.pricesAsOf} |`);
   lines.push(`| Last updated | ${new Date(breakdown.lastCalculated).toLocaleString()} |`);
   lines.push('');
 
@@ -443,6 +450,8 @@ export function exportCostBreakdownCSV(breakdown: CostBreakdown, nodes?: Node[])
   lines.push('Azure Architecture Cost Breakdown');
   lines.push(`Total Monthly Cost,$${breakdown.totalMonthlyCost.toFixed(2)}`);
   lines.push(`Region,${breakdown.region}`);
+  if (breakdown.pricingTerm) lines.push(`Pricing Term,${breakdown.pricingTerm}`);
+  if (breakdown.pricesAsOf) lines.push(`Prices As Of,${breakdown.pricesAsOf}`);
   lines.push(`Date,${new Date(breakdown.lastCalculated).toLocaleDateString()}`);
   lines.push('');
   

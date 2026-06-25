@@ -254,3 +254,13 @@ done
 
 echo ""
 echo "📁 Data saved in: $OUTPUT_DIR"
+
+# Stamp the "Prices as of" date so cost exports reflect this refresh.
+PRICING_TS_FILE="../src/data/azurePricing.ts"
+TODAY=$(date +%Y-%m-%d)
+if [ -f "$PRICING_TS_FILE" ]; then
+  # Portable in-place edit (works on both BSD/macOS and GNU sed)
+  tmp_ts=$(mktemp)
+  sed "s/export const PRICING_DATA_AS_OF = '[0-9-]*';/export const PRICING_DATA_AS_OF = '$TODAY';/" "$PRICING_TS_FILE" > "$tmp_ts" && mv "$tmp_ts" "$PRICING_TS_FILE"
+  echo "🗓️  Stamped PRICING_DATA_AS_OF = $TODAY in azurePricing.ts"
+fi
