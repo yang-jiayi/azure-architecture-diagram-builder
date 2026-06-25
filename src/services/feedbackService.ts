@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-import { trackFeedback } from './telemetryService';
+import { trackFeedback, trackFeedbackPersistFailed } from './telemetryService';
 
 export interface FeedbackContext {
   diagramName?: string;
@@ -57,12 +57,33 @@ export async function submitFeedback(input: FeedbackInput): Promise<void> {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
-    // 503 = storage not configured; telemetry already captured the rating.
-    if (!res.ok && res.status !== 503) {
-      throw new Error(`Feedback endpoint returned ${res.status}`);
+    // A non-2xx means the durable write did not happen (503 = storage not
+    // configured, 500 = Cosmos unreachable, e.g. a network policy disabled
+    // public access). In that case capture the comment text in telemetry so
+    // it is never silently lost.
+    if (!res.ok && comment.length > 0) {
+      trackFeedbackPersistFailed({
+        rating: input.rating,
+        category: input.category,
+        comment,
+        diagramName: input.context?.diagramName,
+        model: input.context?.model,
+        reason: `http_${res.status}`,
+      });
     }
   } catch (err) {
     console.error('[feedback] submit failed:', err);
+    // Network error reaching the proxy/Cosmos — preserve the comment in telemetry.
+    if (comment.length > 0) {
+      trackFeedbackPersistFailed({
+        rating: input.rating,
+        category: input.category,
+        comment,
+        diagramName: input.context?.diagramName,
+        model: input.context?.model,
+        reason: 'network_error',
+      });
+    }
   } finally {
     try {
       sessionStorage.setItem(FEEDBACK_DONE_KEY, '1');
