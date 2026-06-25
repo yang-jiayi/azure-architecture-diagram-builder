@@ -162,13 +162,11 @@ function renderNode(node: PositionedNode): string {
     </g>`;
 }
 
-function renderEdge(edge: PositionedEdge): string {
+function renderEdge(edge: PositionedEdge, labelDy = 0): string {
   if (edge.points.length < 2) return '';
 
   const style = EDGE_STYLES[edge.type] ?? EDGE_STYLES.sync;
-  const pathData = edge.points
-    .map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`)
-    .join(' ');
+  const pathData = smoothPath(edge.points);
 
   // Arrowhead position: last two points
   const last = edge.points[edge.points.length - 1];
@@ -181,14 +179,15 @@ function renderEdge(edge: PositionedEdge): string {
     `${last.x - arrowLen * Math.cos(angle + 0.4)},${last.y - arrowLen * Math.sin(angle + 0.4)}`,
   ].join(' ');
 
-  // Label at midpoint
+  // Label at midpoint, nudged vertically to avoid colliding with neighbours.
   const mid = edge.points[Math.floor(edge.points.length / 2)];
+  const ly = mid.y + labelDy;
   const labelSvg = edge.label
     ? `<g>
-        <rect x="${mid.x - edge.label.length * 3.5 - 4}" y="${mid.y - 9}" 
+        <rect x="${mid.x - edge.label.length * 3.5 - 4}" y="${ly - 9}" 
               width="${edge.label.length * 7 + 8}" height="16" rx="3"
               fill="white" stroke="${style.color}" stroke-width="0.5" opacity="0.95" />
-        <text x="${mid.x}" y="${mid.y + 3}" text-anchor="middle"
+        <text x="${mid.x}" y="${ly + 3}" text-anchor="middle"
               font-family="Segoe UI, system-ui, sans-serif" font-size="10"
               fill="${style.color}">${escapeXml(edge.label)}</text>
       </g>`
@@ -201,6 +200,45 @@ function renderEdge(edge: PositionedEdge): string {
       <polygon points="${arrowPoints}" fill="${style.color}" />
       ${labelSvg}
     </g>`;
+}
+
+// Build a smooth path through dagre waypoints using quadratic segments that
+// pass through the midpoints of each leg. This turns harsh diagonal polylines
+// into gentle curves, greatly reducing the "crossing spaghetti" look.
+function smoothPath(points: Array<{ x: number; y: number }>): string {
+  if (points.length < 3) {
+    const a = points[0];
+    const b = points[points.length - 1];
+    return `M ${a.x} ${a.y} L ${b.x} ${b.y}`;
+  }
+  let d = `M ${points[0].x} ${points[0].y}`;
+  for (let i = 1; i < points.length - 1; i++) {
+    const xc = (points[i].x + points[i + 1].x) / 2;
+    const yc = (points[i].y + points[i + 1].y) / 2;
+    d += ` Q ${points[i].x} ${points[i].y} ${xc} ${yc}`;
+  }
+  const n = points.length - 1;
+  d += ` Q ${points[n].x} ${points[n].y} ${points[n].x} ${points[n].y}`;
+  return d;
+}
+
+// Assign a vertical offset to each edge label so labels whose midpoints fall in
+// the same coarse grid cell don't stack on top of each other.
+function computeLabelOffsets(edges: PositionedEdge[]): number[] {
+  const BUCKET_W = 130;
+  const BUCKET_H = 60;
+  const counters = new Map<string, number>();
+  return edges.map(edge => {
+    if (!edge.label || edge.points.length < 2) return 0;
+    const mid = edge.points[Math.floor(edge.points.length / 2)];
+    const key = `${Math.round(mid.x / BUCKET_W)}|${Math.round(mid.y / BUCKET_H)}`;
+    const idx = counters.get(key) ?? 0;
+    counters.set(key, idx + 1);
+    if (idx === 0) return 0;
+    // -18, +18, -36, +36, ...
+    const step = Math.ceil(idx / 2) * 18;
+    return idx % 2 === 1 ? -step : step;
+  });
 }
 
 function renderGroup(group: PositionedGroup): string {
@@ -262,7 +300,7 @@ export function renderSvg(layout: LayoutResult, title?: string): string {
     ${layout.groups.map(renderGroup).join('\n')}
 
     <!-- Edges -->
-    ${layout.edges.map(renderEdge).join('\n')}
+    ${(() => { const offs = computeLabelOffsets(layout.edges); return layout.edges.map((e, i) => renderEdge(e, offs[i])).join('\n'); })()}
 
     <!-- Nodes (foreground) -->
     ${layout.nodes.map(renderNode).join('\n')}
