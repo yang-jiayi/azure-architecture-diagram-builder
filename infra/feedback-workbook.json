@@ -165,7 +165,7 @@
         {
           "type": 1,
           "content": {
-            "json": "## 🌍 Geography\nWhere usage and feedback come from. The **overall reach** tiles exclude the Azure datacenter cluster (`Boydton` / Microsoft network egress) and masked IPs, so they reflect genuine external users. Raw IPs are intentionally not shown (PII) — only country/city aggregates."
+            "json": "## 🌍 Geography & audience\nApp Insights geolocates the **browser's egress IP**, not the device. On Microsoft-managed networks (Global Secure Access / corporate egress) that exit is **Microsoft/Azure**, so those users collapse to a US datacenter (e.g. `Boydton`) and their real country is hidden. These tiles therefore **count distinct users by `user_Id`** (an anonymous per-browser id — IP undercounts and misattributes) and **classify Microsoft/Azure egress separately** from genuine **External** users. The Microsoft classification is heuristic (Azure IP ranges + datacenter city)."
           },
           "name": "geo-header"
         },
@@ -173,9 +173,23 @@
           "type": 3,
           "content": {
             "version": "KqlItem/1.0",
-            "query": "customEvents\n| where name == 'User_Feedback'\n| where timestamp {TimeRange}\n| summarize Count = count(), ['Avg rating'] = round(avg(toint(customMeasurements.rating)), 2) by Country = client_CountryOrRegion, ['City/Region'] = strcat(client_City, ', ', client_StateOrProvince)\n| order by Count desc",
+            "query": "union pageViews, customEvents\n| where timestamp {TimeRange}\n| where isnotempty(user_Id)\n| extend isMsEgress = (ipv4_is_in_any_range(client_IP, '20.0.0.0/6', '172.200.0.0/13') or client_City == 'Boydton' or client_IP == '0.0.0.0')\n| summarize Users = dcount(user_Id) by Origin = iff(isMsEgress, 'Microsoft network (geo unreliable)', 'External')\n| order by Users desc",
             "size": 0,
-            "title": "Feedback by location",
+            "title": "Audience split — distinct users by network origin",
+            "queryType": 0,
+            "resourceType": "microsoft.insights/components",
+            "visualization": "piechart"
+          },
+          "customWidth": "50",
+          "name": "audience-split"
+        },
+        {
+          "type": 3,
+          "content": {
+            "version": "KqlItem/1.0",
+            "query": "customEvents\n| where name == 'User_Feedback'\n| where timestamp {TimeRange}\n| extend isMsEgress = (ipv4_is_in_any_range(client_IP, '20.0.0.0/6', '172.200.0.0/13') or client_City == 'Boydton')\n| where not(isMsEgress)\n| summarize Users = dcount(user_Id), Feedback = count(), ['Avg rating'] = round(avg(toint(customMeasurements.rating)), 2) by Country = client_CountryOrRegion, ['City/Region'] = strcat(client_City, ', ', client_StateOrProvince)\n| order by Users desc",
+            "size": 0,
+            "title": "External feedback by location (by user)",
             "queryType": 0,
             "resourceType": "microsoft.insights/components",
             "visualization": "table"
@@ -187,9 +201,9 @@
           "type": 3,
           "content": {
             "version": "KqlItem/1.0",
-            "query": "union pageViews, customEvents\n| where timestamp {TimeRange}\n| where client_City != 'Boydton' and client_IP != '0.0.0.0' and isnotempty(client_CountryOrRegion)\n| summarize Sessions = dcount(session_Id), ['Distinct IPs'] = dcount(client_IP), Events = count() by Country = client_CountryOrRegion\n| order by Sessions desc\n| take 50",
+            "query": "union pageViews, customEvents\n| where timestamp {TimeRange}\n| extend isMsEgress = (ipv4_is_in_any_range(client_IP, '20.0.0.0/6', '172.200.0.0/13') or client_City == 'Boydton' or client_IP == '0.0.0.0')\n| where not(isMsEgress) and isnotempty(client_CountryOrRegion)\n| summarize Users = dcount(user_Id), Sessions = dcount(session_Id), Events = count() by Country = client_CountryOrRegion\n| order by Users desc\n| take 50",
             "size": 0,
-            "title": "Overall reach — external users by country",
+            "title": "Overall reach — external users by country (by user_Id)",
             "queryType": 0,
             "resourceType": "microsoft.insights/components",
             "visualization": "table",
@@ -210,23 +224,23 @@
           "type": 3,
           "content": {
             "version": "KqlItem/1.0",
-            "query": "union pageViews, customEvents\n| where timestamp {TimeRange}\n| where client_City != 'Boydton' and client_IP != '0.0.0.0' and isnotempty(client_CountryOrRegion)\n| summarize Sessions = dcount(session_Id) by client_CountryOrRegion\n| order by Sessions desc",
+            "query": "union pageViews, customEvents\n| where timestamp {TimeRange}\n| extend isMsEgress = (ipv4_is_in_any_range(client_IP, '20.0.0.0/6', '172.200.0.0/13') or client_City == 'Boydton' or client_IP == '0.0.0.0')\n| where not(isMsEgress) and isnotempty(client_CountryOrRegion)\n| summarize Users = dcount(user_Id) by client_CountryOrRegion\n| order by Users desc",
             "size": 1,
-            "title": "Overall reach — world map (sessions)",
+            "title": "Overall reach — world map (external users)",
             "queryType": 0,
             "resourceType": "microsoft.insights/components",
             "visualization": "map",
             "mapSettings": {
               "locInfo": "CountryRegion",
               "locInfoColumn": "client_CountryOrRegion",
-              "sizeSettings": "Sessions",
+              "sizeSettings": "Users",
               "sizeAggregation": "Sum",
-              "legendMetric": "Sessions",
+              "legendMetric": "Users",
               "legendAggregation": "Sum",
               "itemColorSettings": {
                 "type": "heatmap",
                 "colorAggregation": "Sum",
-                "nodeColorField": "Sessions",
+                "nodeColorField": "Users",
                 "heatmapPalette": "greenRed"
               }
             }
