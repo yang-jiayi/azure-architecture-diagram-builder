@@ -59,6 +59,14 @@
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
 }
 
+/* Fabric workload items whose cost is included in the Fabric Capacity */
+.cost-badge--capacity {
+  background: linear-gradient(135deg, #14b8a6 0%, #0f766e 100%);
+  font-weight: 600;
+  text-transform: none;
+  opacity: 0.92;
+}
+
 .cost-quantity {
   font-size: 0.55rem;
   opacity: 0.9;

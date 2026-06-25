@@ -918,7 +918,7 @@ export const SERVICE_ICON_MAP: Record<string, ServiceIconMapping> = {
     hasPricingData: true,
     pricingServiceName: 'OneLake Storage',
     isUsageBased: true,
-    costRange: '~$0.023 per GB/mo'
+    costRange: '~$0.026 per GB/mo (Hot)'
   },
   'Lakehouse': {
     displayName: 'Lakehouse',
@@ -1078,6 +1078,21 @@ export function getServiceIconMapping(serviceName: string): ServiceIconMapping |
   }
   
   return null;
+}
+
+/**
+ * Whether a service is a Microsoft Fabric workload item whose cost is
+ * included in the workspace's Fabric Capacity (it consumes Capacity Units
+ * rather than billing separately). Used to show an "included in capacity"
+ * indicator instead of a blank/zero cost. Excludes Fabric Capacity itself
+ * and OneLake (which has its own storage billing).
+ */
+export function isCapacityConsumed(serviceName: string): boolean {
+  const m = getServiceIconMapping(serviceName);
+  return !!m
+    && m.category === 'fabric'
+    && !m.hasPricingData
+    && /consumes Fabric capacity/i.test(m.costRange || '');
 }
 
 /**

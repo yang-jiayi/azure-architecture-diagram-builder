@@ -426,13 +426,15 @@ export const FALLBACK_PRICING: Record<string, {
     premium: 8409.60,  // F64
     unit: 'per capacity/month (F SKU, PAYG)'
   },
-  // OneLake storage is usage-based (per GB/mo, ~$0.023 hot). Flat monthly
-  // estimates here assume ~200 GB / ~1 TB / ~10 TB.
+  // OneLake storage is usage-based. Verified via Azure Retail Prices API
+  // (serviceName 'Microsoft Fabric', eastus, 2026-06): OneLake Storage Hot =
+  // $0.026/GB/mo (Cool $0.019, Cold $0.004). Flat estimates assume Hot at
+  // ~200 GB / ~1 TB / ~10 TB.
   'OneLake Storage': {
-    basic: 4.71,
-    standard: 23.55,
-    premium: 235.52,
-    unit: 'per month (storage, ~$0.023/GB)'
+    basic: 5.20,
+    standard: 26.00,
+    premium: 260.00,
+    unit: 'per month (storage, ~$0.026/GB Hot)'
   },
   'App Service': {
     basic: 13.14,
@@ -1165,6 +1167,71 @@ export function getFallbackPricing(serviceType: string, tier: 'basic' | 'standar
     return 0;
   }
   return pricing[tier];
+}
+
+/**
+ * Which fallback tier (basic/standard/premium) to use as the *initial* estimate
+ * for services whose sensible default SKU is not the mid 'standard' tier.
+ * Fabric Capacity defaults to the entry F2 SKU rather than F8 so generated
+ * diagrams that reference "F2" don't render the much larger F8 price.
+ */
+export const FALLBACK_DEFAULT_LEVEL: Record<string, 'basic' | 'standard' | 'premium'> = {
+  'Microsoft Fabric Capacity': 'basic', // F2 ($262.80) — entry SKU
+};
+
+export function getFallbackDefaultLevel(serviceType: string): 'basic' | 'standard' | 'premium' {
+  return FALLBACK_DEFAULT_LEVEL[serviceType] || 'standard';
+}
+
+/** Friendly SKU/tier label for the initial fallback estimate. */
+export const FALLBACK_DEFAULT_SKU: Record<string, string> = {
+  'Microsoft Fabric Capacity': 'F2',
+};
+
+export function getFallbackDefaultSku(serviceType: string): string {
+  return FALLBACK_DEFAULT_SKU[serviceType] || 'Standard';
+}
+
+/**
+ * Full Microsoft Fabric Capacity SKU ladder (F2 → F2048).
+ * PAYG monthly = CUs × $0.18 per CU-hour × 730 hours/month (the published
+ * pay-as-you-go rate; confirmed against the Azure Retail Prices API meter
+ * "Fabric Capacity CU"). 1-year reserved is ~40.5% cheaper than PAYG.
+ * Storage (OneLake) is billed separately and is NOT included here.
+ */
+export interface FabricCapacitySku {
+  cu: number;
+  paygMonthly: number;
+  reserved1yrMonthly: number;
+}
+
+export const FABRIC_CAPACITY_SKUS: Record<string, FabricCapacitySku> = {
+  F2:    { cu: 2,    paygMonthly: 262.80,    reserved1yrMonthly: 156.37 },
+  F4:    { cu: 4,    paygMonthly: 525.60,    reserved1yrMonthly: 312.73 },
+  F8:    { cu: 8,    paygMonthly: 1051.20,   reserved1yrMonthly: 625.46 },
+  F16:   { cu: 16,   paygMonthly: 2102.40,   reserved1yrMonthly: 1250.93 },
+  F32:   { cu: 32,   paygMonthly: 4204.80,   reserved1yrMonthly: 2501.86 },
+  F64:   { cu: 64,   paygMonthly: 8409.60,   reserved1yrMonthly: 5003.71 },
+  F128:  { cu: 128,  paygMonthly: 16819.20,  reserved1yrMonthly: 10007.42 },
+  F256:  { cu: 256,  paygMonthly: 33638.40,  reserved1yrMonthly: 20014.85 },
+  F512:  { cu: 512,  paygMonthly: 67276.80,  reserved1yrMonthly: 40029.70 },
+  F1024: { cu: 1024, paygMonthly: 134553.60, reserved1yrMonthly: 80059.39 },
+  F2048: { cu: 2048, paygMonthly: 269107.20, reserved1yrMonthly: 160118.78 },
+};
+
+/**
+ * Look up the monthly price for a Fabric Capacity F-SKU.
+ * @param sku  e.g. "F2", "F64" (case-insensitive)
+ * @param term "payg" (default) or "reserved1yr"
+ * @returns monthly USD price, or null if the SKU is unknown
+ */
+export function getFabricCapacityMonthly(
+  sku: string,
+  term: 'payg' | 'reserved1yr' = 'payg'
+): number | null {
+  const s = FABRIC_CAPACITY_SKUS[String(sku || '').toUpperCase()];
+  if (!s) return null;
+  return term === 'reserved1yr' ? s.reserved1yrMonthly : s.paygMonthly;
 }
 
 /**

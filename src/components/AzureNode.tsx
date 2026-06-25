@@ -3,10 +3,11 @@
 
 import React, { memo, useEffect, useState } from 'react';
 import { Handle, Position, NodeProps, useReactFlow } from 'reactflow';
-import { Zap, Unlink } from 'lucide-react';
+import { Zap, Unlink, Layers } from 'lucide-react';
 import { loadIcon } from '../utils/iconLoader';
 import { NodePricingConfig } from '../types/pricing';
 import { formatMonthlyCost, getCostColor } from '../utils/pricingHelpers';
+import { isCapacityConsumed } from '../data/serviceIconMapping';
 import './AzureNode.css';
 
 // Map categories to colors
@@ -47,6 +48,11 @@ const AzureNode: React.FC<NodeProps> = memo(({ data, selected, id }) => {
   const pricing = data.pricing as NodePricingConfig | undefined;
   const hasPricing = !!pricing && pricing.estimatedCost > 0;
   const totalCost = pricing ? pricing.estimatedCost * pricing.quantity : 0;
+
+  // Fabric workload items consume Capacity Units from the shared Fabric
+  // Capacity rather than billing separately — show an "incl. capacity" badge.
+  const serviceKey = (data.serviceName as string) || (data.label as string) || '';
+  const capacityConsumed = !hasPricing && isCapacityConsumed(serviceKey);
   
   // Extract style preset
   const stylePreset = (data as any).stylePreset || 'detailed';
@@ -180,6 +186,15 @@ const AzureNode: React.FC<NodeProps> = memo(({ data, selected, id }) => {
             {pricing.isUsageBased && <Zap size={12} style={{ marginRight: '2px', display: 'inline-block', verticalAlign: 'middle' }} />}
             {pricing.isUsageBased && '~'}{formatMonthlyCost(totalCost)}
             {pricing.quantity > 1 && <span className="cost-quantity"> x{pricing.quantity}</span>}
+          </div>
+        )}
+        {capacityConsumed && showPricing && (
+          <div
+            className="cost-badge cost-badge--capacity"
+            title={`Cost included in Fabric Capacity\nThis item consumes Capacity Units (CUs) from the workspace's Fabric Capacity\nrather than billing separately. See the Microsoft Fabric Capacity node for the cost.`}
+          >
+            <Layers size={12} style={{ marginRight: '2px', display: 'inline-block', verticalAlign: 'middle' }} />
+            incl. capacity
           </div>
         )}
         {iconUrl ? (

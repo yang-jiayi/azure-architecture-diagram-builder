@@ -22,6 +22,8 @@ import {
   getAzureServiceName, 
   getDefaultTier, 
   getFallbackPricing,
+  getFallbackDefaultLevel,
+  getFallbackDefaultSku,
   hasPricingData,
   USAGE_BASED_SERVICES 
 } from '../data/azurePricing';
@@ -95,15 +97,16 @@ export async function initializeNodePricing(
         isUsageBased: isUsageBased
       };
     } else {
-      // Fallback to static data
-      const fallbackPrice = getFallbackPricing(serviceType, 'standard');
+      // Fallback to static data — use the service's default SKU/level
+      const fallbackPrice = getFallbackPricing(serviceType, getFallbackDefaultLevel(serviceType));
       const basePrice = applyRegionalPricing(fallbackPrice, targetRegion);
+      const skuLabel = getFallbackDefaultSku(serviceType);
       console.log('  💾 Using fallback pricing:', basePrice, '/mo');
       
       return {
         estimatedCost: basePrice,
-        tier: 'Standard',
-        skuName: 'Standard',
+        tier: skuLabel,
+        skuName: skuLabel,
         quantity: 1,
         region: targetRegion,
         unit: 'per instance/month',
@@ -116,14 +119,15 @@ export async function initializeNodePricing(
     console.error(`Error initializing pricing for ${serviceType}:`, error);
     
     // Final fallback
-    const fallbackPrice = getFallbackPricing(serviceType, 'standard');
+    const fallbackPrice = getFallbackPricing(serviceType, getFallbackDefaultLevel(serviceType));
     const basePrice = applyRegionalPricing(fallbackPrice, targetRegion);
+    const skuLabel = getFallbackDefaultSku(serviceType);
     const isUsageBased = USAGE_BASED_SERVICES.includes(serviceType);
     
     return {
       estimatedCost: basePrice,
-      tier: 'Standard',
-      skuName: 'Standard',
+      tier: skuLabel,
+      skuName: skuLabel,
       quantity: 1,
       region: targetRegion,
       unit: 'per instance/month',
