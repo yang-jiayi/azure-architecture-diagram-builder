@@ -106,7 +106,9 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # Startup: token server + MCP HTTP server in background, nginx in foreground.
 COPY start.sh /start.sh
-RUN chmod +x /start.sh
+# Strip any CR (CRLF) that a Windows checkout may have introduced, then mark
+# executable — a CRLF shebang makes the container report "/start.sh: not found".
+RUN sed -i 's/\r$//' /start.sh && chmod +x /start.sh
 
 EXPOSE 80
 
