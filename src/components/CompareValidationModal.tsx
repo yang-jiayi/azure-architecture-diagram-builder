@@ -1,10 +1,20 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { X, Loader2, Clock, Zap, CheckCircle, AlertCircle, GitCompare, FileJson, FileText, Shield, AlertTriangle, Info, Brain, MonitorPlay, StopCircle } from 'lucide-react';
 import { isAzureOpenAIConfigured, generateValidationCritique, ModelOverride } from '../services/azureOpenAI';
 import { validateArchitecture, ArchitectureValidation, ValidationModelOverride, AIMetrics } from '../services/architectureValidator';
+import { buildValidationConsensus, renderConsensusMarkdown, ConsensusResult } from '../services/validationConsensus';
+import { trackValidationCompared, trackValidationCritiqueRanked } from '../services/telemetryService';
+
+/** Parse the critique's #1-ranked / recommended model from its Markdown. */
+function parseCritiqueWinner(text: string): string | null {
+  const rec = text.match(/##\s*Recommendation[\s\S]*?\*\*([^*]+)\*\*/i);
+  if (rec) return rec[1].trim();
+  const rank = text.match(/(?:^|\n)\s*1\.\s*\*\*([^*]+)\*\*/);
+  return rank ? rank[1].trim() : null;
+}
 import { bandLabel, scoreToBand } from '../services/wafMaturity';
 import { useValidationDisplayPrefs } from '../stores/validationDisplayStore';
 import { useDraggableResizable } from '../hooks/useDraggableResizable';
@@ -206,6 +216,7 @@ const CompareValidationModal: React.FC<CompareValidationModalProps> = ({
       status: 'pending',
     }));
     setResults(initial);
+    const collected: ValidationComparisonResult[] = [...initial];
 
     const promises = models.map(async (model, idx) => {
       setResults(prev => prev.map((r, i) => i === idx ? { ...r, status: 'running' as const } : r));
@@ -236,9 +247,9 @@ const CompareValidationModal: React.FC<CompareValidationModalProps> = ({
 
         const totalFindings = criticalCount + highCount + mediumCount + lowCount;
 
-        setResults(prev => prev.map((r, i) => i === idx ? {
-          ...r,
-          status: 'success' as const,
+        const entry: ValidationComparisonResult = {
+          ...initial[idx],
+          status: 'success',
           validation: result,
           metrics: result.metrics,
           overallScore: result.overallScore,
@@ -249,18 +260,52 @@ const CompareValidationModal: React.FC<CompareValidationModalProps> = ({
           lowCount,
           pillarScores,
           quickWinCount: result.quickWins?.length || 0,
-        } : r));
+        };
+        collected[idx] = entry;
+        setResults(prev => prev.map((r, i) => i === idx ? entry : r));
       } catch (err: any) {
-        setResults(prev => prev.map((r, i) => i === idx ? {
-          ...r,
-          status: 'error' as const,
+        const entry: ValidationComparisonResult = {
+          ...initial[idx],
+          status: 'error',
           error: err.message || 'Unknown error',
-        } : r));
+        };
+        collected[idx] = entry;
+        setResults(prev => prev.map((r, i) => i === idx ? entry : r));
       }
     });
 
     await Promise.allSettled(promises);
     setIsRunning(false);
+
+    // Telemetry: the model-leaderboard flywheel.
+    try {
+      const ok = collected.filter(r => r.status === 'success' && r.validation);
+      if (ok.length >= 2) {
+        const cons = buildValidationConsensus(
+          ok.map(r => ({ modelLabel: MODEL_CONFIG[r.model].displayName, validation: r.validation as ArchitectureValidation })),
+        );
+        const best = ok.reduce((a, b) => (b.overallScore ?? 0) > (a.overallScore ?? 0) ? b : a);
+        trackValidationCompared({
+          modelCount: ok.length,
+          serviceCount: services.length,
+          connectionCount: connections.length,
+          reasoningEffort,
+          perModel: ok.map(r => ({
+            model: MODEL_CONFIG[r.model].displayName,
+            score: r.overallScore ?? 0,
+            findings: r.totalFindings ?? 0,
+            high: r.highCount ?? 0,
+            critical: r.criticalCount ?? 0,
+            timeMs: r.metrics?.elapsedTimeMs ?? 0,
+            tokens: r.metrics?.totalTokens ?? 0,
+          })),
+          consensusTotal: cons.findings.length,
+          consensusHighConfidence: cons.highConfidenceCount,
+          bestModel: MODEL_CONFIG[best.model].displayName,
+          bestScore: best.overallScore ?? 0,
+        });
+      }
+    } catch { /* telemetry must never break the UX */ }
   };
 
   const handleApply = (result: ValidationComparisonResult) => {
@@ -339,6 +384,13 @@ const CompareValidationModal: React.FC<CompareValidationModalProps> = ({
       );
       setCritiqueText(content);
       setCritiqueByModel(chosenModel);
+      try {
+        trackValidationCritiqueRanked({
+          criticModel: MODEL_CONFIG[chosenModel].displayName,
+          winnerModel: parseCritiqueWinner(content) || 'unknown',
+          modelCount: results.filter(r => r.status === 'success').length,
+        });
+      } catch { /* telemetry must never break the UX */ }
     } catch (err: any) {
       setCritiqueError(err.message || 'Failed to generate critique');
     } finally {
@@ -517,6 +569,12 @@ const CompareValidationModal: React.FC<CompareValidationModalProps> = ({
       md += `---\n\n`;
     }
 
+    // Consensus findings (confidence-weighted across all models)
+    if (consensus && consensus.findings.length > 0) {
+      md += renderConsensusMarkdown(consensus);
+      md += `\n---\n\n`;
+    }
+
     // AI Critique (appended when generated)
     if (critiqueText && critiqueByModel) {
       md += `---\n\n`;
@@ -557,6 +615,14 @@ const CompareValidationModal: React.FC<CompareValidationModalProps> = ({
   const mostFindings = successResults.length > 0
     ? Math.max(...successResults.map(r => r.totalFindings || 0))
     : 0;
+
+  // Confidence-weighted consensus across all successful model reviews.
+  const consensus = useMemo<ConsensusResult | null>(() => {
+    const inputs = results
+      .filter(r => r.status === 'success' && r.validation)
+      .map(r => ({ modelLabel: MODEL_CONFIG[r.model].displayName, validation: r.validation as ArchitectureValidation }));
+    return inputs.length >= 2 ? buildValidationConsensus(inputs) : null;
+  }, [results]);
 
   if (!isOpen) return null;
 
@@ -861,6 +927,44 @@ const CompareValidationModal: React.FC<CompareValidationModalProps> = ({
                         </button>
                       </>
                     )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Consensus findings */}
+          {!isRunning && consensus && consensus.findings.length > 0 && (
+            <div className="compare-section cv-consensus">
+              <h3 className="compare-section-title">
+                🤝 Consensus Findings
+                <span className="cv-consensus-sub">{consensus.totalModels} models · {consensus.highConfidenceCount} high-confidence</span>
+              </h3>
+              <p className="cv-consensus-intro">
+                Merged across all models. Confidence = the share of models that independently flagged
+                each topic — the more models agree, the more you can trust it. Single-model items are
+                kept as <em>exploratory</em> so unique risks aren't lost.
+              </p>
+              <div className="cv-consensus-list">
+                {consensus.findings.map(f => (
+                  <div key={f.topicId} className={`cv-consensus-card band-${f.confidenceBand}`}>
+                    <div className="cv-consensus-head">
+                      <span className={`cv-conf-pill band-${f.confidenceBand}`}>
+                        {f.confidenceBand === 'high' ? 'High' : f.confidenceBand === 'medium' ? 'Medium' : 'Exploratory'} · {f.modelCount}/{f.totalModels}
+                      </span>
+                      <span className={`cv-sev-badge sev-${f.severity}`}>{f.severity.toUpperCase()}</span>
+                      <span className="cv-consensus-pillar">{f.pillar}</span>
+                    </div>
+                    <div className="cv-conf-bar"><span style={{ width: `${Math.round(f.confidence * 100)}%` }} /></div>
+                    <div className="cv-consensus-label">{f.label}</div>
+                    <div className="cv-consensus-issue">{f.issue}</div>
+                    <div className="cv-consensus-rec"><strong>Fix:</strong> {f.recommendation}</div>
+                    {f.resources.length > 0 && (
+                      <div className="cv-consensus-resources">
+                        {f.resources.map((r, i) => <span key={i} className="cv-res-chip">{r}</span>)}
+                      </div>
+                    )}
+                    <div className="cv-consensus-models">Flagged by: {f.models.join(', ')}</div>
                   </div>
                 ))}
               </div>

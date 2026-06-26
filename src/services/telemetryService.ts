@@ -139,6 +139,55 @@ export function trackValidation(params: {
 }
 
 /**
+ * Track a multi-model validation comparison run. Powers the "best validator
+ * model" leaderboard: which models score architectures how, and how strong the
+ * cross-model consensus is. `perModel` is a compact JSON blob for offline
+ * aggregation via KQL `parse_json()`.
+ */
+export function trackValidationCompared(params: {
+  modelCount: number;
+  serviceCount: number;
+  connectionCount: number;
+  reasoningEffort: string;
+  perModel: Array<{ model: string; score: number; findings: number; high: number; critical: number; timeMs: number; tokens: number }>;
+  consensusTotal: number;
+  consensusHighConfidence: number;
+  bestModel?: string;
+  bestScore?: number;
+}): void {
+  trackEvent('Validation_Compared', {
+    reasoningEffort: params.reasoningEffort,
+    bestModel: params.bestModel || 'unknown',
+    perModel: JSON.stringify(params.perModel).slice(0, 8000),
+  }, {
+    modelCount: params.modelCount,
+    serviceCount: params.serviceCount,
+    connectionCount: params.connectionCount,
+    consensusTotal: params.consensusTotal,
+    consensusHighConfidence: params.consensusHighConfidence,
+    bestScore: params.bestScore ?? 0,
+  });
+}
+
+/**
+ * Track the AI critique's verdict — the judge model's #1-ranked validator.
+ * Aggregated over time, this is the model-leaderboard signal: which model the
+ * critique consistently rates the most trustworthy WAF reviewer.
+ */
+export function trackValidationCritiqueRanked(params: {
+  criticModel: string;
+  winnerModel: string;
+  modelCount: number;
+}): void {
+  trackEvent('Validation_Critique_Ranked', {
+    criticModel: params.criticModel,
+    winnerModel: params.winnerModel,
+  }, {
+    modelCount: params.modelCount,
+  });
+}
+
+/**
  * Track deployment guide generation.
  */
 export function trackDeploymentGuide(params: {
