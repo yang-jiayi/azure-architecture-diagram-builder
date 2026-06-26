@@ -70,7 +70,7 @@
                   "additionalResourceOptions": [],
                   "showDefault": false
                 },
-                "jsonData": "[{\"value\":\"all\",\"label\":\"All\",\"selected\":true},{\"value\":\"single\",\"label\":\"Single model\"},{\"value\":\"consensus\",\"label\":\"Consensus (multi-model)\"}]"
+                "jsonData": "[[{\"value\":\"all\",\"label\":\"All\",\"selected\":true},{\"value\":\"single\",\"label\":\"Single model\"},{\"value\":\"consensus\",\"label\":\"Consensus (multi-model)\"}]"
               }
             ],
             "style": "pills",
