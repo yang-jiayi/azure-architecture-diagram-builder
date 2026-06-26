@@ -1,10 +1,14 @@
 # Azure Architecture Diagram Builder - System Architecture
 
-**Last Updated**: March 14, 2026 (azd template + CI/CD pipeline)
+**Last Updated**: June 2026 (server-side OpenAI proxy, MCP server + Microsoft Scout, Microsoft Fabric, PAYG/Reserved pricing)
 
 ## Overview
 
-The Azure Architecture Diagram Builder is a web-based tool that uses AI to generate Azure architecture diagrams with real-time pricing estimates. Built with React, TypeScript, and Vite, it leverages **7 AI models** via Azure OpenAI: **GPT-5.1, GPT-5.2, GPT-5.2 Codex, GPT-5.3 Codex, GPT-5.4, DeepSeek V3.2 Speciale, and Grok 4.1 Fast** for intelligent diagram generation, validation, and Infrastructure as Code generation. The Azure Retail Prices API provides cost estimation across 5 regions. A lightweight Express.js **token server** (port 3001) runs co-located with nginx inside the container, handling keyless Azure Speech authentication for the **Talking Avatar Presenter** feature via `DefaultAzureCredential` (Managed Identity). The app is deployed on Azure Container Apps and instrumented with Application Insights for telemetry.
+The Azure Architecture Diagram Builder is a web-based tool that uses AI to generate Azure architecture diagrams with real-time pricing estimates. Built with React, TypeScript, and Vite, it leverages **12 AI models** via Azure OpenAI (GPT-5.1, GPT-5.2, GPT-5.2 Codex, GPT-5.3 Codex, GPT-5.4, GPT-5.4 Mini, DeepSeek V3.2 Speciale, DeepSeek V4 Pro, Grok 4.1 Fast, Grok 4.3, Mistral Large 3, Kimi K2.5) for diagram generation, validation, and Infrastructure as Code. The Azure Retail Prices API provides cost estimation across **8 regions** (PAYG and 1-year Reserved), including Microsoft Fabric capacity and OneLake.
+
+A lightweight Express.js **token server** (`127.0.0.1:3001`, co-located with nginx in the container) is the security boundary: it proxies all Azure OpenAI traffic (`/api/openai`) so the key never reaches the browser, grounds deployment guides in Microsoft Learn (`/api/docs-search`), persists user feedback to Cosmos DB (`/api/feedback`), and issues keyless Speech tokens (`/api/speech-token`) via `DefaultAzureCredential` (Managed Identity).
+
+The project also ships a standalone **MCP server** (`mcp-server/`) exposing 7 tools over stdio + Streamable-HTTP, consumable by **Microsoft Scout** and other MCP clients. The app is deployed on Azure Container Apps and instrumented with Application Insights.
 
 ## High-Level Architecture
 
@@ -15,54 +19,67 @@ graph TB
         RF[React Flow Canvas]
         State[React State Management]
     end
-    
+
     subgraph "Service Layer"
-        AI[Azure OpenAI Service]
+        AI[azureOpenAI Service]
         Pricing[Cost Estimation Service]
         Regional[Regional Pricing Service]
         Icons[Icon Loader]
         Validator[Architecture Validator]
         DeployGen[Deployment Guide Generator]
+        DocsGround[Docs Grounding Service]
+        Feedback[Feedback Service]
     end
-    
+
     subgraph "State Management"
-        ModelStore[Model Settings Store<br/>6 AI Models]
+        ModelStore[Model Settings Store<br/>12 AI Models]
     end
-    
+
     subgraph "Data Layer"
-        PricingData[(Pricing JSON Files<br/>49 services × 5 regions)]
+        PricingData[(Pricing JSON Files<br/>49-71 services × 8 regions)]
         IconData[(SVG Icons<br/>714 files in 29 categories)]
-        Mappings[Service Mappings<br/>& Icon Mappings]
+        Mappings[Service & Icon Mappings<br/>incl. Microsoft Fabric]
     end
-    
+
     subgraph "Backend Layer"
-        TokenServer[Express.js Token Server<br/>Port 3001<br/>speech-token + ice-token]
+        TokenServer[Express.js Token Server<br/>127.0.0.1:3001<br/>/api/openai · /api/docs-search<br/>/api/feedback · /api/speech-token]
+        MCP[MCP Server<br/>7 tools · stdio + HTTP<br/>used by Microsoft Scout]
     end
-    
+
     subgraph "External APIs"
-        OpenAI[Azure OpenAI API<br/>7 Models via Azure AI Foundry]
+        OpenAI[Azure OpenAI API<br/>12 Models via Azure AI Foundry]
+        LearnMCP[Microsoft Learn MCP]
         AzureAPI[Azure Retail Prices API]
+        Cosmos[(Azure Cosmos DB)]
         AppInsightsAPI[Application Insights]
         SpeechAPI[Azure Speech Service<br/>TTS Avatar]
     end
-    
+
     UI --> RF
     UI --> State
     State --> ModelStore
     State --> AI
     State --> Pricing
     State --> Icons
-    AI --> OpenAI
-    ModelStore --> AI
+    State --> Validator
+    State --> DeployGen
+    State --> Feedback
+    DeployGen --> DocsGround
+    AI --> TokenServer
+    Validator --> TokenServer
+    DeployGen --> TokenServer
+    DocsGround --> TokenServer
+    Feedback --> TokenServer
     Pricing --> Regional
     Regional --> PricingData
     Icons --> IconData
     Pricing --> Mappings
-    Validator --> OpenAI
-    DeployGen --> OpenAI
-    State --> TokenServer
+    TokenServer --> OpenAI
+    TokenServer --> LearnMCP
+    TokenServer --> Cosmos
     TokenServer --> SpeechAPI
     UI --> AppInsightsAPI
+    MCP --> AzureAPI
 ```
 
 ## Detailed Component Architecture
@@ -109,9 +126,15 @@ graph LR
         TEL[telemetryService.ts<br/>App Insights Telemetry]
         API[apiHelper.ts<br/>HTTP Retry Logic]
         AVP[avatarPresenter.ts<br/>Speech Avatar + ICE Relay<br/>TCP/443 fallback]
+        DGr[docsGroundingService.ts<br/>Microsoft Learn grounding]
+        FB[feedbackService.ts<br/>Cosmos + telemetry fallback]
         DRH[useDraggableResizable.ts<br/>Drag + Resize Hook]
     end
-    
+
+    subgraph Backend["Backend"]
+        TS[token-server.js<br/>/api/openai · /api/docs-search<br/>/api/feedback · /api/speech-token]
+    end
+
     Canvas --> AzureNode
     Canvas --> EditableEdge
     Canvas --> GroupNode
@@ -119,7 +142,7 @@ graph LR
     RegionSel --> RPS
     ModelSel --> AIGen
     Toolbar --> CES
-    
+
     AzureNode --> CES
     CES --> RPS
     CES --> APS
@@ -127,14 +150,25 @@ graph LR
     AIGen --> AOI
     ValModal --> AV
     DeployModal --> DGG
-    
-    azureOpenAI --> OpenAI
-    costService --> PricingAPI
-    telemetry --> AppInsights
-    
+    DGG --> DGr
+
+    AOI --> TS
+    AV --> TS
+    DGG --> TS
+    DGr --> TS
+    FB --> TS
+    CES --> PricingAPI
+    TEL --> AppInsights
+
+    TS --> OpenAI
+    TS --> LearnMCP
+    TS --> Cosmos
+
     subgraph External["External APIs"]
-        OpenAI[Azure OpenAI API<br/>7 Models]
+        OpenAI[Azure OpenAI API<br/>12 Models]
+        LearnMCP[Microsoft Learn MCP]
         PricingAPI[Azure Retail Prices API]
+        Cosmos[(Azure Cosmos DB)]
         AppInsights[Application Insights]
     end
 ```
@@ -145,29 +179,32 @@ graph LR
 sequenceDiagram
     participant User
     participant UI as React UI
-    participant AI as Azure OpenAI Service
+    participant AI as azureOpenAI Service
+    participant TS as Token Server (/api/openai)
     participant OpenAI as Azure OpenAI API
     participant Icons as Icon Loader
     participant Pricing as Pricing Service
     participant Data as Pricing Data
-    
+
     User->>UI: Enter architecture description
     UI->>AI: Generate diagram request
-    AI->>OpenAI: Send prompt with requirements
-    OpenAI-->>AI: Return JSON (services, connections, groups)
+    AI->>TS: POST /api/openai (no key in browser)
+    TS->>OpenAI: Send prompt (managed identity / key fallback)
+    OpenAI-->>TS: Return JSON (services, connections, groups)
+    TS-->>AI: Proxied response
     AI-->>UI: Parsed diagram structure
-    
+
     par Load Icons
         UI->>Icons: Request icons for services
         Icons->>Icons: Match service names to icon files
         Icons-->>UI: Return SVG paths
     and Load Pricing
         UI->>Pricing: Request pricing for services
-        Pricing->>Data: Load regional pricing
+        Pricing->>Data: Load regional pricing (PAYG / Reserved)
         Data-->>Pricing: Return pricing items
         Pricing-->>UI: Return cost estimates
     end
-    
+
     UI->>UI: Render diagram with icons & pricing
     UI-->>User: Display interactive diagram
 ```
@@ -199,6 +236,27 @@ sequenceDiagram
     
     Nodes-->>User: Display updated pricing badges
 ```
+
+## MCP Server & Microsoft Scout
+
+The repository ships a standalone **Model Context Protocol (MCP) server** (`mcp-server/`) that
+exposes the Diagram Builder's deterministic capabilities as tools, independent of the web UI. It is
+consumable by **Microsoft Scout** and any MCP-compatible client.
+
+| Tool | Purpose |
+|------|---------|
+| `list_services` | Browse the Azure service catalog (categories, aliases, pricing) |
+| `validate_architecture` | Score a design against Well-Architected Framework rules (no LLM) |
+| `estimate_costs` | Estimate monthly cost for a set of services |
+| `generate_manifest` | Emit an `az prototype` interchange manifest |
+| `get_waf_rules` | Query WAF rules by pillar or service type |
+| `render_diagram` | Render a diagram as SVG/HTML with real Azure icons |
+| `export_reactflow_scene` | Produce a React Flow scene for the web app |
+
+- **Transport** — stdio (local) and Streamable-HTTP (`npm run start:http`); selected via `--http`/`--stdio` or `MCP_TRANSPORT`.
+- **Auth** — `MCP_AUTH_TOKEN` enforces `Authorization: Bearer <token>` (constant-time compare); `/healthz` + a pre-auth `/mcp` liveness probe support connector wizards.
+- **Rendering** — `svgRenderer.ts` embeds official Azure icons as data-URIs, smooths edges, and uses a `longest-path` dagre ranker to minimize crossings; `layoutEngine.ts` resolves categories alias-aware via `serviceCatalog.ts`.
+- **Deploy** — `scripts/deploy-mcp-instance.sh` builds and ships an isolated MCP ACA instance; see `SCOUT/README.md` for the Scout registration walkthrough.
 
 ## File Structure
 
@@ -268,9 +326,10 @@ azure-diagrams/
 │   │
 │   └── App.tsx                        # Main application (3,000 lines)
 │
-├── server/                            # Express.js backend (port 8787)
-│   ├── index.js                       # Server entry point
-│   └── store.js                       # Data persistence
+├── server/                            # Express.js token server (127.0.0.1:3001, co-located with nginx)
+│   └── token-server.js                 # /api/openai + /api/docs-search + /api/feedback + /api/speech-token + /api/ice-token
+├── mcp-server/                         # MCP server (7 tools, stdio + Streamable-HTTP, Bearer auth)
+│   └── src/                            # serviceCatalog, wafDetector, layoutEngine, svgRenderer, htmlRenderer
 │
 ├── Azure_Public_Service_Icons/        # 714 SVG files in 29 categories
 ├── infra/                             # Bicep infrastructure (azd template)
@@ -308,8 +367,9 @@ azure-diagrams/
 - **html2canvas 1.4.1** - Diagram export to PNG
 
 ### Backend Stack
-- **Express.js** - Server on port 8787
-- **Node.js** - Runtime for server and scripts
+- **Express.js token server** - `127.0.0.1:3001`, co-located with nginx; proxies `/api/openai`, grounds docs via `/api/docs-search`, persists feedback via `/api/feedback`, and issues Speech tokens via `/api/speech-token` (keyless, `DefaultAzureCredential`)
+- **MCP server** - `@modelcontextprotocol/sdk`, stdio + Streamable-HTTP transports, Bearer-token auth (consumable by Microsoft Scout)
+- **Node.js** - Runtime for server, MCP server, and scripts
 
 ### AI Models (via Azure AI Foundry)
 - **GPT-5.1** - Reasoning model with configurable effort (none/low/medium/high)
@@ -317,20 +377,28 @@ azure-diagrams/
 - **GPT-5.2 Codex** - Code-optimized reasoning model
 - **GPT-5.3 Codex** - Latest code-optimized reasoning model
 - **GPT-5.4** - Most capable frontier model for professional work, coding, and tool use
+- **GPT-5.4 Mini** - Lightweight frontier model
 - **DeepSeek V3.2 Speciale** - Third-party model via Azure AI Foundry
+- **DeepSeek V4 Pro** - Third-party model via Azure AI Foundry
 - **Grok 4.1 Fast** - Third-party model via Azure AI Foundry
+- **Grok 4.3** - Third-party model via Azure AI Foundry
+- **Mistral Large 3** - Third-party model via Azure AI Foundry
+- **Kimi K2.5** - Third-party model via Azure AI Foundry
+- All Azure OpenAI traffic is **proxied server-side** (`/api/openai`); the key is never bundled into the browser
 - Selectable per-generation via **ModelSelector** dropdown
 - Per-feature overrides (generation, validation, deployment) stored in localStorage
 
 ### Services & APIs
-- **Azure OpenAI API** (`2025-04-01-preview`) - AI-powered diagram generation, validation, deployment guides
-- **Azure Retail Prices API** - Real-time pricing data
+- **Azure OpenAI API** (`2025-04-01-preview`) - AI-powered diagram generation, validation, deployment guides (via the `/api/openai` server proxy)
+- **Microsoft Learn MCP** - documentation grounding for deployment guides (via the `/api/docs-search` server proxy)
+- **Azure Retail Prices API** - real-time pricing data (PAYG + Reserved), pre-fetched per region
+- **Azure Cosmos DB** - diagram & feedback persistence (keyless / managed identity)
 - **Application Insights** - Telemetry, feature usage tracking, session analytics
 - **Vite Dynamic Imports** - SVG icon loading (`import.meta.glob`)
 
 ### Data Management
-- **JSON files** - Cached regional pricing (245 files total: 49 services × 5 regions)
-- **SVG files** - Azure service icons (714 files)
+- **JSON files** - cached regional pricing per region (49-71 services × 8 regions), including Microsoft Fabric capacity & OneLake meters; refresh with `npm run pricing:refresh`
+- **SVG files** - Azure service icons (714 files) plus the Microsoft Fabric icon set
 - **In-memory caching** - Performance optimization
 - **localStorage** - Model settings, per-feature overrides, version history, export history
 
@@ -346,7 +414,7 @@ azure-diagrams/
 
 ### 1. AI-Powered Diagram Generation
 - **Input**: Natural language architecture description, or uploaded image, or IaC template (ARM/Bicep/Terraform)
-- **Model Selection**: Choose from 7 models (GPT-5.1, GPT-5.2, GPT-5.2 Codex, GPT-5.3 Codex, GPT-5.4, DeepSeek V3.2 Speciale, Grok 4.1 Fast) with optional reasoning effort
+- **Model Selection**: Choose from 12 models (GPT-5.1, GPT-5.2, GPT-5.2 Codex, GPT-5.3 Codex, GPT-5.4, GPT-5.4 Mini, DeepSeek V3.2 Speciale, DeepSeek V4 Pro, Grok 4.1 Fast, Grok 4.3, Mistral Large 3, Kimi K2.5) with optional reasoning effort
 - **Processing**: Azure OpenAI analyzes requirements and generates structured JSON
 - **Post-processing**: Service names normalized against `serviceIconMapping`, categories corrected, icons resolved
 - **Output**: Services, connections (sync/async/optional/bidirectional), groups, and workflow steps
@@ -408,7 +476,7 @@ azure-diagrams/
 - **Restore**: Roll back to any previous version
 
 ### 9. Model Selection & Comparison
-- **7 models**: GPT-5.1, GPT-5.2, GPT-5.2 Codex, GPT-5.3 Codex, GPT-5.4, DeepSeek V3.2 Speciale, Grok 4.1 Fast
+- **12 models**: GPT-5.1, GPT-5.2, GPT-5.2 Codex, GPT-5.3 Codex, GPT-5.4, GPT-5.4 Mini, DeepSeek V3.2 Speciale, DeepSeek V4 Pro, Grok 4.1 Fast, Grok 4.3, Mistral Large 3, Kimi K2.5
 - **Reasoning effort**: Configurable (none/low/medium/high) for reasoning-capable models
 - **Per-feature overrides**: Different models for generation vs. validation vs. deployment guides
 - **Architecture comparison**: Run the same prompt through multiple models in parallel; compare service counts, tokens, latency; apply the best result
@@ -465,7 +533,7 @@ scripts/fetch-multi-region-pricing.sh
 - Fetches from Azure Retail Prices API
 - Filters by region and service name
 - Stores in `src/data/pricing/regions/{region}/{service}.json`
-- 49 services × 5 regions = 245 files (~116KB each)
+- 49-71 services × 8 regions (plus per-region Microsoft Fabric meters); refresh with `npm run pricing:refresh`
 
 ### Pricing Data Structure
 ```json
@@ -711,4 +779,4 @@ Key architectural decisions:
 - **azd template** (`azure.yaml` + `infra/`) for one-command provision and deploy, qualifying for Azure-Samples gallery
 - **Azure Container Apps deployment** with ACR builds and auto-scaling (1–3 replicas)
 
-The system successfully handles the complexity of 714 icons, 245 pricing files, 7 AI models, and variable service naming conventions to deliver a seamless user experience.
+The system successfully handles the complexity of 714 icons (plus the Microsoft Fabric set), per-region pricing across 8 regions, 12 AI models, and variable service naming conventions to deliver a seamless user experience.
