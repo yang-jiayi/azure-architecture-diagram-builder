@@ -211,6 +211,34 @@ export function buildValidationConsensus(inputs: ConsensusInput[]): ConsensusRes
   };
 }
 
+export interface TopicHit {
+  id: string;
+  label: string;
+  pillar: string;
+  severity: Severity;
+}
+
+/**
+ * Classify a single validation's findings into distinct WAF topics (max
+ * severity per topic). Used for product analytics: emitting the topics of every
+ * validation lets us aggregate which gaps recur across all users.
+ */
+export function classifyValidationTopics(validation: ArchitectureValidation): TopicHit[] {
+  const map = new Map<string, TopicHit>();
+  for (const pillar of validation?.pillars ?? []) {
+    const pillarName = (pillar as { pillar?: string }).pillar ?? 'Other';
+    const findings: ValidationFinding[] = (pillar as { findings?: ValidationFinding[] }).findings ?? [];
+    for (const f of findings) {
+      const { id, label, pillar: tp } = classify(f, pillarName);
+      const existing = map.get(id);
+      if (!existing || SEVERITY_RANK[f.severity] > SEVERITY_RANK[existing.severity]) {
+        map.set(id, { id, label, pillar: tp, severity: f.severity });
+      }
+    }
+  }
+  return [...map.values()];
+}
+
 /** Render the consensus as a Markdown section for the comparison report. */
 export function renderConsensusMarkdown(consensus: ConsensusResult): string {
   if (consensus.findings.length === 0) return '';

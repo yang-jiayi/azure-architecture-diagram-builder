@@ -188,6 +188,32 @@ export function trackValidationCritiqueRanked(params: {
 }
 
 /**
+ * Track the WAF gap "topics" of a validation, for product analytics. Aggregated
+ * across all validations this reveals which gaps recur (e.g. "no private
+ * endpoints", "no DR") so we can prioritize guardrails, secure-by-default
+ * starter templates, or "common pitfalls" nudges. `topics` is a compact JSON
+ * array of { id, pillar, severity } for KQL `parse_json()` / `mv-expand`.
+ */
+export function trackValidationFindings(params: {
+  source: string; // 'single' | 'consensus'
+  model?: string;
+  overallScore?: number;
+  serviceCount?: number;
+  topics: Array<{ id: string; label?: string; pillar: string; severity: string }>;
+}): void {
+  trackEvent('Validation_Findings', {
+    source: params.source,
+    model: params.model || 'unknown',
+    topics: JSON.stringify(params.topics).slice(0, 6000),
+  }, {
+    overallScore: params.overallScore ?? 0,
+    serviceCount: params.serviceCount ?? 0,
+    topicCount: params.topics.length,
+    highCount: params.topics.filter(t => t.severity === 'high' || t.severity === 'critical').length,
+  });
+}
+
+/**
  * Track deployment guide generation.
  */
 export function trackDeploymentGuide(params: {

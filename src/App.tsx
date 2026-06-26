@@ -71,7 +71,8 @@ import {
 } from './utils/layoutPresets';
 import { generateModelFilename, setSourceModel, clearSourceModel } from './utils/modelNaming';
 import { fitAllGroupsToContent } from './utils/groupUtils';
-import { trackArchitectureGeneration, trackValidation, trackDeploymentGuide, trackExport, trackTemplateImport, trackModelComparison, trackRecommendationsApplied, trackVersionOperation, trackStartFresh } from './services/telemetryService';
+import { trackArchitectureGeneration, trackValidation, trackDeploymentGuide, trackExport, trackTemplateImport, trackModelComparison, trackRecommendationsApplied, trackVersionOperation, trackStartFresh, trackValidationFindings } from './services/telemetryService';
+import { classifyValidationTopics } from './services/validationConsensus';
 import type { IaCFormat } from './services/azureOpenAI';
 import FeedbackModal from './components/FeedbackModal';
 import FeedbackToast from './components/FeedbackToast';
@@ -2424,6 +2425,13 @@ function App() {
         serviceCount: services.length,
         findingCount: result.pillars?.reduce((sum: number, p: any) => sum + (p.findings?.length || 0), 0),
         elapsedTimeMs: result.metrics?.elapsedTimeMs,
+      });
+      trackValidationFindings({
+        source: 'single',
+        model: result.metrics?.model,
+        overallScore: result.overallScore,
+        serviceCount: services.length,
+        topics: classifyValidationTopics(result).map(t => ({ id: t.id, label: t.label, pillar: t.pillar, severity: t.severity })),
       });
       // Collapse panels to maximize diagram view
       setPanelsCollapsedSignal(prev => prev + 1);

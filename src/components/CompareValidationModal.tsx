@@ -6,7 +6,7 @@ import { X, Loader2, Clock, Zap, CheckCircle, AlertCircle, GitCompare, FileJson,
 import { isAzureOpenAIConfigured, generateValidationCritique, ModelOverride } from '../services/azureOpenAI';
 import { validateArchitecture, ArchitectureValidation, ValidationModelOverride, AIMetrics } from '../services/architectureValidator';
 import { buildValidationConsensus, renderConsensusMarkdown, ConsensusResult } from '../services/validationConsensus';
-import { trackValidationCompared, trackValidationCritiqueRanked } from '../services/telemetryService';
+import { trackValidationCompared, trackValidationCritiqueRanked, trackValidationFindings } from '../services/telemetryService';
 
 /** Parse the critique's #1-ranked / recommended model from its Markdown. */
 function parseCritiqueWinner(text: string): string | null {
@@ -303,6 +303,16 @@ const CompareValidationModal: React.FC<CompareValidationModalProps> = ({
           consensusHighConfidence: cons.highConfidenceCount,
           bestModel: MODEL_CONFIG[best.model].displayName,
           bestScore: best.overallScore ?? 0,
+        });
+        // Product-analytics signal: the consensus-confirmed gap topics.
+        trackValidationFindings({
+          source: 'consensus',
+          model: 'multi',
+          overallScore: best.overallScore ?? 0,
+          serviceCount: services.length,
+          topics: cons.findings
+            .filter(f => f.confidenceBand !== 'exploratory')
+            .map(f => ({ id: f.topicId, label: f.label, pillar: f.pillar, severity: f.severity })),
         });
       }
     } catch { /* telemetry must never break the UX */ }
