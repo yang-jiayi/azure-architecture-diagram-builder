@@ -2648,6 +2648,11 @@ function App() {
                     architectureName: titleBlockData.architectureName
                   }}
                 />
+                <ModelSettingsPopover
+                  ref={modelSettingsRef}
+                  isOpen={isModelSettingsOpen}
+                  onToggle={() => setIsModelSettingsOpen(v => !v)}
+                />
                 <button
                   className={`btn btn-ai-chat${isChatOpen ? ' active' : ''}`}
                   onClick={() => setIsChatOpen((v) => !v)}
@@ -3222,11 +3227,6 @@ function App() {
               </div>
 
               <div className="toolbar-group">
-                <ModelSettingsPopover
-                  ref={modelSettingsRef}
-                  isOpen={isModelSettingsOpen}
-                  onToggle={() => setIsModelSettingsOpen(v => !v)}
-                />
                 <button 
                   onClick={handleValidateArchitecture} 
                   className="btn btn-premium" 

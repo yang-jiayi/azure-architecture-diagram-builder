@@ -932,3 +932,53 @@ body.dark-mode .react-flow__handle.valid {
 body.dark-mode .react-flow__handle.valid {
   box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.5);
 }
+
+/* ── Toolbar UX quick-wins (prototype — branch ux/toolbar-quick-wins) ─────────
+   Reduce top-bar visual noise: neutralize the rainbow of gradient/pulsing accent
+   buttons (Chat, Help, Compare Models, Validate, Deployment Guide, Compare
+   Validation) so the single primary action — "Generate with AI" — plus "Export"
+   clearly stand out. Buttons keep their labels, icons and hover affordance; only
+   the loud colors and attention-grabbing pulse animations are removed.
+   To revert the experiment, delete this block. */
+.btn-compare-models,
+.btn-ai-chat,
+.btn-help,
+.btn-premium,
+body.dark-mode .btn-compare-models,
+body.dark-mode .btn-ai-chat,
+body.dark-mode .btn-help,
+body.dark-mode .btn-premium {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: none;
+  animation: none;
+}
+
+.btn-compare-models:hover,
+.btn-ai-chat:hover,
+.btn-help:hover,
+.btn-premium:hover,
+body.dark-mode .btn-compare-models:hover,
+body.dark-mode .btn-premium:hover {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.45);
+  transform: translateY(-1px);
+  box-shadow: none;
+  animation: none;
+}
+
+/* keep a subtle "active" state for the Chat toggle (no loud gradient) */
+.btn-ai-chat.active {
+  background: rgba(255, 255, 255, 0.34);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.55);
+}
+
+/* drop the first-run Help pulse and the premium shimmer overlay */
+.btn-help.nudge { animation: none; }
+.btn-premium::before { display: none; }
+
+/* slightly stronger group dividers for clearer grouping */
+.toolbar-group + .toolbar-group {
+  border-left-color: rgba(255, 255, 255, 0.35);
+}
