@@ -577,21 +577,26 @@ AZURE_SPEECH_RESOURCE_ID=/subscriptions/<subscription-id>/resourceGroups/<resour
 
 4. **Start the development server**
 ```bash
-# Standard (no avatar)
+# Frontend only — Vite on http://localhost:3000.
+# NOTE: /api/openai is NOT served, so AI generation/chat will fail with a
+# 500/503. Use this only for pure UI work that doesn't call the AI backend.
 npm run dev
 
-# With avatar presenter: starts token server + Vite concurrently
-npm run dev:avatar
-
-# Recommended for end-to-end local testing before pushing to GitHub.
-# Loads .env, verifies required AZURE_SPEECH_* vars, checks `az login`
-# (warns if not on the expected subscription), confirms ports 3000/3001
-# are free, installs deps if missing, starts the speech token server,
-# probes `/api/speech-token`, then runs Vite in the foreground.
-# Single Ctrl-C cleans up all child processes. Logs land in `.dev-logs/`.
-./scripts/dev-all.sh                # token server + Vite
+# Recommended for local testing: starts the token server (:3001, serves
+# /api/openai) AND Vite (:3000) together, with pre-flight checks and cleanup.
+# Reads .env, bridges VITE_AZURE_OPENAI_* → server-side AZURE_OPENAI_* so the
+# /api/openai proxy works, checks `az login` (warns if not on the expected
+# subscription), confirms ports 3000/3001 are free, installs deps if missing,
+# then runs Vite in the foreground. Single Ctrl-C cleans up all children.
+# Logs land in `.dev-logs/`. The AZURE_SPEECH_* vars are OPTIONAL — without
+# them the avatar "Present" button is disabled but everything else works.
+npm run dev:full                    # alias for ./scripts/dev-all.sh
+./scripts/dev-all.sh                # token server + Vite (same thing)
 ./scripts/dev-all.sh --with-mcp     # also build & start the MCP server
 ./scripts/dev-all.sh --skip-az-check  # skip the Azure CLI verification
+
+# With avatar presenter on an alternate port (Vite :3002 + token server):
+npm run dev:avatar
 ```
 
 #### Avatar narrator troubleshooting

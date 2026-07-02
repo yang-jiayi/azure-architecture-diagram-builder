@@ -19,7 +19,7 @@ import 'reactflow/dist/style.css';
 import { captureDiagramAsPng, captureDiagramAsSvg } from './utils/captureCanvas';
 import { animateEdgeFlow } from './utils/animateEdges';
 import { sequenceWorkflowSvg } from './utils/sequenceWorkflow';
-import { Download, Save, Upload, DollarSign, Shield, FileText, FileCode, ChevronDown, Clock, Camera, Loader, GitCompare, RefreshCw, PanelLeftClose, Minimize2, Maximize2, Presentation, MessageSquare, MessagesSquare, HelpCircle } from 'lucide-react';
+import { Download, Save, Upload, DollarSign, Shield, FileText, FileCode, ChevronDown, Clock, Camera, Loader, GitCompare, RefreshCw, PanelLeftClose, Minimize2, Maximize2, Presentation, MessageSquare, MessagesSquare, HelpCircle, Hand, ZoomIn, Frame, X, PanelTopClose, PanelTopOpen } from 'lucide-react';
 import IconPalette from './components/IconPalette';
 import AzureNode from './components/AzureNode';
 import GroupNode from './components/GroupNode';
@@ -102,6 +102,8 @@ type ExportHistoryItem = {
 
 const EXPORT_HISTORY_STORAGE_KEY = 'azure-diagram-builder.exportHistory.v1';
 const EDGE_STYLE_STORAGE_KEY = 'azure-diagram-builder.edgeStyle.v1';
+const CANVAS_HINT_STORAGE_KEY = 'azure-diagram-builder.canvasHintDismissed.v1';
+const HEADER_COLLAPSED_STORAGE_KEY = 'azure-diagram-builder.headerCollapsed.v1';
 
 // Derive a short, human-friendly architecture title from a free-form prompt
 // (used as a fallback when no manifest title is available). Strips common
@@ -185,6 +187,13 @@ function App() {
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   // First-run nudge: pulse the Help button until it has been opened once.
   const [helpSeen, setHelpSeen] = useState<boolean>(() => localStorage.getItem('help.seen') === '1');
+  // Canvas navigation hint: teaches scroll-to-zoom / drag-to-pan / fit-view.
+  // Dismissed permanently once the user closes it (persisted in localStorage).
+  const [showCanvasHint, setShowCanvasHint] = useState<boolean>(() => localStorage.getItem(CANVAS_HINT_STORAGE_KEY) !== '1');
+  // Collapses the top toolbar rows to maximize canvas height. Independent of
+  // the "Focus" button (which collapses the side panels). Persisted so the
+  // user's preference sticks across sessions.
+  const [isHeaderCollapsed, setIsHeaderCollapsed] = useState<boolean>(() => localStorage.getItem(HEADER_COLLAPSED_STORAGE_KEY) === '1');
   const [isCompareValidationOpen, setIsCompareValidationOpen] = useState(false);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
   const [isFeedbackToastOpen, setIsFeedbackToastOpen] = useState(false);
@@ -197,6 +206,10 @@ function App() {
   const [lastReferenceArchitecture, setLastReferenceArchitecture] = useState<ReferenceArchitecture | null>(null);
   const [lastBlueprintArchitecture, setLastBlueprintArchitecture] = useState<BlueprintArchitecture | null>(null);
   const [panelsCollapsedSignal, setPanelsCollapsedSignal] = useState(0);
+  // Focus mode: hides canvas chrome (side panels via the signal above, plus the
+  // "Generated from" prompt banner and the "Generated with" model badge) so only
+  // the diagram itself remains. Toggled by the Focus button.
+  const [focusMode, setFocusMode] = useState(false);
 
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
   const exportMenuRef = useRef<HTMLDivElement | null>(null);
@@ -2584,7 +2597,7 @@ function App() {
 
   return (
     <div className="app">
-      <header className="app-header">
+      <header className={`app-header${isHeaderCollapsed ? ' header-collapsed' : ''}`}>
         <div className="header-content">
           <div className="header-brand">
             <img src={microsoftLogoWhite} alt="Microsoft" className="microsoft-logo" />
@@ -3207,12 +3220,21 @@ function App() {
                 </div>
 
                 <button
-                  onClick={() => setPanelsCollapsedSignal(prev => prev + 1)}
-                  className="btn btn-secondary"
-                  title="Collapse all panels for maximum diagram space"
+                  onClick={() => {
+                    setFocusMode(prev => {
+                      const next = !prev;
+                      // Entering focus also collapses the side panels & legend
+                      // (their existing one-way signal behavior).
+                      if (next) setPanelsCollapsedSignal(p => p + 1);
+                      return next;
+                    });
+                  }}
+                  className={`btn btn-secondary${focusMode ? ' btn-active' : ''}`}
+                  title={focusMode ? 'Show panels and diagram info' : 'Hide panels and diagram info for maximum diagram space'}
+                  aria-pressed={focusMode}
                 >
                   <PanelLeftClose size={18} />
-                  Focus
+                  {focusMode ? 'Exit Focus' : 'Focus'}
                 </button>
 
                 <button
@@ -3277,6 +3299,22 @@ function App() {
               </div>
             </div>
           </div>
+          <button
+            className="header-collapse-toggle"
+            onClick={() => {
+              setIsHeaderCollapsed(v => {
+                const next = !v;
+                try { localStorage.setItem(HEADER_COLLAPSED_STORAGE_KEY, next ? '1' : '0'); } catch { /* ignore */ }
+                return next;
+              });
+            }}
+            title={isHeaderCollapsed ? 'Show the toolbar' : 'Hide the toolbar for more canvas space'}
+            aria-label={isHeaderCollapsed ? 'Show the toolbar' : 'Hide the toolbar'}
+            aria-pressed={isHeaderCollapsed}
+          >
+            {isHeaderCollapsed ? <PanelTopOpen size={18} /> : <PanelTopClose size={18} />}
+            <span>{isHeaderCollapsed ? 'Show Toolbar' : 'Hide Toolbar'}</span>
+          </button>
         </div>
       </header>
       
@@ -3316,6 +3354,39 @@ function App() {
               color="#60a5fa"
               style={{ backgroundColor: '#f8fafc' }}
             />
+            {/* Canvas navigation hint — teaches pan/zoom so large diagrams
+                aren't perceived as "stuck" or too big to view. Shown only when
+                a diagram exists and until the user dismisses it. */}
+            {showCanvasHint && nodes.length > 0 && (
+              <div className="canvas-nav-hint" role="note" aria-label="Canvas navigation tips">
+                <div className="canvas-nav-hint-tips">
+                  <span className="canvas-nav-hint-tip"><ZoomIn size={15} /> Scroll to zoom in / out</span>
+                  <span className="canvas-nav-hint-sep" aria-hidden="true">·</span>
+                  <span className="canvas-nav-hint-tip"><Hand size={15} /> Right-click + drag to pan</span>
+                  <span className="canvas-nav-hint-sep" aria-hidden="true">·</span>
+                  <button
+                    type="button"
+                    className="canvas-nav-hint-fit"
+                    onClick={() => reactFlowInstance?.fitView?.({ padding: 0.2, duration: 400 })}
+                    title="Zoom to fit the whole diagram in view"
+                  >
+                    <Frame size={15} /> Fit to view
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  className="canvas-nav-hint-close"
+                  onClick={() => {
+                    setShowCanvasHint(false);
+                    try { localStorage.setItem(CANVAS_HINT_STORAGE_KEY, '1'); } catch { /* ignore */ }
+                  }}
+                  title="Dismiss (won't show again)"
+                  aria-label="Dismiss navigation tips"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            )}
             <style>
               {highlightedServices.map(id => 
                 `.react-flow__node[data-id="${id}"] {
@@ -3388,7 +3459,7 @@ function App() {
             )}
 
             {/* Architecture generation prompt banner */}
-            {architecturePrompt && (
+            {architecturePrompt && !focusMode && (
               <div
                 className="prompt-banner draggable"
                 style={{
@@ -3429,7 +3500,7 @@ function App() {
               date={titleBlockData.date}
               onUpdate={(data) => setTitleBlockData({ ...titleBlockData, ...data })}
             />
-            {generatedWithModel && (
+            {generatedWithModel && !focusMode && (
               <ModelBadge
                 modelName={generatedWithModel.name}
                 elapsedTimeMs={generatedWithModel.timeMs}

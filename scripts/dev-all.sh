@@ -64,10 +64,27 @@ else
   warn ".env not found at $ROOT/.env"
 fi
 
-# -- Required vars --------------------------------------------------------------
-: "${AZURE_SPEECH_REGION:?AZURE_SPEECH_REGION must be set in .env}"
-: "${AZURE_SPEECH_RESOURCE_ID:?AZURE_SPEECH_RESOURCE_ID must be set in .env}"
-ok "Speech region: $AZURE_SPEECH_REGION"
+# -- OpenAI proxy vars ----------------------------------------------------------
+# The /api/openai proxy needs the server-side AZURE_OPENAI_* names. In local dev
+# the .env usually only defines the client-side VITE_ names, so bridge them here
+# (an explicit server-side value always wins). Keyless auth (az login /
+# DefaultAzureCredential) is used when AZURE_OPENAI_API_KEY is empty.
+export AZURE_OPENAI_ENDPOINT="${AZURE_OPENAI_ENDPOINT:-${VITE_AZURE_OPENAI_ENDPOINT:-}}"
+export AZURE_OPENAI_API_KEY="${AZURE_OPENAI_API_KEY:-${VITE_AZURE_OPENAI_API_KEY:-}}"
+if [ -n "${AZURE_OPENAI_ENDPOINT:-}" ]; then
+  ok "OpenAI proxy endpoint: $AZURE_OPENAI_ENDPOINT (key auth: $([ -n "${AZURE_OPENAI_API_KEY:-}" ] && echo yes || echo 'no — managed identity'))"
+else
+  warn "AZURE_OPENAI_ENDPOINT / VITE_AZURE_OPENAI_ENDPOINT not set — /api/openai will return 503 (AI generation/chat disabled)"
+fi
+
+# -- Speech vars (optional) -----------------------------------------------------
+# Only needed for the avatar "Present" button. When absent, the token server
+# still starts and /api/openai works; /api/speech-token just returns 503.
+if [ -n "${AZURE_SPEECH_REGION:-}" ] && [ -n "${AZURE_SPEECH_RESOURCE_ID:-}" ]; then
+  ok "Speech region: $AZURE_SPEECH_REGION"
+else
+  warn "AZURE_SPEECH_REGION / AZURE_SPEECH_RESOURCE_ID not set — avatar Present button disabled (OpenAI proxy still works)"
+fi
 
 # -- Tooling --------------------------------------------------------------------
 command -v node >/dev/null || die "node not found"
@@ -169,11 +186,13 @@ fi
 log "starting Vite dev server (foreground)…"
 sleep 1  # let token server bind first
 
-# Quick health probe (best-effort)
-if curl -fsS -o /dev/null -m 3 http://127.0.0.1:3001/api/speech-token 2>/dev/null; then
-  ok "/api/speech-token → 200"
-else
-  warn "/api/speech-token did not return 200 yet — check $LOG_DIR/token-server.log"
+# Quick health probe (best-effort). Only check speech when it's configured.
+if [ -n "${AZURE_SPEECH_REGION:-}" ] && [ -n "${AZURE_SPEECH_RESOURCE_ID:-}" ]; then
+  if curl -fsS -o /dev/null -m 3 http://127.0.0.1:3001/api/speech-token 2>/dev/null; then
+    ok "/api/speech-token → 200"
+  else
+    warn "/api/speech-token did not return 200 yet — check $LOG_DIR/token-server.log"
+  fi
 fi
 
 printf "\n${C_BOLD}Open: http://localhost:3000${C_RESET}\n\n"
