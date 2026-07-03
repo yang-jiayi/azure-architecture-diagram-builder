@@ -30,6 +30,7 @@
 
 import JSZip from 'jszip';
 import type { Node, Edge } from 'reactflow';
+import { loadIcon } from '../utils/iconLoader';
 
 const PX_PER_INCH = 96;
 const DEFAULT_NODE_W = 150;
@@ -69,6 +70,7 @@ const CONTENT_TYPES = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
   <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
   <Default Extension="xml" ContentType="application/xml"/>
+  <Default Extension="png" ContentType="image/png"/>
   <Override PartName="/visio/document.xml" ContentType="application/vnd.ms-visio.drawing.main+xml"/>
   <Override PartName="/visio/pages/pages.xml" ContentType="application/vnd.ms-visio.pages+xml"/>
   <Override PartName="/visio/pages/page1.xml" ContentType="application/vnd.ms-visio.page+xml"/>
@@ -149,20 +151,27 @@ const APP_XML = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 
 // ── Shape / page builders ─────────────────────────────────────────────────
 
-function rectShapeXml(id: number, pinX: number, pinY: number, w: number, h: number, text: string, fill: string, line: string, titleTop = false): string {
-  // Group boxes: title at top-left, bold — like a zone header — instead of the
-  // default middle-centered text.
-  const alignCells = titleTop
+function rectShapeXml(id: number, pinX: number, pinY: number, w: number, h: number, text: string, fill: string, line: string, opts: { titleTop?: boolean; vAlignBottom?: boolean } = {}): string {
+  // Group boxes: title at top-left, bold — like a zone header. Shapes with an
+  // icon overlay use bottom-aligned text so it sits below the icon.
+  const alignCells = opts.titleTop
     ? `
       <Cell N="VerticalAlign" V="0"/>
       <Cell N="TopMargin" V="0.06"/>
       <Cell N="LeftMargin" V="0.1"/>`
-    : '';
-  const textSections = titleTop
+    : opts.vAlignBottom
+      ? `
+      <Cell N="VerticalAlign" V="2"/>
+      <Cell N="BottomMargin" V="0.03"/>`
+      : '';
+  const textSections = opts.titleTop
     ? `
       <Section N="Character"><Row IX="0"><Cell N="Size" V="0.13"/><Cell N="Style" V="1"/></Row></Section>
       <Section N="Paragraph"><Row IX="0"><Cell N="HorzAlign" V="0"/></Row></Section>`
-    : '';
+    : opts.vAlignBottom
+      ? `
+      <Section N="Character"><Row IX="0"><Cell N="Size" V="0.09"/></Row></Section>`
+      : '';
   return `    <Shape ID="${id}" Type="Shape" LineStyle="0" FillStyle="0" TextStyle="0">
       <Cell N="PinX" V="${f(pinX)}"/>
       <Cell N="PinY" V="${f(pinY)}"/>
@@ -186,6 +195,53 @@ function rectShapeXml(id: number, pinX: number, pinY: number, w: number, h: numb
       </Section>${textSections}
       <Text>${text}</Text>
     </Shape>`;
+}
+
+/** A Foreign (embedded bitmap) shape referencing a media image relationship. */
+function iconShapeXml(id: number, pinX: number, pinY: number, size: number, relId: string): string {
+  return `    <Shape ID="${id}" Type="Foreign" LineStyle="0" FillStyle="0" TextStyle="0">
+      <Cell N="PinX" V="${f(pinX)}"/>
+      <Cell N="PinY" V="${f(pinY)}"/>
+      <Cell N="Width" V="${f(size)}"/>
+      <Cell N="Height" V="${f(size)}"/>
+      <Cell N="LocPinX" V="${f(size / 2)}"/>
+      <Cell N="LocPinY" V="${f(size / 2)}"/>
+      <Cell N="Angle" V="0"/>
+      <ForeignData ForeignType="Bitmap">
+        <Rel r:id="${relId}"/>
+      </ForeignData>
+    </Shape>`;
+}
+
+/**
+ * Rasterize an SVG icon (fetched from iconPath) to PNG bytes via an offscreen
+ * canvas. Browser-only; returns null on any failure so the caller falls back to
+ * a plain rectangle.
+ */
+async function rasterizeSvgToPng(iconPath: string, sizePx = 96): Promise<Uint8Array | null> {
+  try {
+    const res = await fetch(iconPath);
+    if (!res.ok) return null;
+    const svg = await res.text();
+    const svgUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    const img = new Image();
+    await new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve();
+      img.onerror = () => reject(new Error('icon image load failed'));
+      img.src = svgUrl;
+    });
+    const canvas = document.createElement('canvas');
+    canvas.width = sizePx;
+    canvas.height = sizePx;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    ctx.drawImage(img, 0, 0, sizePx, sizePx);
+    const blob: Blob | null = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+    if (!blob) return null;
+    return new Uint8Array(await blob.arrayBuffer());
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -340,18 +396,47 @@ export async function buildVsdxBlob(nodes: Node[], edges: Edge[], diagramName = 
   for (const s of serviceNodes) shapeId.set(s.id, nextId++);
 
   const shapes: string[] = [];
+  const media: Array<{ file: string; bytes: Uint8Array }> = [];
+  const pageRels: string[] = [];
+  let imgIdx = 0;
 
-  // Group rectangles first (behind).
+  // Group rectangles first (behind), title at top.
   for (const g of groupNodes) {
     const b = boxes.get(g.id)!;
     const { pinX, pinY } = centerIn(b);
-    shapes.push(rectShapeXml(shapeId.get(g.id)!, pinX, pinY, inches(b.w), inches(b.h), esc(String((g.data as any)?.label ?? 'Group')), '#EEF3FB', '#8AA9D6', true));
+    shapes.push(rectShapeXml(shapeId.get(g.id)!, pinX, pinY, inches(b.w), inches(b.h), esc(String((g.data as any)?.label ?? 'Group')), '#EEF3FB', '#8AA9D6', { titleTop: true }));
   }
-  // Service rectangles.
+
+  // Service rectangles, with the Azure icon rasterized + embedded on top.
   for (const s of serviceNodes) {
     const b = boxes.get(s.id)!;
     const { pinX, pinY } = centerIn(b);
-    shapes.push(rectShapeXml(shapeId.get(s.id)!, pinX, pinY, inches(b.w), inches(b.h), esc(String((s.data as any)?.label ?? 'Service')), '#FFFFFF', '#0078D4'));
+    const wIn = inches(b.w);
+    const hIn = inches(b.h);
+    const label = esc(String((s.data as any)?.label ?? 'Service'));
+    const iconPath = (s.data as any)?.iconPath as string | undefined;
+
+    let png: Uint8Array | null = null;
+    if (iconPath) {
+      const url = await loadIcon(iconPath);
+      if (url) png = await rasterizeSvgToPng(url);
+    }
+
+    if (png) {
+      // Rectangle with text pushed to the bottom, icon centered in the top area.
+      shapes.push(rectShapeXml(shapeId.get(s.id)!, pinX, pinY, wIn, hIn, label, '#FFFFFF', '#0078D4', { vAlignBottom: true }));
+      imgIdx += 1;
+      const file = `image${imgIdx}.png`;
+      const relId = `rId${imgIdx}`;
+      media.push({ file, bytes: png });
+      pageRels.push(`  <Relationship Id="${relId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/${file}"/>`);
+      const iconSize = Math.min(hIn * 0.55, wIn * 0.4, 0.42);
+      const iconPinX = pinX;
+      const iconPinY = pinY + hIn / 2 - iconSize / 2 - 0.05;
+      shapes.push(iconShapeXml(nextId++, iconPinX, iconPinY, iconSize, relId));
+    } else {
+      shapes.push(rectShapeXml(shapeId.get(s.id)!, pinX, pinY, wIn, hIn, label, '#FFFFFF', '#0078D4'));
+    }
   }
 
   // Connectors — orthogonal (right-angle) routes + boxed wrapped labels.
@@ -396,6 +481,15 @@ export async function buildVsdxBlob(nodes: Node[], edges: Edge[], diagramName = 
   zip.file('visio/pages/pages.xml', pagesXml(pageWidthIn, pageHeightIn, diagramName));
   zip.file('visio/pages/_rels/pages.xml.rels', PAGES_RELS);
   zip.file('visio/pages/page1.xml', pageContentsXml(shapes, []));
+
+  // Embedded icon images + the page's relationships to them.
+  if (media.length > 0) {
+    zip.file(
+      'visio/pages/_rels/page1.xml.rels',
+      `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">\n${pageRels.join('\n')}\n</Relationships>`,
+    );
+    for (const mf of media) zip.file(`visio/media/${mf.file}`, mf.bytes);
+  }
 
   return zip.generateAsync({
     type: 'blob',
