@@ -30,11 +30,38 @@ const repoRoot = resolve(here, '..', '..');
 const regionsRoot = resolve(repoRoot, 'src', 'data', 'pricing', 'regions');
 const outPath = resolve(here, '..', 'src', 'pricing.generated.json');
 
-// Files that require special parsing (AI per-product filtering, Fabric F-SKU).
-// Skipped for now; those services keep their catalog costRange fallback.
+// Files that require special parsing (AI per-product filtering, Fabric F-SKU)
+// and are intentionally not distilled in this cut — those services keep their
+// catalog costRange fallback. (Tracked for P0-1b.) All other non-instance /
+// usage-based / composite services are handled automatically by the
+// "default-SKU-only" rule below (they emit no entry → catalog range).
 const SKIP_FILES = new Set(['foundry_models', 'foundry_tools', 'microsoft_fabric']);
 
 const HOURS_PER_MONTH = 730;
+
+/**
+ * Representative-SKU map (P0-1a).
+ *
+ * "expected" should approximate a TYPICAL production deployment. We only emit a
+ * numeric estimate for services whose per-SKU meter equals a deployable unit
+ * (compute/db/cache/search/APIM/AKS) — and only when one of these preferred
+ * default SKUs matches (case-insensitive substring, priority order). Everything
+ * else (usage/consumption/per-GB/composite billing) is NOT distilled and falls
+ * back to the curated catalog range in estimate_costs, which is far more honest
+ * than a median/percentile of per-unit meters. low/high still span the full
+ * cheapest→most-expensive SKU range for the distilled services.
+ *
+ * Keyed by file stem (serviceName lowercased + underscores).
+ */
+const REPRESENTATIVE_SKUS = {
+  azure_app_service: ['p1 v3', 'p1v3', 'p1 v2', 'p1v2', 's1', 'b1'],
+  redis_cache: ['c1', 'c2', 'basic c1', 'standard c1'],
+  sql_database: ['s3', 's2', '100 dtu', 'general purpose', 's1'],
+  virtual_machines: ['d2s v5', 'd2s v4', 'd2as v5', 'd2 v3', 'd2s v3', 'b2ms'],
+  azure_kubernetes_service: ['standard', 'base'],
+  azure_cognitive_search: ['standard s1', 'standard', 'basic'],
+  api_management: ['developer', 'basic', 'standard'],
+};
 
 /** Compute a monthly price from a single retail-price item (parity with web app). */
 function monthlyFromItem(item) {
@@ -60,7 +87,7 @@ const round2 = (n) => Math.round(n * 100) / 100;
  * Distill one service JSON file into representative monthly costs.
  * Returns null when there is no usable Consumption pricing.
  */
-function distillFile(filePath) {
+function distillFile(filePath, stem) {
   let parsed;
   try {
     parsed = JSON.parse(readFileSync(filePath, 'utf8'));
@@ -106,15 +133,38 @@ function distillFile(filePath) {
   const sorted = [...monthlies].sort((a, b) => a - b);
   const low = sorted[0];
   const high = sorted[sorted.length - 1];
-  const expected = median(sorted);
 
-  // Representative SKU = the one whose monthly is closest to the median.
+  const paidSorted = sorted.filter((m) => m > 0);
+  if (paidSorted.length === 0) return null;
+
+  // "expected" = a typical-deployment SKU. We ONLY emit a numeric estimate when
+  // a trusted default SKU matches; usage/consumption/composite services (no
+  // default) return null and fall back to the curated catalog range.
+  let expected = null;
   let sampleSku = '';
-  let bestDelta = Infinity;
-  for (const [sku, m] of perSku.entries()) {
-    const d = Math.abs(m - expected);
-    if (d < bestDelta) { bestDelta = d; sampleSku = sku; }
+  let expectedBasis = null;
+
+  const patterns = REPRESENTATIVE_SKUS[stem];
+  if (patterns) {
+    for (const pat of patterns) {
+      let match = null;
+      for (const [sku, m] of perSku.entries()) {
+        // Skip geo-replica / failover SKUs — not a representative primary cost.
+        if (/secondary|failover|passive/i.test(sku)) continue;
+        if (m > 0 && sku.toLowerCase().includes(pat)) {
+          if (!match || m < match.m) match = { sku, m };
+        }
+      }
+      if (match) {
+        expected = match.m;
+        sampleSku = match.sku;
+        expectedBasis = `default-sku:${pat}`;
+        break;
+      }
+    }
   }
+
+  if (expected == null) return null;
 
   const reservedRatio = savingsRatios.length ? median(savingsRatios) : null;
 
@@ -126,6 +176,7 @@ function distillFile(filePath) {
     reservedRatio: reservedRatio != null ? round2(reservedRatio) : null,
     currency,
     sampleSku,
+    expectedBasis,
     tierCount: monthlies.length,
     pricesAsOf: newestDate ? newestDate.slice(0, 10) : null,
   };
@@ -157,7 +208,7 @@ function main() {
     for (const file of files) {
       const stem = basename(file, '.json');
       if (SKIP_FILES.has(stem)) continue;
-      const distilled = distillFile(resolve(dir, file));
+      const distilled = distillFile(resolve(dir, file), stem);
       if (distilled) {
         regionMap[stem] = distilled;
         totalEntries++;

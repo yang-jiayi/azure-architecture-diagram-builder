@@ -30,6 +30,7 @@ interface ServicePricingEntry {
   reservedRatio: number | null;
   currency: string;
   sampleSku: string;
+  expectedBasis?: string;
   tierCount: number;
   pricesAsOf: string | null;
 }
@@ -75,6 +76,8 @@ export interface ServiceCostEstimate {
   totalMonthlyCost?: number;
   quantity?: number;
   sampleSku?: string;
+  /** How "expected" was chosen: a default SKU match or the p25 fallback. */
+  expectedBasis?: string;
   /** True when reserved numbers were derived from a 1-year savings plan. */
   reservedApplied?: boolean;
   note?: string;
@@ -133,6 +136,7 @@ export function estimateServiceCost(params: EstimateParams): ServiceCostEstimate
     totalMonthlyCost: round2(selected * quantity),
     quantity,
     sampleSku: entry.sampleSku,
+    expectedBasis: entry.expectedBasis,
     reservedApplied: useReserved,
     note:
       'expected = representative (median) SKU; low/high span the cheapest/most-expensive SKUs for this service in the region.',

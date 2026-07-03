@@ -313,6 +313,7 @@ server.tool(
           currency: est.currency,
           term: targetTerm,
           sampleSku: est.sampleSku,
+          expectedBasis: est.expectedBasis,
           reservedApplied: est.reservedApplied ?? false,
           monthlyCostPerInstance: est.monthlyCost,
           selectedMonthlyCost: est.selectedMonthlyCost,
@@ -369,7 +370,7 @@ server.tool(
               servicesMissingData,
               pricingSource: getPricingMeta(),
               note:
-                'Numeric costs are derived from a distilled Azure Retail Prices snapshot (per region). "expected" uses a representative (median) SKU; low/high span the SKU range. AI (Foundry), Microsoft Fabric, and per-GB storage services still report catalog ranges (P0-1b). For authoritative quotes use the Azure Pricing Calculator.',
+                'Numeric costs are derived from a distilled Azure Retail Prices snapshot (per region). "expected" = a representative typical-deployment SKU (e.g. App Service P1v3, Redis C1, SQL S3, VM D2s v4, AKS Standard); low/high span the full SKU range. Numeric estimates are emitted only for instance-priced services with a trusted representative SKU; usage-based, per-GB, composite-billed (App Gateway, Firewall, VPN, Load Balancer, managed-DB Flexible Server), AI (Foundry), and Microsoft Fabric services report curated catalog ranges instead (P0-1b). For authoritative quotes use the Azure Pricing Calculator.',
             },
             null,
             2,
