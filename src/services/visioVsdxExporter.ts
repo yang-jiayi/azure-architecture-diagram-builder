@@ -149,7 +149,20 @@ const APP_XML = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 
 // ── Shape / page builders ─────────────────────────────────────────────────
 
-function rectShapeXml(id: number, pinX: number, pinY: number, w: number, h: number, text: string, fill: string, line: string): string {
+function rectShapeXml(id: number, pinX: number, pinY: number, w: number, h: number, text: string, fill: string, line: string, titleTop = false): string {
+  // Group boxes: title at top-left, bold — like a zone header — instead of the
+  // default middle-centered text.
+  const alignCells = titleTop
+    ? `
+      <Cell N="VerticalAlign" V="0"/>
+      <Cell N="TopMargin" V="0.06"/>
+      <Cell N="LeftMargin" V="0.1"/>`
+    : '';
+  const textSections = titleTop
+    ? `
+      <Section N="Character"><Row IX="0"><Cell N="Size" V="0.13"/><Cell N="Style" V="1"/></Row></Section>
+      <Section N="Paragraph"><Row IX="0"><Cell N="HorzAlign" V="0"/></Row></Section>`
+    : '';
   return `    <Shape ID="${id}" Type="Shape" LineStyle="0" FillStyle="0" TextStyle="0">
       <Cell N="PinX" V="${f(pinX)}"/>
       <Cell N="PinY" V="${f(pinY)}"/>
@@ -161,7 +174,7 @@ function rectShapeXml(id: number, pinX: number, pinY: number, w: number, h: numb
       <Cell N="FillForegnd" V="${fill}"/>
       <Cell N="FillPattern" V="1"/>
       <Cell N="LineColor" V="${line}"/>
-      <Cell N="LineWeight" V="0.01"/>
+      <Cell N="LineWeight" V="0.01"/>${alignCells}
       <Section N="Geometry" IX="0">
         <Cell N="NoFill" V="0"/>
         <Cell N="NoLine" V="0"/>
@@ -170,7 +183,7 @@ function rectShapeXml(id: number, pinX: number, pinY: number, w: number, h: numb
         <Row T="LineTo" IX="3"><Cell N="X" V="${f(w)}"/><Cell N="Y" V="${f(h)}"/></Row>
         <Row T="LineTo" IX="4"><Cell N="X" V="0"/><Cell N="Y" V="${f(h)}"/></Row>
         <Row T="LineTo" IX="5"><Cell N="X" V="0"/><Cell N="Y" V="0"/></Row>
-      </Section>
+      </Section>${textSections}
       <Text>${text}</Text>
     </Shape>`;
 }
@@ -332,7 +345,7 @@ export async function buildVsdxBlob(nodes: Node[], edges: Edge[], diagramName = 
   for (const g of groupNodes) {
     const b = boxes.get(g.id)!;
     const { pinX, pinY } = centerIn(b);
-    shapes.push(rectShapeXml(shapeId.get(g.id)!, pinX, pinY, inches(b.w), inches(b.h), esc(String((g.data as any)?.label ?? 'Group')), '#EEF3FB', '#8AA9D6'));
+    shapes.push(rectShapeXml(shapeId.get(g.id)!, pinX, pinY, inches(b.w), inches(b.h), esc(String((g.data as any)?.label ?? 'Group')), '#EEF3FB', '#8AA9D6', true));
   }
   // Service rectangles.
   for (const s of serviceNodes) {
