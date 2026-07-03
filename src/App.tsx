@@ -63,6 +63,7 @@ import { generateArchitectureWithAI } from './services/azureOpenAI';
 import { MODEL_CONFIG, DEPLOYMENT_NAMES, type ModelType } from './stores/modelSettingsStore';
 import { createSnapshot, DiagramVersion } from './services/versionStorageService';
 import { exportAndDownloadDrawio } from './services/drawioExporter';
+import { buildVdx } from './services/visioVdxExporter';
 import { exportDiagramAsPptx } from './services/pptxExporter';
 import { exportDiagramAsHtml } from './services/htmlDiagramExporter';
 import {
@@ -92,7 +93,7 @@ const edgeTypes = {
   editableEdge: EditableEdge,
 };
 
-type ExportHistoryKind = 'png' | 'svg' | 'animated-svg' | 'workflow-animation' | 'workflow-md' | 'costs' | 'json' | 'drawio' | 'pptx' | 'html';
+type ExportHistoryKind = 'png' | 'svg' | 'animated-svg' | 'workflow-animation' | 'workflow-md' | 'costs' | 'json' | 'drawio' | 'vdx' | 'pptx' | 'html';
 
 type ExportHistoryItem = {
   id: string;
@@ -1202,6 +1203,30 @@ function App() {
     } catch (err) {
       console.error('Error exporting Draw.io:', err);
       alert('Failed to export Draw.io file. Please try again.');
+    }
+  }, [nodes, edges, titleBlockData.architectureName, recordExport]);
+
+  const exportAsVdx = useCallback(() => {
+    if (nodes.filter(n => n.type === 'azureNode').length === 0) {
+      alert('Add or generate an architecture first, then export to Visio.');
+      return;
+    }
+    try {
+      const diagramName = titleBlockData.architectureName || 'Azure Architecture';
+      const xml = buildVdx(nodes, edges, diagramName);
+      const blob = new Blob([xml], { type: 'application/xml;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      const fileName = generateModelFilename('azure-diagram', 'vdx');
+      link.download = fileName;
+      link.click();
+      URL.revokeObjectURL(url);
+      recordExport('vdx', fileName);
+      trackExport('vdx', nodes.filter(n => n.type === 'azureNode').length);
+    } catch (err) {
+      console.error('Error exporting Visio VDX:', err);
+      alert('Failed to export Visio file. Please try again.');
     }
   }, [nodes, edges, titleBlockData.architectureName, recordExport]);
 
@@ -2913,10 +2938,23 @@ function App() {
                           setIsExportMenuOpen(false);
                           exportAsDrawio();
                         }}
-                        title="Export for Draw.io / diagrams.net (editable format)"
+                        title="Export for Draw.io / diagrams.net (editable). For Visio: open the file at diagrams.net, then File → Export as → VSDX."
                       >
                         <Download size={18} />
-                        Export Draw.io
+                        Export Draw.io (→ Visio via diagrams.net)
+                      </button>
+                      <button
+                        className="toolbar-dropdown-item"
+                        role="menuitem"
+                        disabled={nodes.filter(n => n.type === 'azureNode').length === 0}
+                        onClick={() => {
+                          setIsExportMenuOpen(false);
+                          exportAsVdx();
+                        }}
+                        title="Export a Visio drawing (.vdx). Open directly in Visio via File → Open. Generic editable shapes + connectors."
+                      >
+                        <Download size={18} />
+                        Export Visio (VDX)
                       </button>
                       <button
                         className="toolbar-dropdown-item"
