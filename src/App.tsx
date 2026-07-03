@@ -19,6 +19,7 @@ import 'reactflow/dist/style.css';
 import { captureDiagramAsPng, captureDiagramAsSvg } from './utils/captureCanvas';
 import { animateEdgeFlow } from './utils/animateEdges';
 import { sequenceWorkflowSvg } from './utils/sequenceWorkflow';
+import { buildWorkflowMarkdown } from './services/workflowNarrativeExporter';
 import { Download, Save, Upload, DollarSign, Shield, FileText, FileCode, ChevronDown, Clock, Camera, Loader, GitCompare, RefreshCw, PanelLeftClose, Minimize2, Maximize2, Presentation, MessageSquare, MessagesSquare, HelpCircle, Hand, ZoomIn, Frame, X, PanelTopClose, PanelTopOpen } from 'lucide-react';
 import IconPalette from './components/IconPalette';
 import AzureNode from './components/AzureNode';
@@ -91,7 +92,7 @@ const edgeTypes = {
   editableEdge: EditableEdge,
 };
 
-type ExportHistoryKind = 'png' | 'svg' | 'animated-svg' | 'workflow-animation' | 'costs' | 'json' | 'drawio' | 'pptx' | 'html';
+type ExportHistoryKind = 'png' | 'svg' | 'animated-svg' | 'workflow-animation' | 'workflow-md' | 'costs' | 'json' | 'drawio' | 'pptx' | 'html';
 
 type ExportHistoryItem = {
   id: string;
@@ -1079,6 +1080,42 @@ function App() {
       }
     }, 800);
   }, [reactFlowInstance, recordExport, nodes]);
+
+  // Export the workflow narrative (title, prompt, services, step-by-step flow,
+  // connections, optional validation/cost) as a Markdown document.
+  const exportWorkflowMarkdown = useCallback(() => {
+    if (nodes.filter(n => n.type === 'azureNode').length === 0) {
+      alert('Add or generate an architecture first, then export its workflow narrative.');
+      return;
+    }
+    try {
+      const md = buildWorkflowMarkdown({
+        title: titleBlockData,
+        prompt: architecturePrompt,
+        model: generatedWithModel,
+        nodes,
+        edges,
+        workflow,
+        validationScore: validationResult ? validationResult.overallScore : null,
+        totalMonthlyCost,
+        pricingMode,
+        region: getActiveRegion(),
+      });
+      const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      const fileName = generateModelFilename('azure-diagram-workflow', 'md');
+      link.download = fileName;
+      link.click();
+      URL.revokeObjectURL(url);
+      recordExport('workflow-md', fileName);
+      trackExport('workflow-md', nodes.filter(n => n.type === 'azureNode').length);
+    } catch (err) {
+      console.error('Error exporting workflow markdown:', err);
+      alert('Failed to export workflow narrative. Please try again.');
+    }
+  }, [nodes, edges, workflow, titleBlockData, architecturePrompt, generatedWithModel, validationResult, totalMonthlyCost, pricingMode, recordExport]);
 
   // Export as an Animated SVG: same vector capture as exportAsSvg, but with
   // flowing data-flow circles injected onto each edge. Pure client-side — the
@@ -2843,6 +2880,19 @@ function App() {
                       >
                         <Download size={18} />
                         Export Workflow Animation
+                      </button>
+                      <button
+                        className="toolbar-dropdown-item"
+                        role="menuitem"
+                        disabled={nodes.filter(n => n.type === 'azureNode').length === 0}
+                        onClick={() => {
+                          setIsExportMenuOpen(false);
+                          exportWorkflowMarkdown();
+                        }}
+                        title="Export the workflow narrative (services, step-by-step flow, connections) as a Markdown file"
+                      >
+                        <FileText size={18} />
+                        Export Workflow (Markdown)
                       </button>
                       <button
                         className="toolbar-dropdown-item"
