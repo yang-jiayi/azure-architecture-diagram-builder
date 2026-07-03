@@ -440,9 +440,9 @@ export async function buildVsdxBlob(nodes: Node[], edges: Edge[], diagramName = 
       const relId = `rId${imgIdx}`;
       media.push({ file, bytes: png });
       pageRels.push(`  <Relationship Id="${relId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/${file}"/>`);
-      const iconSize = Math.min(hIn * 0.55, wIn * 0.4, 0.42);
+      const iconSize = Math.min(hIn * 0.62, wIn * 0.5, 0.58);
       const iconPinX = pinX;
-      const iconPinY = pinY + hIn / 2 - iconSize / 2 - 0.05;
+      const iconPinY = pinY + hIn / 2 - iconSize / 2 - 0.04;
       shapes.push(iconShapeXml(nextId++, iconPinX, iconPinY, iconSize, relId));
     } else {
       shapes.push(rectShapeXml(shapeId.get(s.id)!, pinX, pinY, wIn, hIn, label, '#FFFFFF', '#0078D4'));
