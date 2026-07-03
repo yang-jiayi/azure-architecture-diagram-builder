@@ -207,7 +207,7 @@ function iconShapeXml(id: number, pinX: number, pinY: number, size: number, relI
       <Cell N="LocPinX" V="${f(size / 2)}"/>
       <Cell N="LocPinY" V="${f(size / 2)}"/>
       <Cell N="Angle" V="0"/>
-      <ForeignData ForeignType="Bitmap">
+      <ForeignData ForeignType="Bitmap" CompressionType="PNG">
         <Rel r:id="${relId}"/>
       </ForeignData>
     </Shape>`;
@@ -222,7 +222,13 @@ async function rasterizeSvgToPng(iconPath: string, sizePx = 96): Promise<Uint8Ar
   try {
     const res = await fetch(iconPath);
     if (!res.ok) return null;
-    const svg = await res.text();
+    let svg = await res.text();
+    // Many Azure icon SVGs declare only a viewBox (no width/height). Without
+    // explicit pixel dimensions some browsers rasterize a 0-sized (blank)
+    // image, so inject width/height on the root <svg> when missing.
+    if (!/<svg[^>]*\bwidth\s*=/.test(svg)) {
+      svg = svg.replace(/<svg\b/, `<svg width="${sizePx}" height="${sizePx}"`);
+    }
     const svgUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
     const img = new Image();
     await new Promise<void>((resolve, reject) => {
