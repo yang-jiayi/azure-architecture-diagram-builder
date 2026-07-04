@@ -438,7 +438,7 @@ server.registerTool(
       servicesMissingData,
       pricingSource: getPricingMeta(),
       note:
-        'Numeric costs are derived from a distilled Azure Retail Prices snapshot (per region). "expected" = a representative typical-deployment SKU (e.g. App Service P1v3, Redis C1, SQL S3, VM D2s v4, AKS Standard); low/high span the full SKU range. Numeric estimates are emitted only for instance-priced services with a trusted representative SKU; usage-based, per-GB, composite-billed (App Gateway, Firewall, VPN, Load Balancer, managed-DB Flexible Server), AI (Foundry), and Microsoft Fabric services report curated catalog ranges instead (P0-1b). For authoritative quotes use the Azure Pricing Calculator.',
+        'Numeric costs are derived from a distilled Azure Retail Prices snapshot (per region). Coverage: instance-priced services use a representative typical-deployment SKU (e.g. App Service P1v3, Redis C1, SQL S3, VM D2s v4, AKS Standard) with low/high spanning the SKU range; Microsoft Fabric uses F-SKU capacity (F2/F8/F64 reservation monthly). Usage-based services — AI (Foundry, per-token), per-GB storage, and composite-billed networking (App Gateway, Firewall, VPN, Load Balancer, managed-DB Flexible Server) — report curated catalog ranges instead, because a fixed monthly would mislead. For authoritative quotes use the Azure Pricing Calculator.',
     };
 
     const missingNote = servicesMissingData.length

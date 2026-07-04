@@ -30,12 +30,12 @@ const repoRoot = resolve(here, '..', '..');
 const regionsRoot = resolve(repoRoot, 'src', 'data', 'pricing', 'regions');
 const outPath = resolve(here, '..', 'src', 'pricing.generated.json');
 
-// Files that require special parsing (AI per-product filtering, Fabric F-SKU)
-// and are intentionally not distilled in this cut — those services keep their
-// catalog costRange fallback. (Tracked for P0-1b.) All other non-instance /
-// usage-based / composite services are handled automatically by the
-// "default-SKU-only" rule below (they emit no entry → catalog range).
-const SKIP_FILES = new Set(['foundry_models', 'foundry_tools', 'microsoft_fabric']);
+// Files kept as honest catalog ranges. Foundry (AI) meters are usage-based
+// (per-token / per-transaction) so a representative monthly is misleading; they
+// stay as catalog ranges. Microsoft Fabric IS distilled specially below (F-SKU
+// capacity is a real fixed monthly reservation). All other non-instance /
+// usage-based / composite services are handled by the "default-SKU-only" rule.
+const SKIP_FILES = new Set(['foundry_models', 'foundry_tools']);
 
 const HOURS_PER_MONTH = 730;
 
@@ -82,6 +82,66 @@ function median(nums) {
 }
 
 const round2 = (n) => Math.round(n * 100) / 100;
+
+/** Most-frequent value (mode) of a numeric array, else fallback. */
+function modeOrDefault(nums, fallback) {
+  if (nums.length === 0) return fallback;
+  const counts = new Map();
+  let best = fallback;
+  let bestCount = -1;
+  for (const v of nums) {
+    const c = (counts.get(v) || 0) + 1;
+    counts.set(v, c);
+    if (c > bestCount) { bestCount = c; best = v; }
+  }
+  return best;
+}
+
+/**
+ * Distill Microsoft Fabric capacity (P0-1b). Unlike usage-based AI/storage,
+ * Fabric F-SKU capacity is a fixed monthly reservation: monthly = per-CU-hour
+ * rate x CUs x 730. Rate = mode of the "Capacity Usage CU" 1-Hour consumption
+ * meters (~$0.18). Band: F2 (low) -> F8 (expected) -> F64 (high). Mirrors the
+ * web app's getFabricRegionalPricing.
+ */
+function distillFabric(filePath) {
+  let parsed;
+  try {
+    parsed = JSON.parse(readFileSync(filePath, 'utf8'));
+  } catch {
+    return null;
+  }
+  const items = Array.isArray(parsed.Items) ? parsed.Items : [];
+  const currency = parsed.BillingCurrency || 'USD';
+  const rates = [];
+  let newestDate = '';
+  for (const i of items) {
+    if (
+      i.type === 'Consumption' &&
+      (i.unitOfMeasure || '') === '1 Hour' &&
+      /Capacity Usage CU/i.test(i.meterName || '')
+    ) {
+      const r = i.retailPrice || i.unitPrice || 0;
+      if (r > 0) rates.push(r);
+      if (i.effectiveStartDate && i.effectiveStartDate > newestDate) newestDate = i.effectiveStartDate;
+    }
+  }
+  if (rates.length === 0) return null;
+  const rate = modeOrDefault(rates, 0.18);
+  const monthly = (cu) => round2(rate * cu * HOURS_PER_MONTH);
+  return {
+    low: monthly(2), // F2
+    expected: monthly(8), // F8
+    high: monthly(64), // F64
+    reservedExpected: null,
+    reservedRatio: null,
+    currency,
+    sampleSku: 'F8 (8 CU)',
+    expectedBasis: 'fabric-capacity:F8',
+    tierCount: 3,
+    pricesAsOf: newestDate ? newestDate.slice(0, 10) : null,
+  };
+}
 
 /**
  * Distill one service JSON file into representative monthly costs.
@@ -208,7 +268,9 @@ function main() {
     for (const file of files) {
       const stem = basename(file, '.json');
       if (SKIP_FILES.has(stem)) continue;
-      const distilled = distillFile(resolve(dir, file), stem);
+      const distilled = stem === 'microsoft_fabric'
+        ? distillFabric(resolve(dir, file))
+        : distillFile(resolve(dir, file), stem);
       if (distilled) {
         regionMap[stem] = distilled;
         totalEntries++;
