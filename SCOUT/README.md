@@ -26,11 +26,14 @@ Azure architectures conversationally.
 | --- | --- |
 | `list_services` | Browse the Azure service catalog (categories, aliases, pricing, cost ranges). |
 | `validate_architecture` | Score a design against Well-Architected Framework rules (deterministic, no LLM). |
-| `estimate_costs` | Estimate monthly cost for a set of services. |
+| `estimate_costs` | **Numeric** monthly costs (low/expected/high) from a distilled Azure Retail Prices snapshot — region- and term-aware (PAYG / 1-year reserved), with by-category totals. Instance-priced services use a representative SKU; Microsoft Fabric uses F-SKU capacity; usage-based services (AI, per-GB storage, composite networking) report curated catalog ranges. |
+| `generate_bicep` | Emit deployable Bicep with Well-Architected secure defaults pre-set (HTTPS-only + TLS 1.2, managed identity, Key Vault soft-delete/purge, health check, autoscale, staging slots, Storage/Cosmos/Redis hardening, KV role assignments) and a structured map of which WAF finding each setting resolves. Design-time only. |
 | `generate_manifest` | Emit an `az prototype` interchange manifest. |
 | `get_waf_rules` | Query WAF rules by pillar or service type. |
 | `render_diagram` | Render an architecture diagram as SVG/HTML. |
 | `export_reactflow_scene` | Produce a React Flow scene for the web app. |
+
+**Structured outputs:** `validate_architecture`, `estimate_costs`, and `get_waf_rules` return typed `structuredContent` (validated against a declared `outputSchema`) alongside a concise human summary, and carry read-only/idempotent tool annotations — so agents can consume the data machine-readably instead of parsing prose.
 
 ## Artifacts
 

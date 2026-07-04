@@ -179,13 +179,16 @@ A usage-based pricing indicator (⚡) appears on consumption services like Azure
 
 ### Change the Pricing Region
 
-Use the **Region Selector** dropdown in the toolbar to switch between five Azure regions:
+Use the **Region Selector** dropdown in the toolbar to switch between eight Azure regions:
 
 - 🇺🇸 East US 2 (Virginia)
 - 🇨🇦 Canada Central (Toronto)
 - 🇧🇷 Brazil South (São Paulo)
+- 🇲🇽 Mexico Central (Querétaro)
 - 🇳🇱 West Europe (Netherlands)
 - 🇸🇪 Sweden Central (Gävle)
+- 🇦🇺 Australia East (Sydney)
+- 🇸🇬 Southeast Asia (Singapore)
 
 Changing the region recalculates all pricing in real time. The total estimated monthly cost is shown in the toolbar as a 💰 badge.
 
@@ -294,7 +297,7 @@ When the AI generates an architecture, a **Workflow Panel** appears on the right
 - Use this to walk stakeholders through the architecture during presentations.
 
 > [!TIP]
-> Click the **Focus** button in the toolbar to collapse both sidebars and the legend, maximizing the canvas area for demos and screen sharing.
+> Click the **Focus** button in the toolbar to hide the side panels, legend, generation banner, and model badge — leaving just the diagram for demos and screen sharing. A separate **Hide Toolbar** toggle collapses the top toolbar for even more canvas space (both preferences persist). A dismissable hint on the canvas also reminds you that you can scroll to zoom, right-click-drag to pan, and click **Fit to view**.
 
 ---
 
@@ -331,9 +334,11 @@ Click the **Export** dropdown to choose a format:
 | Export Editorial PNG | Re-downloading the publication-style reference-architecture PNG |
 | Export Blueprint PNG | Re-downloading the hand-drawn, whiteboard-style Blueprint PNG (Step 2) |
 | Export SVG | Scalable vector graphics for web pages or wikis |
+| Export Visio (VSDX) | A native Visio drawing that opens in desktop Visio **and** Visio for the web (embedded Azure icons, orthogonal connectors, wrapped labels, group zones) |
 | Export PPTX Slide | Dropping the diagram straight into a PowerPoint deck (.pptx) |
-| Export Draw.io | Further editing in diagrams.net |
+| Export Draw.io | Further editing in diagrams.net (orthogonal connectors with wrapped, auto-sized edge-label boxes) |
 | Export Interactive HTML | A self-contained HTML file with pan, zoom, and tooltips |
+| Export Workflow (Markdown) | The workflow narrative as a `.md` doc — title block, prompt, grouped services, step-by-step flow, connections, optional WAF score + cost |
 | Export to az prototype | A manifest for production IaC generation (round-trips with Import Manifest) |
 | Export Costs (CSV) | Cost analysis in Excel or other spreadsheet tools |
 | Export Costs (All Formats) | A ZIP with CSV, JSON, a summary, and an intelligent cost analysis |

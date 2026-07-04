@@ -1,6 +1,6 @@
 # Azure Architecture Diagram Builder - System Architecture
 
-**Last Updated**: June 2026 (server-side OpenAI proxy, MCP server + Microsoft Scout, Microsoft Fabric, PAYG/Reserved pricing)
+**Last Updated**: July 2026 (native Visio VSDX + workflow-Markdown exports, `generate_bicep` MCP tool, structured MCP outputs, Microsoft Fabric F-SKU pricing, canvas UX)
 
 ## Overview
 
@@ -8,7 +8,7 @@ The Azure Architecture Diagram Builder is a web-based tool that uses AI to gener
 
 A lightweight Express.js **token server** (`127.0.0.1:3001`, co-located with nginx in the container) is the security boundary: it proxies all Azure OpenAI traffic (`/api/openai`) so the key never reaches the browser, grounds deployment guides in Microsoft Learn (`/api/docs-search`), persists user feedback to Cosmos DB (`/api/feedback`), and issues keyless Speech tokens (`/api/speech-token`) via `DefaultAzureCredential` (Managed Identity).
 
-The project also ships a standalone **MCP server** (`mcp-server/`) exposing 7 tools over stdio + Streamable-HTTP, consumable by **Microsoft Scout** and other MCP clients. The app is deployed on Azure Container Apps and instrumented with Application Insights.
+The project also ships a standalone **MCP server** (`mcp-server/`) exposing 8 tools over stdio + Streamable-HTTP, consumable by **Microsoft Scout** and other MCP clients. The app is deployed on Azure Container Apps and instrumented with Application Insights.
 
 ## High-Level Architecture
 
@@ -43,7 +43,7 @@ graph TB
 
     subgraph "Backend Layer"
         TokenServer[Express.js Token Server<br/>127.0.0.1:3001<br/>/api/openai · /api/docs-search<br/>/api/feedback · /api/speech-token]
-        MCP[MCP Server<br/>7 tools · stdio + HTTP<br/>used by Microsoft Scout]
+        MCP[MCP Server<br/>8 tools · stdio + HTTP<br/>used by Microsoft Scout]
     end
 
     subgraph "External APIs"
@@ -247,11 +247,14 @@ consumable by **Microsoft Scout** and any MCP-compatible client.
 |------|---------|
 | `list_services` | Browse the Azure service catalog (categories, aliases, pricing) |
 | `validate_architecture` | Score a design against Well-Architected Framework rules (no LLM) |
-| `estimate_costs` | Estimate monthly cost for a set of services |
+| `estimate_costs` | **Numeric** monthly costs (low/expected/high) from a distilled Azure Retail Prices snapshot — region- and term-aware (PAYG / 1-year reserved); instance-priced services use a representative SKU, Microsoft Fabric uses F-SKU capacity, usage-based services report catalog ranges |
+| `generate_bicep` | Emit deployable Bicep with WAF secure defaults pre-set (HTTPS-only + TLS 1.2, managed identity, Key Vault soft-delete/purge, health check, autoscale, staging slots) + a structured map of which WAF finding each setting resolves |
 | `generate_manifest` | Emit an `az prototype` interchange manifest |
 | `get_waf_rules` | Query WAF rules by pillar or service type |
 | `render_diagram` | Render a diagram as SVG/HTML with real Azure icons |
 | `export_reactflow_scene` | Produce a React Flow scene for the web app |
+
+> `validate_architecture`, `estimate_costs`, and `get_waf_rules` return typed **`structuredContent`** (validated against a declared `outputSchema`) plus a human summary, and carry read-only/idempotent tool annotations.
 
 - **Transport** — stdio (local) and Streamable-HTTP (`npm run start:http`); selected via `--http`/`--stdio` or `MCP_TRANSPORT`.
 - **Auth** — `MCP_AUTH_TOKEN` enforces `Authorization: Bearer <token>` (constant-time compare); `/healthz` + a pre-auth `/mcp` liveness probe support connector wizards.
@@ -328,7 +331,7 @@ azure-diagrams/
 │
 ├── server/                            # Express.js token server (127.0.0.1:3001, co-located with nginx)
 │   └── token-server.js                 # /api/openai + /api/docs-search + /api/feedback + /api/speech-token + /api/ice-token
-├── mcp-server/                         # MCP server (7 tools, stdio + Streamable-HTTP, Bearer auth)
+├── mcp-server/                         # MCP server (8 tools, stdio + Streamable-HTTP, Bearer auth)
 │   └── src/                            # serviceCatalog, wafDetector, layoutEngine, svgRenderer, htmlRenderer
 │
 ├── Azure_Public_Service_Icons/        # 714 SVG files in 29 categories
@@ -431,8 +434,8 @@ azure-diagrams/
   - Title Case conversion with acronym preservation (AI, SQL, CDN, API, etc.)
 
 ### 3. Regional Pricing Engine
-- **5 regions supported**: East US 2, Sweden Central, West Europe, Brazil South, Canada Central
-- **49 services per region**: 245 total pricing files
+- **8 regions supported**: East US 2, Sweden Central, West Europe, Brazil South, Canada Central, Australia East, Mexico Central, Southeast Asia
+- **49-71 services per region**: pre-fetched pricing files, incl. Microsoft Fabric capacity & OneLake meters
 - **Dynamic loading**: Pricing fetched on-demand per service/region
 - **Caching**: Two-level cache (raw data + parsed pricing)
 - **Fallback system**: Usage-based services use estimated costs
@@ -449,12 +452,16 @@ azure-diagrams/
   - Red: > $1000/month
 
 ### 5. Export Capabilities
-- **PNG Export**: High-quality 2x scale diagram images
-- **SVG Export**: Vector graphics for editing
+- **PNG / Editorial PNG / Blueprint PNG**: High-quality raster images (2x scale, publication-style, and whiteboard-style)
+- **SVG Export**: True vector graphics (edges preserved as paths)
+- **Visio (VSDX)**: Native Visio drawing (OPC package) that opens in desktop Visio **and** Visio for the web, with embedded Azure icons, orthogonal connectors, wrapped edge-label chips, and top-titled group zones
+- **Draw.io Export**: XML for diagrams.net — orthogonal connectors with wrapped, auto-sized edge-label boxes
+- **PPTX Slide**: Single PowerPoint slide (dark/light theme)
+- **Interactive HTML**: Self-contained HTML with pan, zoom, tooltips
+- **Workflow (Markdown)**: The workflow narrative as a `.md` doc (title block, prompt, grouped services, ordered steps, connections, optional WAF score + cost)
 - **JSON Export**: Diagram structure for re-import
-- **Draw.io Export**: XML format for Draw.io/diagrams.net editing
-- **ARM Template**: Azure deployment ready (partial)
-- **CSV/JSON Cost Reports**: Detailed cost breakdowns
+- **az prototype manifest**: Round-trips with Import Manifest for IaC generation
+- **CSV / ZIP Cost Reports**: Detailed cost breakdowns (single region / all formats)
 
 ### 6. Architecture Validation
 - **Hybrid approach**: Rule-based WAF pattern detection (65+ rules in `wafPatternDetector.ts`) + AI-powered contextual refinement
@@ -628,7 +635,7 @@ COSMOS_CONTAINER_ID=<Cosmos DB container ID>
 1. **Icon Coverage**: Not all Azure services have custom icons (fallbacks used for less common services)
 2. **Pricing Accuracy**: Estimates based on default tiers and typical usage
 3. **Usage-Based Services**: Fixed fallback estimates (e.g., Storage, Monitor)
-4. **Region Coverage**: 5 regions (can expand to 60+ Azure regions)
+4. **Region Coverage**: 8 regions (can expand to 60+ Azure regions)
 5. **ARM Export**: Partial implementation, not production-ready
 6. **Model Variability**: Third-party models (DeepSeek, Grok) may occasionally produce less precise service naming than GPT models
 
@@ -765,8 +772,8 @@ The Azure Architecture Diagram Builder demonstrates a sophisticated integration 
 
 Key architectural decisions:
 
-- **7-model AI support** with reactive model selection via `useModelSettings()` hook and per-feature overrides
-- **File-based pricing cache** for reliability and performance across 5 regions (245 pricing files)
+- **12-model AI support** with reactive model selection via `useModelSettings()` hook and per-feature overrides
+- **File-based pricing cache** for reliability and performance across 8 regions
 - **Two-path icon resolution** for flexible service name handling (945-line mapping + 1,163-line normalization)
 - **Layered service mappings** to bridge AI outputs with Azure reality
 - **React Flow canvas** for professional diagram rendering with 21 custom components

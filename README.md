@@ -197,6 +197,8 @@ A built-in feedback widget captures a rating, category, and free-text comment. S
 - **Editable Connections** — Labels, animations, custom styling
 - **Alignment Tools** — Professional layout assistance
 - **Title Block & Legend** — Document-ready diagrams
+- **Canvas navigation hint** — a dismissable pill teaches scroll-to-zoom, right-click-drag to pan, and one-click **Fit to view** (so large diagrams are never "stuck")
+- **Maximize the canvas** — a **Hide/Show Toolbar** toggle collapses the top toolbar, and **Focus** mode hides the side panels plus the generation banner/model badge for a clean, diagram-only view (both persist across sessions)
 
 ### 📤 Export Options
 | Format | Use Case |
@@ -207,7 +209,9 @@ A built-in feedback widget captures a rating, category, and free-text comment. S
 | **SVG** | Scalable vector graphics (true vector — edges preserved as paths) |
 | **PPTX Slide** | Single PowerPoint slide, dark or light theme matching the canvas |
 | **Interactive HTML** | Self-contained HTML with pan, zoom, and tooltips |
-| **Draw.io** | Edit in diagrams.net |
+| **Visio (VSDX)** | Native Visio drawing — opens in desktop Visio **and** Visio for the web (and importable into diagrams.net). Embeds Azure service icons, orthogonal connectors, wrapped edge-label chips, and top-titled group zones |
+| **Draw.io** | Edit in diagrams.net — orthogonal (right-angle) connectors with wrapped, auto-sized edge-label boxes |
+| **Workflow (Markdown)** | The workflow narrative as a `.md` doc — title block, prompt, grouped services, ordered step-by-step flow (service names resolved), connections table, optional WAF score + cost |
 | **JSON** | Backup, version control |
 | **CSV** | Cost analysis in Excel (single region) |
 | **ZIP (All Formats)** | CSV + JSON + TXT summary + intelligent analysis + multi-region comparison |
@@ -221,7 +225,7 @@ A built-in feedback widget captures a rating, category, and free-text comment. S
   | `Architecture_Generated` | model, reasoning effort, prompt length, service/connection/group counts, elapsed time, tokens |
   | `Architecture_Validated` | model, overall WAF score, finding count, elapsed time |
   | `DeploymentGuide_Generated` | model, service count, bicep file count, elapsed time |
-  | `Diagram_Exported` | format (png/svg/drawio/json/csv), service count |
+  | `Diagram_Exported` | format (png/svg/vsdx/drawio/pptx/html/workflow-md/json/csv), service count |
   | `ARM_Template_Imported` | filename, resource count |
   | `Image_Imported` | — |
   | `Models_Compared` | selected model |
@@ -420,11 +424,14 @@ The Diagram Builder ships a **Model Context Protocol (MCP) server** (`mcp-server
 |------|---------|
 | `list_services` | Browse the Azure service catalog (categories, aliases, pricing, cost ranges) |
 | `validate_architecture` | Score a design against Well-Architected Framework rules (deterministic, no LLM) |
-| `estimate_costs` | Estimate monthly cost for a set of services |
+| `estimate_costs` | **Numeric** monthly costs (low/expected/high) from a distilled Azure Retail Prices snapshot — region- and term-aware (PAYG / 1-year reserved), with by-category totals. Instance-priced services use a representative SKU; Microsoft Fabric uses F-SKU capacity; usage-based services report curated catalog ranges |
+| `generate_bicep` | Emit deployable Bicep with Well-Architected secure defaults pre-set (HTTPS-only + TLS 1.2, managed identity, Key Vault soft-delete/purge, health check, autoscale, staging slots, Storage/Cosmos/Redis hardening) + a structured map of which WAF finding each setting resolves. Design-time only |
 | `generate_manifest` | Emit an `az prototype` interchange manifest |
 | `get_waf_rules` | Query WAF rules by pillar or service type |
 | `render_diagram` | Render a diagram as SVG/HTML — with **real Azure icons**, smooth edges, and tiered layout |
 | `export_reactflow_scene` | Produce a React Flow scene for the web app |
+
+> **Structured outputs:** `validate_architecture`, `estimate_costs`, and `get_waf_rules` return typed `structuredContent` (validated against a declared `outputSchema`) alongside a concise human summary, and carry read-only/idempotent tool annotations — so agents consume the data machine-readably instead of parsing prose.
 
 ### Transport & auth
 - **Dual transport** — stdio (local clients) and **Streamable-HTTP** (remote clients). Launch HTTP with `npm run start:http` (or `MCP_TRANSPORT=http`).
@@ -844,7 +851,7 @@ azure-diagrams/
 │   ├── deploy-mcp-instance.sh  # Deploy the isolated MCP server ACA instance
 │   └── fetch-multi-region-pricing.sh  # Refresh per-region pricing (npm run pricing:refresh)
 ├── Azure_Public_Service_Icons/  # 714 official Azure icons (29 categories)
-├── mcp-server/               # MCP server (7 tools, stdio + HTTP, Bearer auth)
+├── mcp-server/               # MCP server (8 tools, stdio + HTTP, Bearer auth)
 │   └── src/                  # serviceCatalog, wafDetector, layoutEngine, svgRenderer, htmlRenderer
 ├── SCOUT/                    # Microsoft Scout integration notes & sample session
 ├── DOCS/                     # Documentation
@@ -868,7 +875,7 @@ azure-diagrams/
 ### June 2026 — MCP Server, Microsoft Scout, Fabric & Pricing Upgrades
 
 #### 🔌 MCP server + Microsoft Scout
-The Diagram Builder is now an **MCP server** (7 tools: list / validate / estimate / render / export / manifest / WAF) with stdio + Streamable-HTTP transports and Bearer auth, registerable as a remote extension in **Microsoft Scout**. SVG rendering gained **real Azure icons** (embedded glyphs, emoji fallback), smooth bezier edges, tighter layout, and far fewer edge crossings.
+The Diagram Builder is now an **MCP server** (8 tools: list / validate / estimate / **generate_bicep** / render / export / manifest / WAF) with stdio + Streamable-HTTP transports and Bearer auth, registerable as a remote extension in **Microsoft Scout**. `estimate_costs` returns numeric live-derived pricing, `generate_bicep` emits WAF-hardened IaC, and three tools now return typed `structuredContent`. SVG rendering gained **real Azure icons** (embedded glyphs, emoji fallback), smooth bezier edges, tighter layout, and far fewer edge crossings.
 
 #### 🟦 Microsoft Fabric support
 ~21 Fabric items with official icons, capacity-aware costing (F2→F2048 ladder, “incl. capacity” badges), per-region Fabric/OneLake meters, and Fabric example prompts.

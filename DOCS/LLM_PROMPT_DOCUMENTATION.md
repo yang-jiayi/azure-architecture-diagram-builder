@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document explains the AI/LLM instructions used to generate Azure architecture diagrams from natural language descriptions. The system uses Azure OpenAI (GPT-5.2, GPT-4.1, GPT-4.1 Mini) with structured prompts to convert user requirements into visual architecture diagrams.
+This document explains the AI/LLM instructions used to generate Azure architecture diagrams from natural language descriptions. The system uses Azure OpenAI / Azure AI Foundry with **12 selectable models** (GPT-5.1, GPT-5.2, GPT-5.2 Codex, GPT-5.3 Codex, GPT-5.4, GPT-5.4 Mini, DeepSeek V3.2 Speciale, DeepSeek V4 Pro, Grok 4.1 Fast, Grok 4.3, Mistral Large 3, Kimi K2.5) and structured prompts to convert user requirements into visual architecture diagrams. All model traffic is proxied server-side via `/api/openai` (the key is never bundled into the browser).
 
 ## Architecture
 
@@ -274,17 +274,20 @@ message queue, and Redis cache
 # NOT bundled — Azure OpenAI is proxied server-side via /api/openai.
 VITE_AZURE_OPENAI_ENDPOINT=https://your-openai.openai.azure.com/
 VITE_AZURE_OPENAI_DEPLOYMENT=your-default-deployment
+VITE_AZURE_OPENAI_DEPLOYMENT_GPT51=your-gpt51-deployment
 VITE_AZURE_OPENAI_DEPLOYMENT_GPT52=your-gpt52-deployment
-VITE_AZURE_OPENAI_DEPLOYMENT_GPT41=your-gpt41-deployment
-VITE_AZURE_OPENAI_DEPLOYMENT_GPT41MINI=your-gpt41mini-deployment
+VITE_AZURE_OPENAI_DEPLOYMENT_GPT54=your-gpt54-deployment
+VITE_AZURE_OPENAI_DEPLOYMENT_DEEPSEEK=your-deepseek-deployment
+VITE_AZURE_OPENAI_DEPLOYMENT_GROK4FAST=your-grok-deployment
+# ...one VITE_AZURE_OPENAI_DEPLOYMENT_* per model in the lineup
 VITE_REASONING_EFFORT=medium
 ```
 
 ### API Configuration
-- **Max tokens**: Per-model (GPT-5.2: 16,000 | GPT-4.1: 10,000 | GPT-4.1 Mini: 8,000)
+- **Max tokens**: Per-model (GPT-5.x reasoning models allocate a larger `max_output_tokens` budget; lighter models use less)
 - **Response format**: `json_object` (ensures valid JSON)
-- **API version**: `2025-04-01-preview`
-- **Model selection**: Runtime via `ModelSelector` dropdown with `ModelOverride`
+- **API version**: `2025-04-01-preview` (Responses API for GPT-5.x; Chat Completions for partner models)
+- **Model selection**: Runtime via `ModelSelector` dropdown with per-feature `ModelOverride`
 
 ## Best Practices
 
@@ -303,9 +306,9 @@ VITE_REASONING_EFFORT=medium
 ## Limitations
 
 1. **Token limit**: Very large architectures may exceed model-specific limits
-2. **Icon availability**: Limited to 713 icons across 29 categories
+2. **Icon availability**: Limited to 714 icons across 29 categories
 3. **Connection complexity**: Cannot represent all possible Azure connection types
-4. **Model variance**: GPT-4.1 Mini may occasionally misidentify services
+4. **Model variance**: Partner/third-party models (DeepSeek, Grok, Mistral, Kimi) may occasionally misidentify services vs. the GPT-5.x family
 
 ## Future Enhancements
 
@@ -324,6 +327,6 @@ Potential improvements to the prompt:
 
 ---
 
-**Version**: 2.0  
-**Last Updated**: February 12, 2026  
-**Models**: GPT-5.2, GPT-4.1, GPT-4.1 Mini (Azure OpenAI)
+**Version**: 3.0  
+**Last Updated**: July 2026  
+**Models**: 12 via Azure OpenAI / Azure AI Foundry (GPT-5.1 → GPT-5.4 Mini, DeepSeek V3.2/V4 Pro, Grok 4.1 Fast/4.3, Mistral Large 3, Kimi K2.5)
