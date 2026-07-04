@@ -106,6 +106,10 @@ const EXPORT_HISTORY_STORAGE_KEY = 'azure-diagram-builder.exportHistory.v1';
 const EDGE_STYLE_STORAGE_KEY = 'azure-diagram-builder.edgeStyle.v1';
 const CANVAS_HINT_STORAGE_KEY = 'azure-diagram-builder.canvasHintDismissed.v1';
 const HEADER_COLLAPSED_STORAGE_KEY = 'azure-diagram-builder.headerCollapsed.v1';
+// First-visit nudge: auto-open the Architecture Chat once so it acts as the
+// primary starting point. Dismissal is implicit — we set the flag as soon as
+// we auto-open, so it never re-opens on its own again.
+const CHAT_AUTO_OPEN_STORAGE_KEY = 'azure-diagram-builder.chatAutoOpened.v1';
 
 // Derive a short, human-friendly architecture title from a free-form prompt
 // (used as a fallback when no manifest title is available). Strips common
@@ -208,6 +212,17 @@ function App() {
   const [lastReferenceArchitecture, setLastReferenceArchitecture] = useState<ReferenceArchitecture | null>(null);
   const [lastBlueprintArchitecture, setLastBlueprintArchitecture] = useState<BlueprintArchitecture | null>(null);
   const [panelsCollapsedSignal, setPanelsCollapsedSignal] = useState(0);
+
+  // First-visit nudge: open the Architecture Chat once so new users have an
+  // obvious starting point. We set the flag immediately so it only ever
+  // auto-opens on the very first load.
+  useEffect(() => {
+    if (localStorage.getItem(CHAT_AUTO_OPEN_STORAGE_KEY) !== '1') {
+      setIsChatOpen(true);
+      try { localStorage.setItem(CHAT_AUTO_OPEN_STORAGE_KEY, '1'); } catch { /* ignore */ }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   // Focus mode: hides canvas chrome (side panels via the signal above, plus the
   // "Generated from" prompt banner and the "Generated with" model badge) so only
   // the diagram itself remains. Toggled by the Focus button.
@@ -3472,6 +3487,34 @@ function App() {
                 >
                   <X size={14} />
                 </button>
+              </div>
+            )}
+            {/* Empty-canvas call-to-action — turns the blank grid into an
+                obvious starting point that opens the Architecture Chat. Hidden
+                once a diagram exists or while the chat panel is already open.
+                pointer-events are disabled on the wrapper so drag-and-drop of
+                services onto the canvas still works; only the button is
+                clickable. */}
+            {nodes.length === 0 && !isChatOpen && (
+              <div className="canvas-empty-cta" role="note" aria-label="Get started">
+                <div className="canvas-empty-cta-inner">
+                  <MessagesSquare size={34} className="canvas-empty-cta-icon" />
+                  <h2 className="canvas-empty-cta-title">Start with a conversation</h2>
+                  <p className="canvas-empty-cta-desc">
+                    Describe what you want to build in plain English — I’ll draw the
+                    first version, then you refine it step by step.
+                  </p>
+                  <button
+                    type="button"
+                    className="canvas-empty-cta-btn"
+                    onClick={() => setIsChatOpen(true)}
+                  >
+                    <MessagesSquare size={18} /> Start with a conversation
+                  </button>
+                  <span className="canvas-empty-cta-alt">
+                    or use <strong>Generate with AI</strong> · or drag services from the left
+                  </span>
+                </div>
               </div>
             )}
             <style>

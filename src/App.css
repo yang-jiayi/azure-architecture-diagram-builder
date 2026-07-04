@@ -569,6 +569,73 @@ body.dark-mode .toolbar-dropdown-separator {
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* Empty-canvas call-to-action: centered "start with a conversation" prompt.
+   The wrapper ignores pointer events so drag-and-drop still reaches the
+   canvas; only the button re-enables them. */
+.canvas-empty-cta {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  animation: canvas-nav-hint-in 0.4s ease-out;
+}
+.canvas-empty-cta-inner {
+  max-width: 440px;
+  text-align: center;
+  padding: 2rem 2.25rem;
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(139, 92, 246, 0.45);
+  border-radius: 18px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(6px);
+}
+.canvas-empty-cta-icon {
+  color: #c4b5fd;
+  margin-bottom: 0.5rem;
+}
+.canvas-empty-cta-title {
+  margin: 0 0 0.6rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #f8fafc;
+}
+.canvas-empty-cta-desc {
+  margin: 0 0 1.4rem;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: #cbd5e1;
+}
+.canvas-empty-cta-btn {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.4rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  background: linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%);
+  box-shadow: 0 4px 16px rgba(139, 92, 246, 0.4);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.canvas-empty-cta-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 22px rgba(139, 92, 246, 0.55);
+}
+.canvas-empty-cta-alt {
+  display: block;
+  margin-top: 1rem;
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
+.canvas-empty-cta-alt strong { color: #c4b5fd; font-weight: 600; }
+
 .canvas-nav-hint-tips {
   display: flex;
   align-items: center;

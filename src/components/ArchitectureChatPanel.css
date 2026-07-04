@@ -114,6 +114,34 @@
   color: #fff;
   transform: translateY(-1px);
 }
+.arch-chat-chip-advanced {
+  background: rgba(236, 72, 153, 0.1);
+  border-color: rgba(244, 114, 182, 0.35);
+}
+.arch-chat-chip-advanced:hover:not(:disabled) {
+  background: rgba(236, 72, 153, 0.24);
+  border-color: rgba(244, 114, 182, 0.7);
+}
+.arch-chat-more-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  align-self: center;
+  margin-top: 0.15rem;
+  padding: 0.4rem 0.6rem;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: #c4b5fd;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.12s ease, background 0.12s ease;
+}
+.arch-chat-more-toggle:hover {
+  color: #ddd6fe;
+  background: rgba(139, 92, 246, 0.12);
+}
 .arch-chat-chip:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .arch-chat-msg {

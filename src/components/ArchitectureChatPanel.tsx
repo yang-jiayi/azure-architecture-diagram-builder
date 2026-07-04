@@ -2,7 +2,7 @@
 // Licensed under the MIT License.
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Sparkles, X, Send, Loader2, AlertCircle, MessageSquare } from 'lucide-react';
+import { Sparkles, X, Send, Loader2, AlertCircle, MessageSquare, ChevronDown, ChevronUp } from 'lucide-react';
 import { generateArchitectureWithAI, isAzureOpenAIConfigured } from '../services/azureOpenAI';
 import { useModelSettings, MODEL_CONFIG } from '../stores/modelSettingsStore';
 import {
@@ -36,7 +36,18 @@ const STARTER_SUGGESTIONS = [
   'Serverless REST API with Functions, Cosmos DB, and a Storage queue',
 ];
 
-// Warm start: once a diagram exists, offer incremental refinements.
+// Cold start (advanced): richer, enterprise-grade patterns revealed behind a
+// "More ideas" toggle so first-timers aren't overwhelmed but power users can
+// see the tool's ceiling.
+const ADVANCED_STARTER_SUGGESTIONS = [
+  'Hub-and-spoke landing zone with Azure Firewall and private DNS',
+  'Multi-region active-active web app with Front Door and geo-replicated SQL',
+  'RAG chat app: Azure OpenAI + AI Search + Cosmos DB, all behind private endpoints',
+  'Event-driven microservices on AKS with Service Bus, KEDA autoscaling, and Key Vault',
+];
+
+// Warm start: once a diagram exists, offer incremental refinements. Used as a
+// fallback when no context-aware "what's missing" suggestions apply.
 const REFINE_SUGGESTIONS = [
   'Add Azure Front Door with WAF in front of the web tier',
   'Make it zone-redundant for high availability',
@@ -44,6 +55,45 @@ const REFINE_SUGGESTIONS = [
   'Add monitoring with Application Insights and Log Analytics',
   'Put private endpoints on the data services',
 ];
+
+// Context-aware refinement suggestions: inspect the services already on the
+// canvas and propose the most valuable *missing* Well-Architected additions
+// (security, reliability, observability). Falls back to the static list when
+// nothing obvious is missing so the panel is never empty.
+function computeRefineSuggestions(nodes: any[]): string[] {
+  const labels = nodes
+    .filter((n) => n?.type === 'azureNode')
+    .map((n) => String(n?.data?.label || '').toLowerCase());
+  const has = (...needles: string[]) =>
+    labels.some((l) => needles.some((needle) => l.includes(needle)));
+
+  const suggestions: string[] = [];
+
+  // Security / identity
+  if (!has('key vault')) {
+    suggestions.push('Add Key Vault and use managed identities for secrets');
+  }
+  if (!has('private endpoint', 'private link')) {
+    suggestions.push('Put private endpoints on the data services');
+  }
+  if (!has('front door', 'application gateway', 'firewall', 'waf')) {
+    suggestions.push('Add Azure Front Door with a WAF in front of the web tier');
+  }
+  // Observability
+  if (!has('application insights', 'monitor', 'log analytics')) {
+    suggestions.push('Add monitoring with Application Insights and Log Analytics');
+  }
+  // Reliability
+  suggestions.push('Make it zone-redundant for high availability');
+  if (!has('redis', 'cache')) {
+    suggestions.push('Add a Redis cache between the API and the database');
+  }
+
+  const deduped = Array.from(new Set(suggestions));
+  if (deduped.length >= 3) return deduped.slice(0, 5);
+  // Pad with static defaults if the diagram already covers most pillars.
+  return Array.from(new Set([...deduped, ...REFINE_SUGGESTIONS])).slice(0, 5);
+}
 
 const uid = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
@@ -56,6 +106,7 @@ const ArchitectureChatPanel: React.FC<ArchitectureChatPanelProps> = ({
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [modelSettings] = useModelSettings();
 
   const threadRef = useRef<HTMLDivElement>(null);
@@ -175,7 +226,7 @@ const ArchitectureChatPanel: React.FC<ArchitectureChatPanelProps> = ({
                 : 'Pick a starter below or type your own. Every step is saved to version history.'}
             </p>
             <div className="arch-chat-suggestions">
-              {(hasDiagram ? REFINE_SUGGESTIONS : STARTER_SUGGESTIONS).map((s) => (
+              {(hasDiagram ? computeRefineSuggestions(currentArchitecture.nodes) : STARTER_SUGGESTIONS).map((s) => (
                 <button
                   key={s}
                   className="arch-chat-chip"
@@ -185,6 +236,30 @@ const ArchitectureChatPanel: React.FC<ArchitectureChatPanelProps> = ({
                   {s}
                 </button>
               ))}
+
+              {!hasDiagram && showAdvanced && ADVANCED_STARTER_SUGGESTIONS.map((s) => (
+                <button
+                  key={s}
+                  className="arch-chat-chip arch-chat-chip-advanced"
+                  disabled={isSending || !configured}
+                  onClick={() => send(s)}
+                >
+                  {s}
+                </button>
+              ))}
+
+              {!hasDiagram && (
+                <button
+                  type="button"
+                  className="arch-chat-more-toggle"
+                  onClick={() => setShowAdvanced((v) => !v)}
+                  aria-expanded={showAdvanced}
+                >
+                  {showAdvanced
+                    ? <><ChevronUp size={15} /> Fewer ideas</>
+                    : <><ChevronDown size={15} /> More ideas — enterprise patterns</>}
+                </button>
+              )}
             </div>
           </div>
         )}
