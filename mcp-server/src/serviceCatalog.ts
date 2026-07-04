@@ -72,6 +72,7 @@ export const SERVICE_CATALOG: Record<string, ServiceInfo> = {
 
   // Analytics & Data
   'Data Factory':           { displayName: 'Azure Data Factory',     aliases: ['Data Factory', 'ADF'],                                         category: 'analytics', hasPricingData: true, pricingServiceName: 'Azure Data Factory', isUsageBased: true, costRange: '$0.50-2.50 per 1000 activities' },
+  'Microsoft Fabric':       { displayName: 'Microsoft Fabric',       aliases: ['Fabric', 'Fabric Capacity', 'Azure Fabric', 'OneLake'],        category: 'analytics', hasPricingData: true, pricingServiceName: 'Microsoft Fabric', costRange: '$262-8410/mo (F2–F64 capacity)' },
   'Azure Synapse Analytics': { displayName: 'Azure Synapse Analytics', aliases: ['Synapse', 'Synapse Analytics', 'Azure Synapse'],             category: 'analytics', hasPricingData: true, pricingServiceName: 'Azure Synapse Analytics', isUsageBased: true, costRange: '$5-8000/mo' },
   'Stream Analytics':       { displayName: 'Azure Stream Analytics', aliases: ['Stream Analytics', 'ASA', 'Azure Stream Analytics'],            category: 'analytics', hasPricingData: true, pricingServiceName: 'Stream Analytics', isUsageBased: true, costRange: '$0.11 per SU/hour' },
   'Event Hubs':             { displayName: 'Event Hubs',             aliases: ['Azure Event Hubs', 'Event Hub'],                               category: 'analytics', hasPricingData: true, pricingServiceName: 'Event Hubs', isUsageBased: true, costRange: '$11-6849/mo' },
