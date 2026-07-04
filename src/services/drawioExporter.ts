@@ -281,19 +281,33 @@ function createEdgeCell(
   // architecture connectors.
   // - edgeStyle=orthogonalEdgeStyle routes with right angles
   // - curved=0 + rounded=0 keeps corners square (no smooth/curved bends)
-  // - labelBackgroundColor adds a white box behind the label
-  // - labelBorderColor adds a border around the label box
-  const labelBoxStyle = label 
-    ? 'labelBackgroundColor=#fef9c3;labelBorderColor=#374151;spacingTop=2;spacingBottom=2;spacingLeft=6;spacingRight=6;fontSize=12;fontColor=#1f2937;fontStyle=1;' 
-    : '';
-  const style = `edgeStyle=orthogonalEdgeStyle;curved=0;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;${dashStyle}strokeWidth=2;strokeColor=#6b7280;endArrow=classic;endFill=1;${labelBoxStyle}`;
+  const style = `edgeStyle=orthogonalEdgeStyle;curved=0;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;${dashStyle}strokeWidth=2;strokeColor=#6b7280;endArrow=classic;endFill=1;`;
   
-  const labelAttr = label ? ` value="${escapeXml(String(label))}"` : ' value=""';
-  
-  return `
-      <mxCell id="${edgeCellId}"${labelAttr} style="${style}" edge="1" parent="1" source="${sourceCellId}" target="${targetCellId}">
+  // The line carries no inline label; instead a child edgeLabel cell holds the
+  // text with whiteSpace=wrap + a fixed width so long labels wrap into a compact
+  // box (an unbounded inline label just stretches out horizontally).
+  let cells = `
+      <mxCell id="${edgeCellId}" value="" style="${style}" edge="1" parent="1" source="${sourceCellId}" target="${targetCellId}">
         <mxGeometry relative="1" as="geometry" />
       </mxCell>`;
+
+  if (label) {
+    const labelStyle = 'edgeLabel;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fillColor=#fef9c3;strokeColor=#374151;fontColor=#1f2937;fontStyle=1;fontSize=12;spacingLeft=4;spacingRight=4;spacingTop=2;spacingBottom=2;';
+    // Size the yellow box to the wrapped text: estimate lines from the label
+    // length at the wrap width so the box grows tall enough (no overflow).
+    const wrapWidth = 150;
+    const charsPerLine = 22; // ~150px at 12px font
+    const lineCount = Math.max(1, Math.ceil(String(label).length / charsPerLine));
+    const boxHeight = 12 + lineCount * 16;
+    cells += `
+      <mxCell id="${edgeCellId}-lbl" value="${escapeXml(String(label))}" style="${labelStyle}" vertex="1" connectable="0" parent="${edgeCellId}">
+        <mxGeometry x="0" y="0" width="${wrapWidth}" height="${boxHeight}" relative="1" as="geometry">
+          <mxPoint as="offset" />
+        </mxGeometry>
+      </mxCell>`;
+  }
+
+  return cells;
 }
 
 // Main export function (async to support icon embedding)
