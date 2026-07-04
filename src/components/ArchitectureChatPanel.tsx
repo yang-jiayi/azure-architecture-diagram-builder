@@ -27,7 +27,17 @@ interface ArchitectureChatPanelProps {
   onApply: (architecture: any, prompt: string, autoSnapshot?: boolean) => void | Promise<void>;
 }
 
-const SUGGESTIONS = [
+// Cold start: when the canvas is empty, offer complete starter architectures
+// so Chat works as a first-class entry point (not just a refinement tool).
+const STARTER_SUGGESTIONS = [
+  'Three-tier web app with App Service, SQL Database, and Redis cache',
+  'Event-driven order processing with Service Bus and Azure Functions',
+  'Secure AI chat app with Azure OpenAI and private endpoints',
+  'Serverless REST API with Functions, Cosmos DB, and a Storage queue',
+];
+
+// Warm start: once a diagram exists, offer incremental refinements.
+const REFINE_SUGGESTIONS = [
   'Add Azure Front Door with WAF in front of the web tier',
   'Make it zone-redundant for high availability',
   'Add a Redis cache between the API and the database',
@@ -145,7 +155,9 @@ const ArchitectureChatPanel: React.FC<ArchitectureChatPanelProps> = ({
       <div className="arch-chat-subhead">
         <Sparkles size={13} />
         <span>
-          Iteratively refine your diagram in plain English · <strong>{modelName}</strong>
+          {hasDiagram
+            ? <>Refine your diagram in plain English · <strong>{modelName}</strong></>
+            : <>Describe it, I’ll draw it — then refine in plain English · <strong>{modelName}</strong></>}
         </span>
       </div>
 
@@ -155,10 +167,15 @@ const ArchitectureChatPanel: React.FC<ArchitectureChatPanelProps> = ({
             <p className="arch-chat-empty-title">
               {hasDiagram
                 ? 'Describe a change and I’ll update the diagram.'
-                : 'Describe an architecture to get started, then keep refining it here.'}
+                : 'Start by describing what you want to build — I’ll draw the first version, then we refine it together.'}
+            </p>
+            <p className="arch-chat-empty-sub">
+              {hasDiagram
+                ? 'Every change is saved to version history, so you can experiment freely.'
+                : 'Pick a starter below or type your own. Every step is saved to version history.'}
             </p>
             <div className="arch-chat-suggestions">
-              {SUGGESTIONS.map((s) => (
+              {(hasDiagram ? REFINE_SUGGESTIONS : STARTER_SUGGESTIONS).map((s) => (
                 <button
                   key={s}
                   className="arch-chat-chip"
