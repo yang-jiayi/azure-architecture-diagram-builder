@@ -1,6 +1,6 @@
 # Azure Services with Regional Pricing Data
 
-**Last Updated:** January 31, 2026
+**Last Updated:** July 2026
 
 This document lists all Azure services that have local pricing data loaded from regional JSON files across all 5 supported regions.
 
@@ -112,7 +112,7 @@ Pricing data is fetched from the [Azure Retail Prices API](https://learn.microso
 cd scripts && ./fetch-multi-region-pricing.sh
 ```
 
-Script downloads 71 services × 5 regions, filters empty data, and stores in `src/data/pricing/regions/`.
+Script downloads services across 8 regions, filters empty data, and stores in `src/data/pricing/regions/`.
 
 ## Regional Pricing
 

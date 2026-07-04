@@ -1,6 +1,6 @@
 # Regional Pricing Implementation - Complete ✅
 
-**Last Updated**: February 12, 2026
+**Last Updated**: July 2026
 
 ## Overview
 Successfully implemented Option B: Lazy-Load Regional Pricing with User Selection
@@ -9,9 +9,9 @@ Successfully implemented Option B: Lazy-Load Regional Pricing with User Selectio
 
 ### 1. Regional Data Structure ✅
 - **Location**: `src/data/pricing/regions/`
-- **Regions**: eastus2, swedencentral, westeurope, brazilsouth, canadacentral
-- **Services per region**: 47 Azure services
-- **Total pricing files**: 235 (47 × 5 regions)
+- **Regions**: eastus2, swedencentral, westeurope, brazilsouth, canadacentral, australiaeast, mexicocentral, southeastasia
+- **Services per region**: 50–72 Azure services (incl. Microsoft Fabric capacity & OneLake meters)
+- **Total pricing files**: 466 across 8 regions
 
 ### 2. Regional Pricing Service ✅
 - **File**: `src/services/regionalPricingService.ts` (352 lines)
@@ -19,7 +19,7 @@ Successfully implemented Option B: Lazy-Load Regional Pricing with User Selectio
   - Dynamic region switching
   - Lazy-loading of pricing data (only loads what's needed)
   - Caching system for performance
-  - 5 regions with full metadata (flag, location, display name)
+  - 8 regions with full metadata (flag, location, display name)
   - Preload common services for faster initial load
 
 ### 3. Updated Services ✅
@@ -31,7 +31,7 @@ Successfully implemented Option B: Lazy-Load Regional Pricing with User Selectio
 - **Component**: `RegionSelector.tsx`
 - **Location**: Top toolbar (after Region Selector)
 - **Features**:
-  - Flag emojis for visual identification (🇺🇸 🇸🇪 🇳🇱 🇧🇷 🇨🇦)
+  - Flag emojis for visual identification (🇺🇸 🇸🇪 🇳🇱 🇧🇷 🇨🇦 🇦🇺 🇲🇽 🇸🇬)
   - Dropdown with region details
   - Smooth animations
   - Auto-recalculates all node pricing on region change
@@ -69,11 +69,14 @@ Successfully implemented Option B: Lazy-Load Regional Pricing with User Selectio
 ### New Files Created:
 1. `src/services/regionalPricingService.ts` (352 lines)
 2. `src/components/RegionSelector.tsx` (64 lines)
-3. `src/data/pricing/regions/eastus2/` (47 JSON files)
-4. `src/data/pricing/regions/swedencentral/` (47 JSON files)
-5. `src/data/pricing/regions/westeurope/` (47 JSON files)
-6. `src/data/pricing/regions/brazilsouth/` (47 JSON files)
-7. `src/data/pricing/regions/canadacentral/` (47 JSON files)
+3. `src/data/pricing/regions/eastus2/` (50 JSON files)
+4. `src/data/pricing/regions/swedencentral/` (50 JSON files)
+5. `src/data/pricing/regions/westeurope/` (50 JSON files)
+6. `src/data/pricing/regions/brazilsouth/` (50 JSON files)
+7. `src/data/pricing/regions/canadacentral/` (50 JSON files)
+8. `src/data/pricing/regions/australiaeast/` (72 JSON files)
+9. `src/data/pricing/regions/mexicocentral/` (72 JSON files)
+10. `src/data/pricing/regions/southeastasia/` (72 JSON files)
 
 ### Modified Files:
 1. `src/services/localPricingService.ts` - Simplified, delegates to regional service
@@ -99,7 +102,7 @@ Successfully implemented Option B: Lazy-Load Regional Pricing with User Selectio
 
 ✅ **Smaller bundle size**: ~2.5MB per region vs ~15MB single file  
 ✅ **Faster initial load**: Only loads one region at startup  
-✅ **Real-time region switching**: Compare costs across 5 regions instantly  
+✅ **Real-time region switching**: Compare costs across 8 regions instantly  
 ✅ **Easy to update**: Drop new JSON files when pricing changes  
 ✅ **Easy to extend**: Add more regions by adding folders  
 ✅ **Better UX**: Visual region selection with flags and locations  

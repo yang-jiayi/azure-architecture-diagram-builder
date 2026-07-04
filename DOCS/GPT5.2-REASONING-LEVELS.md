@@ -2,9 +2,9 @@
 
 ## Overview
 
-Azure OpenAI with API version `2025-04-01-preview` supports configurable reasoning effort levels that control how deeply GPT-5.2 thinks before responding.
+Azure OpenAI with API version `2025-04-01-preview` supports configurable reasoning effort levels that control how deeply the GPT-5.x models think before responding.
 
-> **Note**: Reasoning effort only applies to GPT-5.2. GPT-4.1 and GPT-4.1 Mini are non-reasoning models and ignore this setting.
+> **Note**: Reasoning effort applies to the GPT-5.x family (GPT-5.1, 5.2, 5.2 Codex, 5.3 Codex, 5.4, 5.4 Mini). Partner models (DeepSeek V3.2/V4 Pro, Grok 4.1 Fast/4.3, Mistral Large 3, Kimi K2.5) are non-reasoning and ignore this setting.
 
 ## Configuration
 
@@ -45,7 +45,7 @@ Benefits with `medium` reasoning:
 | **medium** | **+30-50%** | **Most production use** |
 | high | +60-100% | Enterprise architectures |
 
-> **Alternative**: For faster results at lower cost, consider using GPT-4.1 (10,000 max tokens, no reasoning overhead) or GPT-4.1 Mini (8,000 max tokens, fastest). These models skip reasoning entirely.
+> **Alternative**: For faster results at lower cost, consider **GPT-5.4 Mini** (compact frontier model, fast and cost-efficient) or a non-reasoning partner model such as **Grok 4.1 Fast** or **DeepSeek V3.2 Speciale**, which skip reasoning entirely.
 
 ## When to Adjust
 
@@ -112,7 +112,7 @@ See `notebooks/reasoning_effort_test.ipynb` for comprehensive testing of all rea
 
 ---
 
-**Last Updated:** February 12, 2026  
+**Last Updated:** July 2026  
 **Status:** ✅ Working with Azure OpenAI API version 2025-04-01-preview  
 **Current Setting:** `medium` (recommended)  
-**Models:** GPT-5.2 (reasoning), GPT-4.1 (non-reasoning), GPT-4.1 Mini (non-reasoning)
+**Models:** GPT-5.x family (reasoning) + partner models (DeepSeek, Grok, Mistral, Kimi — non-reasoning)

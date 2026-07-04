@@ -1,7 +1,7 @@
 # AI Instructions Documentation
 
-**Last Updated**: February 12, 2026  
-**Models Supported**: GPT-5.2, GPT-4.1, GPT-4.1 Mini (Azure OpenAI)
+**Last Updated**: July 2026  
+**Models Supported**: 12 via Azure OpenAI / Azure AI Foundry (GPT-5.1, GPT-5.2, GPT-5.2 Codex, GPT-5.3 Codex, GPT-5.4, GPT-5.4 Mini, DeepSeek V3.2 Speciale, DeepSeek V4 Pro, Grok 4.1 Fast, Grok 4.3, Mistral Large 3, Kimi K2.5)
 
 This document details the AI instructions (system prompts) for all three agents in the Azure Architecture Diagram Builder application. Each agent supports multi-model selection.
 
@@ -15,17 +15,25 @@ The three agents support **multiple AI models** selected at runtime via `ModelSe
 - `VITE_AZURE_OPENAI_ENDPOINT` - Azure OpenAI endpoint URL (non-secret build-time flag)
 - `AZURE_OPENAI_ENDPOINT` / `AZURE_OPENAI_API_KEY` - server-side runtime config for the `/api/openai` proxy (the key is never bundled; managed identity preferred)
 - `VITE_AZURE_OPENAI_DEPLOYMENT` - Default deployment name
-- `VITE_AZURE_OPENAI_DEPLOYMENT_GPT52` - GPT-5.2 deployment
-- `VITE_AZURE_OPENAI_DEPLOYMENT_GPT41` - GPT-4.1 deployment
-- `VITE_AZURE_OPENAI_DEPLOYMENT_GPT41MINI` - GPT-4.1 Mini deployment
-- `VITE_REASONING_EFFORT` - Reasoning effort for GPT-5.2 (none/low/medium/high)
+- `VITE_AZURE_OPENAI_DEPLOYMENT_GPT51` / `_GPT52` / `_GPT52CODEX` / `_GPT53CODEX` / `_GPT54` / `_GPT54MINI` - GPT-5.x family deployments
+- `VITE_AZURE_OPENAI_DEPLOYMENT_DEEPSEEK` / `_DEEPSEEK_V4_PRO` / `_GROK4FAST` / `_GROK43` / `_MISTRALLARGE3` / `_KIMIK25` - partner-model deployments
+- `VITE_REASONING_EFFORT` - Reasoning effort for GPT-5.x reasoning models (none/low/medium/high)
 
 ### Model Configuration (from `modelSettingsStore.ts`)
-| Model | Max Tokens | Reasoning | Deployment Env Var |
-|-------|-----------|-----------|-------------------|
-| GPT-5.2 | 16,000 | Yes (configurable effort) | `VITE_AZURE_OPENAI_DEPLOYMENT_GPT52` |
-| GPT-4.1 | 10,000 | No | `VITE_AZURE_OPENAI_DEPLOYMENT_GPT41` |
-| GPT-4.1 Mini | 8,000 | No | `VITE_AZURE_OPENAI_DEPLOYMENT_GPT41MINI` |
+| Model | Max Completion Tokens | Reasoning | API Format |
+|-------|-----------------------|-----------|------------|
+| GPT-5.1 | 32,000 | Yes (default effort `none`) | Responses |
+| GPT-5.2 | 32,000 | Yes (configurable effort) | Responses |
+| GPT-5.2 Codex | 32,000 | Yes | Responses |
+| GPT-5.3 Codex | 32,000 | Yes | Responses |
+| GPT-5.4 | 32,000 | Yes | Responses |
+| GPT-5.4 Mini | 32,000 | Yes | Responses |
+| DeepSeek V3.2 Speciale | 16,000 | No | Chat Completions |
+| DeepSeek V4 Pro | 16,000 | No | Chat Completions |
+| Grok 4.1 Fast | 16,000 | No | Chat Completions |
+| Grok 4.3 | 16,000 | No | Chat Completions |
+| Mistral Large 3 | 16,000 | No | Chat Completions |
+| Kimi K2.5 | 16,000 | No | Chat Completions |
 
 ---
 
@@ -33,7 +41,7 @@ The three agents support **multiple AI models** selected at runtime via `ModelSe
 
 **File**: `src/services/azureOpenAI.ts` (558 lines)  
 **Function**: `generateArchitectureWithAI(description: string, modelOverride?: ModelOverride)`  
-**Max Tokens**: Per-model (GPT-5.2: 16,000 | GPT-4.1: 10,000 | GPT-4.1 Mini: 8,000)  
+**Max Tokens**: Per-model (GPT-5.x: 32,000 | partner models: 16,000)  
 **Response Format**: JSON Object
 
 ### Purpose
@@ -148,7 +156,7 @@ Generate Azure architecture diagrams with logical service groupings based on nat
 
 **File**: `src/services/architectureValidator.ts` (334 lines)  
 **Function**: `validateArchitecture(..., modelOverride?: ModelOverride)`  
-**Max Tokens**: Per-model (GPT-5.2: 16,000 | GPT-4.1: 10,000 | GPT-4.1 Mini: 8,000)  
+**Max Tokens**: Per-model (GPT-5.x: 32,000 | partner models: 16,000)  
 **Temperature**: 0.3  
 **Response Format**: JSON Object
 
@@ -266,7 +274,7 @@ Validate Azure architectures against the **Azure Well-Architected Framework** (5
 
 **File**: `src/services/deploymentGuideGenerator.ts` (396 lines)  
 **Function**: `generateDeploymentGuide(..., modelOverride?: ModelOverride)`  
-**Max Tokens**: Per-model (GPT-5.2: 16,000 | GPT-4.1: 10,000 | GPT-4.1 Mini: 8,000)  
+**Max Tokens**: Per-model (GPT-5.x: 32,000 | partner models: 16,000)  
 **Temperature**: 0.3  
 **Response Format**: JSON Object
 
@@ -423,13 +431,12 @@ az webapp create \
 ## Token Allocation Strategy
 
 ### Multi-Model Token Budgets
-All three agents now use the same `max_completion_tokens` value from `MODEL_CONFIG` in `modelSettingsStore.ts`. GPT-5.2 uses reasoning tokens internally (not visible in output); GPT-4.1 and GPT-4.1 Mini do not use reasoning tokens.
+All three agents use the same `maxCompletionTokens` value from `MODEL_CONFIG` in `modelSettingsStore.ts`. GPT-5.x reasoning models use reasoning tokens internally (not visible in output); partner models (DeepSeek, Grok, Mistral, Kimi) do not use reasoning tokens.
 
-| Model | Max Completion Tokens | Reasoning | Notes |
-|-------|----------------------|-----------|-------|
-| **GPT-5.2** | 16,000 | Yes (configurable effort) | Best quality, slowest |
-| **GPT-4.1** | 10,000 | No | Good balance of quality/speed |
-| **GPT-4.1 Mini** | 8,000 | No | Fastest, may misidentify services |
+| Model family | Max Completion Tokens | Reasoning | Notes |
+|--------------|-----------------------|-----------|-------|
+| **GPT-5.x** (5.1 → 5.4 Mini) | 32,000 | Yes (configurable effort) | Highest quality; Responses API |
+| **Partner models** (DeepSeek V3.2/V4 Pro, Grok 4.1 Fast/4.3, Mistral Large 3, Kimi K2.5) | 16,000 | No | Provider diversity; Chat Completions API |
 
 ### Per-Agent Behavior
 - **Diagram Generator**: Uses full model token budget
@@ -451,7 +458,7 @@ All three agents now use the same `max_completion_tokens` value from `MODEL_CONF
 ```
 
 ### API Version
-`2025-04-01-preview` - Supports GPT-5.2 reasoning, GPT-4.1, and GPT-4.1 Mini
+`2025-04-01-preview` - Supports the GPT-5.x reasoning family (Responses API) and partner models (DeepSeek, Grok, Mistral, Kimi via Chat Completions)
 
 ### Error Handling
 - 401: Invalid API key
@@ -499,7 +506,7 @@ const result = await generateArchitectureWithAI(
 
 ### Architecture Validator
 ```typescript
-const modelOverride = { model: 'gpt-4.1', reasoningEffort: 'medium' };
+const modelOverride = { model: 'gpt-5.4-mini', reasoningEffort: 'medium' };
 const validation = await validateArchitecture(
   services,      // Array of service objects
   connections,   // Array of connection objects
@@ -557,6 +564,6 @@ const guide = await generateDeploymentGuide(
 
 ---
 
-**Document Version**: 2.0  
-**Models**: GPT-5.2, GPT-4.1, GPT-4.1 Mini (Azure OpenAI)  
-**Last Tested**: February 12, 2026
+**Document Version**: 3.0  
+**Models**: 12 via Azure OpenAI / Azure AI Foundry (GPT-5.1 → GPT-5.4 Mini, DeepSeek V3.2/V4 Pro, Grok 4.1 Fast/4.3, Mistral Large 3, Kimi K2.5)  
+**Last Tested**: July 2026
