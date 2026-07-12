@@ -40,10 +40,24 @@ function abbreviateModel(model: ModelType): string {
       return 'gpt54mini';
     case 'gpt-5.6-sol':
       return 'gpt56sol';
+    case 'gpt-5.6-terra':
+      return 'gpt56terra';
+    case 'gpt-5.6-luna':
+      return 'gpt56luna';
     case 'deepseek-v3.2-speciale':
       return 'deepseek';
+    case 'deepseek-v4-pro':
+      return 'deepseekv4pro';
     case 'grok-4.1-fast':
       return 'grok41fast';
+    case 'grok-4.3':
+      return 'grok43';
+    case 'mistral-large-3':
+      return 'mistrallarge3';
+    case 'kimi-k2-5':
+      return 'kimik25';
+    case 'kimi-k2-7-code':
+      return 'kimik27code';
 
     default:
       return 'unknown';

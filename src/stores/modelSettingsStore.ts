@@ -10,7 +10,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 
-export type ModelType = 'gpt-5.1' | 'gpt-5.2' | 'gpt-5.4' | 'gpt-5.4-mini' | 'gpt-5.6-sol' | 'deepseek-v3.2-speciale' | 'deepseek-v4-pro' | 'grok-4.1-fast' | 'grok-4.3' | 'mistral-large-3' | 'kimi-k2-5' | 'kimi-k2-7-code';
+export type ModelType = 'gpt-5.1' | 'gpt-5.2' | 'gpt-5.4' | 'gpt-5.4-mini' | 'gpt-5.6-sol' | 'gpt-5.6-terra' | 'gpt-5.6-luna' | 'deepseek-v3.2-speciale' | 'deepseek-v4-pro' | 'grok-4.1-fast' | 'grok-4.3' | 'mistral-large-3' | 'kimi-k2-5' | 'kimi-k2-7-code';
 export type ReasoningEffort = 'none' | 'low' | 'medium' | 'high';
 
 /**
@@ -126,6 +126,20 @@ export const MODEL_CONFIG: Record<ModelType, {
     maxCompletionTokens: 32000,
     description: 'Newest frontier reasoning model - top-tier quality for complex architectures'
   },
+  'gpt-5.6-terra': {
+    displayName: 'GPT-5.6 Terra',
+    deploymentEnvVar: 'VITE_AZURE_OPENAI_DEPLOYMENT_GPT56TERRA',
+    isReasoning: true,
+    maxCompletionTokens: 32000,
+    description: 'Frontier reasoning model - grounded, thorough analysis for complex architectures'
+  },
+  'gpt-5.6-luna': {
+    displayName: 'GPT-5.6 Luna',
+    deploymentEnvVar: 'VITE_AZURE_OPENAI_DEPLOYMENT_GPT56LUNA',
+    isReasoning: true,
+    maxCompletionTokens: 32000,
+    description: 'Frontier reasoning model - fast, creative reasoning for architecture design'
+  },
   'deepseek-v3.2-speciale': {
     displayName: 'DeepSeek V3.2 Speciale',
     deploymentEnvVar: 'VITE_AZURE_OPENAI_DEPLOYMENT_DEEPSEEK',
@@ -211,6 +225,8 @@ export const DEPLOYMENT_NAMES: Record<ModelType, string | undefined> = {
   'gpt-5.4': import.meta.env.VITE_AZURE_OPENAI_DEPLOYMENT_GPT54,
   'gpt-5.4-mini': import.meta.env.VITE_AZURE_OPENAI_DEPLOYMENT_GPT54MINI,
   'gpt-5.6-sol': import.meta.env.VITE_AZURE_OPENAI_DEPLOYMENT_GPT56SOL,
+  'gpt-5.6-terra': import.meta.env.VITE_AZURE_OPENAI_DEPLOYMENT_GPT56TERRA,
+  'gpt-5.6-luna': import.meta.env.VITE_AZURE_OPENAI_DEPLOYMENT_GPT56LUNA,
   'deepseek-v3.2-speciale': import.meta.env.VITE_AZURE_OPENAI_DEPLOYMENT_DEEPSEEK,
   'deepseek-v4-pro': import.meta.env.VITE_AZURE_OPENAI_DEPLOYMENT_DEEPSEEK_V4_PRO,
   'grok-4.1-fast': import.meta.env.VITE_AZURE_OPENAI_DEPLOYMENT_GROK4FAST,
