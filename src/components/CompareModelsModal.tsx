@@ -17,8 +17,8 @@ import {
 /** Abbreviate model name for filenames */
 function abbreviateModelForFile(model: ModelType): string {
   const map: Record<string, string> = {
-    'gpt-5.1': 'gpt51', 'gpt-5.2': 'gpt52', 'gpt-5.2-codex': 'gpt52codex',
-    'gpt-5.3-codex': 'gpt53codex', 'gpt-5.4': 'gpt54', 'gpt-5.4-mini': 'gpt54mini',
+    'gpt-5.1': 'gpt51', 'gpt-5.2': 'gpt52',
+    'gpt-5.4': 'gpt54', 'gpt-5.4-mini': 'gpt54mini', 'gpt-5.6-sol': 'gpt56sol',
     'deepseek-v3.2-speciale': 'deepseek', 'deepseek-v4-pro': 'deepseekv4pro',
     'grok-4.1-fast': 'grok41fast', 'grok-4.3': 'grok43',
     'mistral-large-3': 'mistrallarge3',

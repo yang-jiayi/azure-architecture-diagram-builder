@@ -10,7 +10,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 
-export type ModelType = 'gpt-5.1' | 'gpt-5.2' | 'gpt-5.2-codex' | 'gpt-5.3-codex' | 'gpt-5.4' | 'gpt-5.4-mini' | 'deepseek-v3.2-speciale' | 'deepseek-v4-pro' | 'grok-4.1-fast' | 'grok-4.3' | 'mistral-large-3' | 'kimi-k2-5' | 'kimi-k2-7-code';
+export type ModelType = 'gpt-5.1' | 'gpt-5.2' | 'gpt-5.4' | 'gpt-5.4-mini' | 'gpt-5.6-sol' | 'deepseek-v3.2-speciale' | 'deepseek-v4-pro' | 'grok-4.1-fast' | 'grok-4.3' | 'mistral-large-3' | 'kimi-k2-5' | 'kimi-k2-7-code';
 export type ReasoningEffort = 'none' | 'low' | 'medium' | 'high';
 
 /**
@@ -105,20 +105,6 @@ export const MODEL_CONFIG: Record<ModelType, {
     maxCompletionTokens: 32000,
     description: 'Most capable reasoning model - best for complex architectures'
   },
-  'gpt-5.2-codex': {
-    displayName: 'GPT-5.2 Codex',
-    deploymentEnvVar: 'VITE_AZURE_OPENAI_DEPLOYMENT_GPT52CODEX',
-    isReasoning: true,
-    maxCompletionTokens: 32000,
-    description: 'Optimized for code generation - ideal for Bicep/IaC'
-  },
-  'gpt-5.3-codex': {
-    displayName: 'GPT-5.3 Codex',
-    deploymentEnvVar: 'VITE_AZURE_OPENAI_DEPLOYMENT_GPT53CODEX',
-    isReasoning: true,
-    maxCompletionTokens: 32000,
-    description: 'Latest codex model - enhanced reasoning and code generation'
-  },
   'gpt-5.4': {
     displayName: 'GPT-5.4',
     deploymentEnvVar: 'VITE_AZURE_OPENAI_DEPLOYMENT_GPT54',
@@ -132,6 +118,13 @@ export const MODEL_CONFIG: Record<ModelType, {
     isReasoning: true,
     maxCompletionTokens: 32000,
     description: 'Compact frontier model - fast and cost-efficient with strong reasoning'
+  },
+  'gpt-5.6-sol': {
+    displayName: 'GPT-5.6 Sol',
+    deploymentEnvVar: 'VITE_AZURE_OPENAI_DEPLOYMENT_GPT56SOL',
+    isReasoning: true,
+    maxCompletionTokens: 32000,
+    description: 'Newest frontier reasoning model - top-tier quality for complex architectures'
   },
   'deepseek-v3.2-speciale': {
     displayName: 'DeepSeek V3.2 Speciale',
@@ -215,10 +208,9 @@ export const MODEL_CONFIG: Record<ModelType, {
 export const DEPLOYMENT_NAMES: Record<ModelType, string | undefined> = {
   'gpt-5.1': import.meta.env.VITE_AZURE_OPENAI_DEPLOYMENT_GPT51,
   'gpt-5.2': import.meta.env.VITE_AZURE_OPENAI_DEPLOYMENT_GPT52,
-  'gpt-5.2-codex': import.meta.env.VITE_AZURE_OPENAI_DEPLOYMENT_GPT52CODEX,
-  'gpt-5.3-codex': import.meta.env.VITE_AZURE_OPENAI_DEPLOYMENT_GPT53CODEX,
   'gpt-5.4': import.meta.env.VITE_AZURE_OPENAI_DEPLOYMENT_GPT54,
   'gpt-5.4-mini': import.meta.env.VITE_AZURE_OPENAI_DEPLOYMENT_GPT54MINI,
+  'gpt-5.6-sol': import.meta.env.VITE_AZURE_OPENAI_DEPLOYMENT_GPT56SOL,
   'deepseek-v3.2-speciale': import.meta.env.VITE_AZURE_OPENAI_DEPLOYMENT_DEEPSEEK,
   'deepseek-v4-pro': import.meta.env.VITE_AZURE_OPENAI_DEPLOYMENT_DEEPSEEK_V4_PRO,
   'grok-4.1-fast': import.meta.env.VITE_AZURE_OPENAI_DEPLOYMENT_GROK4FAST,

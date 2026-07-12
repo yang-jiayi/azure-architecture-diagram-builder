@@ -77,6 +77,8 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({ compact = false }) => {
         return <Cpu size={16} />;
       case 'gpt-5.2':
         return <Brain size={16} />;
+      case 'gpt-5.6-sol':
+        return <Brain size={16} />;
       case 'deepseek-v3.2-speciale':
         return <Layers size={16} />;
       case 'grok-4.1-fast':
