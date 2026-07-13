@@ -53,6 +53,10 @@ import { renderSvg } from './svgRenderer.js';
 import { renderHtml } from './htmlRenderer.js';
 import { estimateServiceCost, getPricingMeta, type PricingTerm, type CostTier } from './pricing.js';
 import { generateBicep } from './bicepGenerator.js';
+import { generateTerraform } from './terraformGenerator.js';
+import { generateDeploymentGuide } from './deploymentGuide.js';
+import { hardenArchitecture } from './hardener.js';
+import { importArchitecture } from './importer.js';
 
 // Web app icon mapping (generated from src/data/serviceIconMapping.ts via
 // scripts/sync-icon-map.mjs). Used by export_reactflow_scene to emit icon
@@ -65,6 +69,17 @@ const iconMap: Record<string, { iconFile: string; category: string }> = JSON.par
 
 type IconEntry = { iconFile: string; category: string };
 const ICON_MAP = iconMap as Record<string, IconEntry>;
+
+// Reverse map: icon file stem → canonical service name. Lets import_architecture
+// recover a service type from a React Flow node's iconPath when the scene has no
+// explicit type field.
+const ICON_FILE_TO_TYPE: Record<string, string> = (() => {
+  const out: Record<string, string> = {};
+  for (const [name, entry] of Object.entries(ICON_MAP)) {
+    if (entry?.iconFile && !out[entry.iconFile]) out[entry.iconFile] = name;
+  }
+  return out;
+})();
 
 function resolveIconPath(serviceType: string): { iconPath: string; category: string } {
   const canonical = resolveServiceName(serviceType);
@@ -561,7 +576,7 @@ server.tool(
     iacTool: z
       .string()
       .optional()
-      .describe('IaC format. Allowed values: bicep (default), terraform (stub — not yet implemented).'),
+      .describe('IaC format. Allowed values: bicep (default). For Terraform, use the dedicated generate_terraform tool.'),
     services: z
       .array(
         z.object({
@@ -605,6 +620,251 @@ server.tool(
               findingsResolvedCount: result.findingsResolved.length,
               note: result.note,
               bicep: result.bicep,
+            },
+            null,
+            2,
+          ),
+        },
+      ],
+    };
+  },
+);
+
+// ── Tool 4c: generate_terraform ────────────────────────────────────────
+
+server.tool(
+  'generate_terraform',
+  'Generate deployable Terraform (azurerm provider) from a list of services and connections, with Well-Architected secure defaults PRE-SET: App Service (Linux web app) HTTPS-only + TLS 1.2 + managed identity + health check + autoscale + staging slot, Key Vault soft-delete + purge protection + RBAC, Storage HTTPS-only/no-public-access, Cosmos DB automatic failover + continuous backup, Redis TLS 1.2, AI Search keyless, Container Apps HTTPS-only ingress, plus Key Vault Secrets User role assignments for managed identities. Emits a resource group + azurerm provider block. Resolves the config-level WAF findings that cannot be expressed in a diagram. Returns the HCL and a structured map of which WAF finding each attribute resolves. Design-time only — never runs terraform apply.',
+  {
+    projectName: z.string().optional().describe('Project name (used for name_prefix variable). Default: workload'),
+    location: z.string().optional().describe('Azure region (default: eastus2)'),
+    services: z
+      .array(
+        z.object({
+          name: z.string().describe('Service instance name'),
+          type: z.string().describe('Azure service type (e.g. "App Service", "Key Vault")'),
+          description: z.string().optional().describe('Service description'),
+          groupId: z.string().optional().describe('Group ID this service belongs to'),
+        }),
+      )
+      .describe('List of Azure services to generate Terraform for'),
+    connections: z
+      .array(
+        z.object({
+          from: z.string().describe('Source service name'),
+          to: z.string().describe('Target service name'),
+          label: z.string().optional().describe('Connection label'),
+        }),
+      )
+      .optional()
+      .describe('Connections between services'),
+  },
+  async ({ projectName, location, services, connections }) => {
+    const result = generateTerraform({ services, connections, projectName, location });
+
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: JSON.stringify(
+            {
+              iacTool: result.iacTool,
+              servicesCovered: result.servicesCovered,
+              servicesGeneric: result.servicesGeneric,
+              findingsResolved: result.findingsResolved,
+              findingsResolvedCount: result.findingsResolved.length,
+              note: result.note,
+              terraform: result.terraform,
+            },
+            null,
+            2,
+          ),
+        },
+      ],
+    };
+  },
+);
+
+// ── Tool 4d: generate_deployment_guide ────────────────────────────────
+
+server.tool(
+  'generate_deployment_guide',
+  'Generate a step-by-step Markdown deployment runbook for an architecture: prerequisites, az login, resource group, IaC deploy commands (Bicep via `az deployment group create`, or Terraform via `init/plan/apply`), a post-deploy config-hardening checklist derived from the WAF service-level findings, per-service smoke tests, and teardown. Pairs with generate_bicep / generate_terraform. Deterministic, design-time only — it never deploys.',
+  {
+    projectName: z.string().optional().describe('Project name (used for resource group + name prefix). Default: workload'),
+    location: z.string().optional().describe('Azure region (default: eastus2)'),
+    iacTool: z
+      .string()
+      .optional()
+      .describe('Which IaC the guide targets. Allowed values: bicep (default), terraform.'),
+    services: z
+      .array(
+        z.object({
+          name: z.string().describe('Service instance name'),
+          type: z.string().describe('Azure service type'),
+          groupId: z.string().optional().describe('Group ID this service belongs to'),
+        }),
+      )
+      .describe('List of Azure services in the architecture'),
+    connections: z
+      .array(
+        z.object({
+          from: z.string().describe('Source service name'),
+          to: z.string().describe('Target service name'),
+          label: z.string().optional().describe('Connection label'),
+        }),
+      )
+      .optional()
+      .describe('Connections between services'),
+  },
+  async ({ projectName, location, iacTool, services, connections }) => {
+    const result = generateDeploymentGuide({ services, connections, projectName, location, iacTool });
+
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: JSON.stringify(
+            {
+              iacTool: result.iacTool,
+              steps: result.steps,
+              checklistItems: result.checklistItems,
+              markdown: result.markdown,
+            },
+            null,
+            2,
+          ),
+        },
+      ],
+    };
+  },
+);
+
+// ── Tool 5: get_waf_rules ──────────────────────────────────────────────
+
+server.registerTool(
+  'harden_architecture',
+  {
+    description:
+      'Deterministically HARDEN an architecture by clearing pattern-level WAF anti-patterns (single-region, no-identity, no-waf, no-api-gateway, direct-db-access, single-database, no-cache, no-key-vault, no-backup, no-monitoring). Adds the remediating services (Entra ID, Front Door + WAF, API Management, geo-replica, Redis, Key Vault, Backup, Monitor) and rewires connections, then re-validates. Returns the hardened services/connections/groups (ready to pass to render_diagram, generate_bicep, or export_reactflow_scene), a change log, and before/after WAF scores. Collapses the manual add-service → re-validate loop into one call. No LLM. Only fixes topology; config-level findings are resolved by generate_bicep.',
+    inputSchema: {
+      services: z
+        .array(
+          z.object({
+            name: z.string().describe('Service instance name'),
+            type: z.string().describe('Azure service type (e.g. "App Service", "SQL Database")'),
+            description: z.string().optional().describe('Service description'),
+            groupId: z.string().optional().describe('Group ID this service belongs to'),
+          }),
+        )
+        .describe('List of Azure services in the current architecture'),
+      connections: z
+        .array(
+          z.object({
+            from: z.string().describe('Source service name'),
+            to: z.string().describe('Target service name'),
+            label: z.string().optional().describe('Connection label'),
+            type: z.string().optional().describe('Connection type. Allowed values: sync, async, optional'),
+          }),
+        )
+        .optional()
+        .describe('Connections between services'),
+      groups: z
+        .array(
+          z.object({
+            id: z.string().describe('Group identifier'),
+            label: z.string().describe('Display label'),
+          }),
+        )
+        .optional()
+        .describe('Existing logical service groups (new groups are appended as needed)'),
+    },
+    annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+  },
+  async ({ services, connections, groups }) => {
+    const result = hardenArchitecture(
+      services,
+      (connections ?? []).map(c => ({ from: c.from, to: c.to, label: c.label, type: c.type as any })),
+      groups ?? [],
+    );
+
+    const summary =
+      `Hardened: WAF score ${result.before.score} → ${result.after.score}. ` +
+      `Patterns ${result.before.patternsDetected.length} → ${result.after.patternsDetected.length}` +
+      (result.after.patternsDetected.length ? ` (remaining: ${result.after.patternsDetected.join(', ')})` : ' (all cleared)') +
+      `. ${result.changes.length} change(s) applied.`;
+
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: JSON.stringify(
+            {
+              summary,
+              before: result.before,
+              after: result.after,
+              changes: result.changes,
+              unresolved: result.unresolved,
+              note: result.note,
+              services: result.services,
+              connections: result.connections,
+              groups: result.groups,
+            },
+            null,
+            2,
+          ),
+        },
+      ],
+    };
+  },
+);
+
+server.registerTool(
+  'import_architecture',
+  {
+    description:
+      'Import an existing architecture back into the canonical { services, connections, groups } shape — the inverse of generate_manifest and export_reactflow_scene. Accepts an az prototype interchange manifest (clean round-trip) OR a React Flow scene JSON (from this server or the web app; service types are recovered from data.azureServiceType, or reversed from the icon path). Returns the normalized architecture ready to feed straight into validate_architecture, harden_architecture, estimate_costs, render_diagram, or generate_bicep. Tolerant: collects warnings instead of failing on partially-recognized input.',
+    inputSchema: {
+      content: z
+        .string()
+        .describe('The architecture document as a JSON string — either an az prototype manifest or a React Flow scene.'),
+      format: z
+        .string()
+        .optional()
+        .describe('Format hint. Allowed values: auto (default), manifest, reactflow. Auto-detected from the document shape when omitted.'),
+    },
+    annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+  },
+  async ({ content }) => {
+    let result;
+    try {
+      result = importArchitecture(content, { iconFileToType: ICON_FILE_TO_TYPE });
+    } catch (e) {
+      return {
+        isError: true,
+        content: [{ type: 'text' as const, text: `import_architecture failed: ${(e as Error).message}` }],
+      };
+    }
+
+    const summary =
+      `Imported ${result.format}: ${result.services.length} service(s), ` +
+      `${result.connections.length} connection(s), ${result.groups.length} group(s)` +
+      (result.warnings.length ? `. ${result.warnings.length} warning(s).` : '.');
+
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: JSON.stringify(
+            {
+              summary,
+              format: result.format,
+              projectName: result.projectName,
+              location: result.location,
+              warnings: result.warnings,
+              services: result.services,
+              connections: result.connections,
+              groups: result.groups,
             },
             null,
             2,
@@ -1119,6 +1379,122 @@ server.tool(
       ],
     };
   },
+);
+
+// ── Resources ──────────────────────────────────────────────────────────
+// Expose the catalog / rules / pricing as browsable, cacheable MCP resources
+// so clients can read them without a tool round-trip.
+
+server.registerResource(
+  'service-catalog',
+  'azure://catalog/services',
+  {
+    title: 'Azure service catalog',
+    description: 'All Azure services known to the Diagram Builder with categories, aliases, pricing availability, and cost ranges.',
+    mimeType: 'application/json',
+  },
+  async (uri) => ({
+    contents: [{
+      uri: uri.href,
+      mimeType: 'application/json',
+      text: JSON.stringify(
+        Object.entries(SERVICE_CATALOG).map(([key, info]) => ({
+          key,
+          displayName: info.displayName,
+          category: info.category,
+          aliases: info.aliases,
+          hasPricingData: info.hasPricingData,
+          isUsageBased: info.isUsageBased ?? false,
+          costRange: info.costRange ?? 'N/A',
+        })),
+        null,
+        2,
+      ),
+    }],
+  }),
+);
+
+server.registerResource(
+  'waf-rules',
+  'azure://waf/rules',
+  {
+    title: 'Well-Architected Framework rules',
+    description: 'Architecture-wide pattern rules and per-service best practices used by validate_architecture.',
+    mimeType: 'application/json',
+  },
+  async (uri) => ({
+    contents: [{ uri: uri.href, mimeType: 'application/json', text: JSON.stringify(getWafRules(), null, 2) }],
+  }),
+);
+
+server.registerResource(
+  'pricing-meta',
+  'azure://pricing/meta',
+  {
+    title: 'Pricing metadata',
+    description: 'Distilled Azure Retail Prices metadata: regions and priced service entries available to estimate_costs.',
+    mimeType: 'application/json',
+  },
+  async (uri) => ({
+    contents: [{ uri: uri.href, mimeType: 'application/json', text: JSON.stringify(getPricingMeta(), null, 2) }],
+  }),
+);
+
+// ── Prompts ────────────────────────────────────────────────────────────
+// Starter templates that guide any MCP client through the design workflow.
+
+server.registerPrompt(
+  'design-secure-web-app',
+  {
+    title: 'Design a secure web app',
+    description: 'Scaffold a Well-Architected secure web application and run it through validate → harden → cost → render → bicep.',
+    argsSchema: { workload: z.string().describe('What the app does (e.g. "customer portal with SQL backend")') },
+  },
+  ({ workload }) => ({
+    messages: [{
+      role: 'user',
+      content: {
+        type: 'text',
+        text: `Design a secure, Well-Architected Azure web application for: ${workload}\n\nUse the azure-diagram-builder MCP tools in this order:\n1. Propose services + connections (App Service or AKS front end, a database, cache, Key Vault, Entra ID, monitoring).\n2. validate_architecture — get the WAF score and findings.\n3. harden_architecture — clear topology anti-patterns automatically.\n4. estimate_costs for the hardened design (region eastus2).\n5. render_diagram (format svg) to visualize.\n6. generate_bicep to resolve the remaining config-level findings.\nReport the before/after WAF score and the estimated monthly cost.`,
+      },
+    }],
+  }),
+);
+
+server.registerPrompt(
+  'design-event-driven-platform',
+  {
+    title: 'Design an event-driven platform',
+    description: 'Scaffold an event-driven / streaming architecture (ingest → process → store → analytics) and run the full validate → harden → cost → render → bicep flow.',
+    argsSchema: { workload: z.string().describe('The event workload (e.g. "IoT telemetry at 50k events/sec")') },
+  },
+  ({ workload }) => ({
+    messages: [{
+      role: 'user',
+      content: {
+        type: 'text',
+        text: `Design an event-driven Azure platform for: ${workload}\n\nInclude an ingestion tier (Event Hubs / Service Bus), stream processing (Stream Analytics or Functions), a durable store (Cosmos DB / Data Lake), and observability. Then:\n1. validate_architecture, 2. harden_architecture, 3. estimate_costs, 4. render_diagram (svg), 5. generate_bicep.\nGroup services into logical tiers so the diagram reads cleanly, and summarize the before/after WAF score and monthly cost.`,
+      },
+    }],
+  }),
+);
+
+server.registerPrompt(
+  'harden-and-cost',
+  {
+    title: 'Harden and cost an existing design',
+    description: 'Take an existing architecture (or an imported manifest / scene), harden it, and produce the cost + hardened diagram + Bicep.',
+    argsSchema: { region: z.string().optional().describe('Azure region for costing (default: eastus2)') },
+  },
+  ({ region }) => ({
+    messages: [{
+      role: 'user',
+      content: {
+        type: 'text',
+        text: `For the architecture we are working on:\n1. If it came from a saved file, call import_architecture first.\n2. validate_architecture to capture the baseline WAF score.\n3. harden_architecture to clear the topology anti-patterns.\n4. estimate_costs (region ${region ?? 'eastus2'}) on the hardened design.\n5. render_diagram (svg) of the hardened topology.\n6. generate_bicep to resolve config-level findings.\nPresent a before/after comparison of the WAF score and the monthly cost.`,
+      },
+    }],
+  }),
 );
 
   return server;
