@@ -117,19 +117,46 @@ function getCategoryColor(category: string) {
   return CATEGORY_COLORS[category] ?? CATEGORY_COLORS['other'];
 }
 
-// Stable group header color: map common tier/label keywords to a fixed palette
-// entry so a given tier (e.g. "Data Tier") keeps the same color across diagrams
-// regardless of its position. Falls back to index-based assignment for labels
-// that don't match a known tier keyword.
-function groupColorFor(label: string, idx: number): { bg: string; border: string } {
+// Preferred palette index for a group based on tier/label keywords, or -1 when
+// the label doesn't match a known tier. Order matters: more specific tiers win.
+function semanticGroupIndex(label: string): number {
   const l = label.toLowerCase();
-  if (/identity|entra|\baad\b|auth/.test(l)) return GROUP_COLORS[2];              // yellow
-  if (/data|database|storage|\bsql\b|cosmos|cache|persist/.test(l)) return GROUP_COLORS[1]; // green
-  if (/security|\bops\b|monitor|governance|observ|backup|defender|sentinel/.test(l)) return GROUP_COLORS[4]; // red
-  if (/\bapi\b|gateway|apim|integration|messaging|event|queue|bus/.test(l)) return GROUP_COLORS[5]; // teal
-  if (/edge|ingress|front|\bcdn\b|\bdns\b|\bwaf\b|perimeter|network/.test(l)) return GROUP_COLORS[0]; // blue
-  if (/app|compute|web|frontend|backend|application|service|processing|tier/.test(l)) return GROUP_COLORS[3]; // purple
-  return GROUP_COLORS[idx % GROUP_COLORS.length];
+  if (/identity|entra|\baad\b|auth/.test(l)) return 2;                                       // yellow
+  if (/data|database|storage|\bsql\b|cosmos|cache|persist/.test(l)) return 1;                // green
+  if (/security|\bops\b|monitor|governance|observ|backup|defender|sentinel/.test(l)) return 4; // red
+  if (/analytics|lakehouse|warehouse|synapse|databricks|spark/.test(l)) return 3;            // purple
+  if (/\bapi\b|gateway|apim|integration|messaging|event|queue|bus/.test(l)) return 5;        // teal
+  if (/edge|ingress|front|\bcdn\b|\bdns\b|\bwaf\b|perimeter|network/.test(l)) return 0;      // blue
+  if (/app|compute|web|frontend|backend|application|service|processing|tier|genai|\bml\b|model/.test(l)) return 3; // purple
+  return -1;
+}
+
+// Assign each group a header color, honoring semantic tier preferences but
+// keeping colors as distinct as possible within a single diagram. Previously an
+// index-based fallback could collide with semantically-mapped groups, leaving
+// some palette entries unused (e.g. three red groups while blue went unused).
+function assignGroupColors(labels: string[]): { bg: string; border: string }[] {
+  const n = labels.length;
+  const prefs = labels.map(semanticGroupIndex);
+  const assigned: number[] = new Array(n).fill(-1);
+  const usage = new Array(GROUP_COLORS.length).fill(0);
+
+  // Pass 1: grant each group its preferred color when that color is still free.
+  for (let i = 0; i < n; i++) {
+    const p = prefs[i];
+    if (p >= 0 && usage[p] === 0) { assigned[i] = p; usage[p]++; }
+  }
+  // Pass 2: fill the rest — prefer an entirely unused palette entry, else the
+  // group's semantic preference, else the least-used entry.
+  for (let i = 0; i < n; i++) {
+    if (assigned[i] !== -1) continue;
+    let idx = usage.findIndex(u => u === 0);
+    if (idx === -1) {
+      idx = prefs[i] >= 0 ? prefs[i] : usage.reduce((m, u, k) => (u < usage[m] ? k : m), 0);
+    }
+    assigned[i] = idx; usage[idx]++;
+  }
+  return assigned.map(i => GROUP_COLORS[i]);
 }
 
 // ── Layout computation ─────────────────────────────────────────────────
@@ -252,9 +279,10 @@ function computeFlatLayout(
     });
 
   // Extract positioned groups
+  const flatGroupColors = assignGroupColors(groups.map(gr => gr.label));
   const positionedGroups: PositionedGroup[] = groups.map((group, idx) => {
     const gNode = g.node(`group-${group.id}`);
-    const groupColor = groupColorFor(group.label, idx);
+    const groupColor = flatGroupColors[idx];
     if (!gNode) {
       return {
         id: group.id,
@@ -397,6 +425,7 @@ function computeGroupedLayout(
   for (const svc of services) serviceCategories.set(svc.name, resolveCategory(svc.type));
   const nodePos = new Map<string, { x: number; y: number }>();
   const positionedGroups: PositionedGroup[] = [];
+  const groupedColors = assignGroupColors(validGroups.map(gr => gr.label));
 
   validGroups.forEach((grp, idx) => {
     const meta = mg.node(`g:${grp.id}`);
@@ -407,7 +436,7 @@ function computeGroupedLayout(
     const areaLeft = boxLeft + GROUP_INNER_PAD;
     const areaTop = boxTop + GROUP_INNER_PAD + GROUP_HEADER_H;
     for (const [name, p] of s.pos) nodePos.set(name, { x: areaLeft + p.x, y: areaTop + p.y });
-    const color = groupColorFor(grp.label, idx);
+    const color = groupedColors[idx];
     positionedGroups.push({
       id: grp.id, label: grp.label,
       x: areaLeft, y: areaTop, width: effW, height: s.height,
