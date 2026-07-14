@@ -156,7 +156,7 @@ Verification results:
 
 
 
-Once added, Scout should discover 8 tools. If it shows 0, re-check the `/mcp` suffix and that the token was pasted without trailing spaces.
+Once added, Scout should discover 12 tools (plus 3 resources and 3 prompts). If it shows 0, re-check the `/mcp` suffix and that the token was pasted without trailing spaces.
 
 > ⚠️ **Security:** the bearer token above is a **live credential** committed in
 > plaintext. Treat it as compromised — rotate it and avoid committing the new

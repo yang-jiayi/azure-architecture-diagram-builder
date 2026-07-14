@@ -26,6 +26,106 @@ deploys Azure resources.
 
 ---
 
+## 1. `list_services`
+
+**Module:** [`src/serviceCatalog.ts`](src/serviceCatalog.ts)
+
+Browse the Azure service catalog the builder understands. Optionally filter by
+`category`. Use it first to resolve human names/aliases to canonical service
+types before calling the other tools.
+
+**Input:** `{ category?: string }` (valid categories are echoed in the response)
+
+**Output:** `{ totalServices, categories[], services[] }` — each service carries
+`{ key, displayName, category, aliases, hasPricingData, isUsageBased, costRange }`.
+Also available as the `azure://catalog/services` resource.
+
+---
+
+## 2. `validate_architecture`
+
+**Module:** [`src/wafDetector.ts`](src/wafDetector.ts)
+
+Deterministic Well-Architected Framework analysis (no LLM). Runs two rule
+classes — **pattern** rules (architecture-wide anti-patterns) and **service**
+rules (per-service best practices) — and returns a 0–100 score.
+
+**Input:** `{ services[], connections?[] }`
+
+**Output (`structuredContent`):**
+```jsonc
+{
+  "score": 55,
+  "totalFindings": 7,
+  "patternsDetected": ["single-region"],
+  "rulesApplied": { "pattern": N, "service": M },
+  "findingsByPillar": { "Security": { "count": 3, "findings": [ { "severity", "category", "issue", "recommendation", "resources" } ] } }
+}
+```
+
+> The score is capped at the diagram layer. Topology findings are cleared by
+> `harden_architecture` (§6); config-level findings are resolved by
+> `generate_bicep` (§5) / `generate_terraform` (§11).
+
+---
+
+## 3. `estimate_costs`
+
+**Module:** [`src/pricing.ts`](src/pricing.ts)
+
+Numeric monthly costs from a distilled snapshot of the **Azure Retail Prices**
+API, region- and term-aware.
+
+**Input:** `{ services[] (name, type, tier?, quantity?), region?, term? }`
+- `tier`: `basic | standard | premium` → low/expected/high SKU band
+- `region`: `eastus2` (default), `swedencentral`, `westeurope`, `canadacentral`, `brazilsouth`, `australiaeast`, `southeastasia`, `mexicocentral`
+- `term`: `payg` (default) or `reserved1yr`
+
+**Output (`structuredContent`):** `{ region, term, currency, pricesAsOf, totalMonthlyCost {low,expected,high}, byCategory{}, estimates[] }`. Services without distilled pricing fall back to a curated `catalogCostRange` and are flagged.
+
+---
+
+## 4. `generate_manifest`
+
+Emit an **`az prototype` interchange manifest** (schemaVersion 1.0) from the
+architecture — importable into the web app or consumable by `az prototype build`.
+
+**Input:** `{ projectName, location?, iacTool?, services[], connections?[], groups?[] }`
+
+**Output:** the manifest JSON (`{ schemaVersion, architecture: { ... } }`).
+Round-trips back via `import_architecture` (§10).
+
+---
+
+## 5. `generate_bicep`
+
+**Module:** [`src/bicepGenerator.ts`](src/bicepGenerator.ts)
+
+Deployable **Bicep** with Well-Architected secure defaults pre-set, so the
+config-level WAF findings a diagram can't express are resolved out of the gate.
+
+### Coverage (secure defaults pre-set)
+
+| Service | Hardening |
+|---------|-----------|
+| App Service | HTTPS-only, TLS 1.2, managed identity, health check, autoscale, staging slot |
+| Key Vault | soft-delete 90d, purge protection, RBAC |
+| Storage | HTTPS-only, TLS 1.2, no public blob access |
+| Cosmos DB | automatic failover, continuous backup |
+| Redis | TLS 1.2 minimum |
+| AI Search / Container Apps | keyless / HTTPS-only ingress, managed identity |
+| Monitoring | Log Analytics + Application Insights |
+
+Managed identities are granted **Key Vault Secrets User**. Services without a
+template emit a commented placeholder (reported in `servicesGeneric`).
+
+**Input:** `{ projectName?, location?, iacTool?, services[], connections?[] }`
+**Output:** `{ iacTool, servicesCovered[], servicesGeneric[], findingsResolved[], findingsResolvedCount, note, bicep }`
+
+> Terraform counterpart: `generate_terraform` (§11).
+
+---
+
 ## 6. `harden_architecture` (new)
 
 **Module:** [`src/hardener.ts`](src/hardener.ts)
@@ -92,6 +192,50 @@ Idempotent: hardening an already-hardened architecture is a no-op.
 
 ---
 
+## 7. `get_waf_rules`
+
+**Module:** [`src/wafDetector.ts`](src/wafDetector.ts)
+
+Query the WAF rule knowledge base that powers `validate_architecture`. Filter by
+`pillar` and/or `serviceType`.
+
+**Input:** `{ pillar?, serviceType? }` — pillar ∈ Reliability, Security, Cost Optimization, Operational Excellence, Performance Efficiency
+
+**Output (`structuredContent`):** `{ totalRules, filters, rulesByPillar{}, rules[] }`
+where each rule has `{ id, pillar, severity, category, issue, recommendation, appliesTo[], pattern? }`. Also exposed as the `azure://waf/rules` resource.
+
+---
+
+## 8. `render_diagram`
+
+**Modules:** [`src/layoutEngine.ts`](src/layoutEngine.ts), [`src/svgRenderer.ts`](src/svgRenderer.ts), [`src/htmlRenderer.ts`](src/htmlRenderer.ts)
+
+Render the architecture as **SVG** (for markdown/SpecKit embedding) or a
+self-contained interactive **HTML** viewer (pan, zoom, hover tooltips). Uses
+official Azure icons, category colors, dagre-based tiered layout, orthogonal
+edges with 2-line collision-avoided labels, distinct per-group header colors,
+and a footer band (wrapped legend + cost total). Best-effort per-node cost
+badges come from the same pricing resolution as `estimate_costs`.
+
+**Input:** `{ services[], connections?[], groups?[], title?, format? (svg|html), direction? (TB|LR), theme? (light|dark), region?, author?, generatedBy? }`
+
+**Output:** the SVG or HTML markup (text). Set `region: "none"` to disable cost badges.
+
+---
+
+## 9. `export_reactflow_scene`
+
+Export a **React Flow scene JSON** compatible with the web app (Open / Import
+Architecture). Reuses the dagre layout for positions and the web app icon
+catalog for icon paths.
+
+**Input:** `{ services[], connections?[], groups?[], architectureName?, architecturePrompt?, author?, direction? (TB|LR|auto), region?, workflow?[] }`
+- `direction: auto` (default) picks **LR** for 4+ groups or dense graphs, else **TB**.
+
+**Output:** the React Flow scene JSON. Round-trips back via `import_architecture` (§10).
+
+---
+
 ## 10. `import_architecture` (new)
 
 **Module:** [`src/importer.ts`](src/importer.ts)
@@ -136,32 +280,6 @@ round-trip so an agent can reload a previously saved design and keep working.
 `render_diagram`. Edges that touch group nodes are dropped; service types are
 reverse-resolved from the icon map (`ICON_FILE_TO_TYPE` in `index.ts`) when a
 scene has no explicit type field.
-
----
-
-## Resources (new)
-
-Beyond tools, the server exposes read-only MCP **resources** so clients can
-browse reference data without a tool round-trip (they're cacheable):
-
-| URI | Title | Contents |
-|-----|-------|----------|
-| `azure://catalog/services` | Azure service catalog | Every known service: category, aliases, pricing availability, cost range |
-| `azure://waf/rules` | WAF rules | Pattern rules + per-service best practices used by `validate_architecture` |
-| `azure://pricing/meta` | Pricing metadata | Regions and priced service entries available to `estimate_costs` |
-
-All return `application/json`.
-
-## Prompts (new)
-
-Reusable MCP **prompt templates** that guide any client through the full
-design workflow:
-
-| Name | Argument | What it drives |
-|------|----------|----------------|
-| `design-secure-web-app` | `workload` | Propose → validate → harden → cost → render → bicep for a secure web app |
-| `design-event-driven-platform` | `workload` | Same flow for an ingest→process→store→analytics platform |
-| `harden-and-cost` | `region?` | Import (if needed) → validate → harden → cost → render → bicep on an existing design |
 
 ---
 
@@ -245,3 +363,29 @@ Input mirrors the IaC tools: `{ services, connections?, projectName?, location?,
 ```
 
 > Design-time only — the guide documents the steps, it never deploys.
+
+---
+
+## Resources
+
+Beyond tools, the server exposes read-only MCP **resources** so clients can
+browse reference data without a tool round-trip (they're cacheable):
+
+| URI | Title | Contents |
+|-----|-------|----------|
+| `azure://catalog/services` | Azure service catalog | Every known service: category, aliases, pricing availability, cost range |
+| `azure://waf/rules` | WAF rules | Pattern rules + per-service best practices used by `validate_architecture` |
+| `azure://pricing/meta` | Pricing metadata | Regions and priced service entries available to `estimate_costs` |
+
+All return `application/json`.
+
+## Prompts
+
+Reusable MCP **prompt templates** that guide any client through the full
+design workflow:
+
+| Name | Argument | What it drives |
+|------|----------|----------------|
+| `design-secure-web-app` | `workload` | Propose → validate → harden → cost → render → bicep for a secure web app |
+| `design-event-driven-platform` | `workload` | Same flow for an ingest→process→store→analytics platform |
+| `harden-and-cost` | `region?` | Import (if needed) → validate → harden → cost → render → bicep on an existing design |

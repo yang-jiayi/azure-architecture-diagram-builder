@@ -28,7 +28,7 @@
 
 ## 📖 Overview
 
-Azure Architecture Diagram Builder is an enterprise-grade web application that empowers cloud architects to design, visualize, validate, and deploy Azure solutions. Leveraging **12 AI models** across multiple providers — **GPT-5.1, GPT-5.2, GPT-5.2 Codex, GPT-5.3 Codex, GPT-5.4, GPT-5.4 Mini, DeepSeek V3.2 Speciale, DeepSeek V4 Pro, Grok 4.1 Fast, Grok 4.3, Mistral Large 3, and Kimi K2.5** (via Azure OpenAI and Azure AI model deployments) — it transforms natural language descriptions into professional architecture diagrams while providing real-time cost estimates, Well-Architected Framework validation, multi-model comparison, and Infrastructure as Code generation.
+Azure Architecture Diagram Builder is an enterprise-grade web application that empowers cloud architects to design, visualize, validate, and deploy Azure solutions. Leveraging **14 AI models** across multiple providers — **GPT-5.1, GPT-5.2, GPT-5.4, GPT-5.4 Mini, GPT-5.6 Sol, GPT-5.6 Terra, GPT-5.6 Luna, DeepSeek V3.2 Speciale, DeepSeek V4 Pro, Grok 4.1 Fast, Grok 4.3, Mistral Large 3, Kimi K2.5, and Kimi K2.7 Code** (via Azure OpenAI and Azure AI model deployments) — it transforms natural language descriptions into professional architecture diagrams while providing real-time cost estimates, Well-Architected Framework validation, multi-model comparison, and Infrastructure as Code generation.
 
 Beyond editable **topology** diagrams, the app can also produce polished, whiteboard-style **Blueprint** diagrams (BETA) as shareable PNGs — ideal for presentations and design reviews.
 
@@ -55,7 +55,7 @@ architect.
 ## ✨ Key Features
 
 ### 🤖 AI-Powered Architecture Generation
-Describe your architecture in plain English and let any of **12 AI models** (GPT-5.1, GPT-5.2, GPT-5.2 Codex, GPT-5.3 Codex, GPT-5.4, GPT-5.4 Mini, DeepSeek V3.2 Speciale, DeepSeek V4 Pro, Grok 4.1 Fast, Grok 4.3, Mistral Large 3, or Kimi K2.5) automatically create a complete, professionally organized diagram with logical service groupings.
+Describe your architecture in plain English and let any of **14 AI models** (GPT-5.1, GPT-5.2, GPT-5.4, GPT-5.4 Mini, GPT-5.6 Sol, GPT-5.6 Terra, GPT-5.6 Luna, DeepSeek V3.2 Speciale, DeepSeek V4 Pro, Grok 4.1 Fast, Grok 4.3, Mistral Large 3, Kimi K2.5, or Kimi K2.7 Code) automatically create a complete, professionally organized diagram with logical service groupings.
 
 **13 curated example prompts** included — from simple web apps to complex enterprise scenarios:
 - Zero Trust enterprise networks with security segmentation
@@ -101,7 +101,7 @@ Validate your architecture against all five WAF pillars:
 Select specific recommendations and automatically regenerate an improved architecture. During analysis, a dismiss hint lets you close the panel and return later via the **Validation Score** button in the toolbar.
 
 ### 🔀 Multi-Model Comparison
-Compare AI output side-by-side across all 12 models:
+Compare AI output side-by-side across all 14 models:
 
 - **Architecture Comparison** — Run the same prompt through multiple models and compare service counts, connection counts, groups, workflow steps, token usage, and latency
 - **Validation Comparison** — Run WAF validation across models and compare overall scores, pillar-level scores, severity breakdowns, finding counts, and quick wins. An inline WAF info box explains the five pillars being assessed
@@ -252,7 +252,7 @@ flowchart TD
         G[Image Upload] --> H[Vision Analyzer]
     end
 
-    subgraph AI["🤖 AI Services (12 Models)"]
+    subgraph AI["🤖 AI Services (14 Models)"]
         B --> I[Architecture Generation]
         D --> I
         H --> I
@@ -378,7 +378,7 @@ graph TB
     end
 
     subgraph External["External APIs"]
-        OpenAI[Azure OpenAI<br/>12 models]
+        OpenAI[Azure OpenAI<br/>14 models]
         LearnMCP[Microsoft Learn MCP]
         PricingAPI[Azure Retail Prices API]
         Cosmos[(Azure Cosmos DB)]
@@ -416,7 +416,7 @@ graph TB
 
 ## 🔌 MCP Server & Microsoft Scout Integration
 
-The Diagram Builder ships a **Model Context Protocol (MCP) server** (`mcp-server/`) that exposes its core capabilities as tools, so any MCP-compatible client — including **[Microsoft Scout](https://learn.microsoft.com/en-us/microsoft-scout/get-started)** — can design, validate, cost, and render Azure architectures conversationally.
+The Diagram Builder ships a **Model Context Protocol (MCP) server** (`mcp-server/`) that exposes its core capabilities as **12 tools, 3 resources, and 3 prompts**, so any MCP-compatible client — including **[Microsoft Scout](https://learn.microsoft.com/en-us/microsoft-scout/get-started)** — can design, validate, cost, and render Azure architectures conversationally.
 
 ### Tools
 
@@ -424,14 +424,20 @@ The Diagram Builder ships a **Model Context Protocol (MCP) server** (`mcp-server
 |------|---------|
 | `list_services` | Browse the Azure service catalog (categories, aliases, pricing, cost ranges) |
 | `validate_architecture` | Score a design against Well-Architected Framework rules (deterministic, no LLM) |
+| `harden_architecture` | **NEW** — deterministically clear pattern-level WAF anti-patterns (identity, WAF, API gateway, DB replica, cache, Key Vault, backup, monitoring, multi-region) and re-validate; collapses the manual add-service → re-validate loop into one call |
 | `estimate_costs` | **Numeric** monthly costs (low/expected/high) from a distilled Azure Retail Prices snapshot — region- and term-aware (PAYG / 1-year reserved), with by-category totals. Instance-priced services use a representative SKU; Microsoft Fabric uses F-SKU capacity; usage-based services report curated catalog ranges |
 | `generate_bicep` | Emit deployable Bicep with Well-Architected secure defaults pre-set (HTTPS-only + TLS 1.2, managed identity, Key Vault soft-delete/purge, health check, autoscale, staging slots, Storage/Cosmos/Redis hardening) + a structured map of which WAF finding each setting resolves. Design-time only |
+| `generate_terraform` | **NEW** — deployable Terraform (azurerm) with the same Well-Architected secure defaults as `generate_bicep` |
+| `generate_deployment_guide` | **NEW** — step-by-step Markdown deploy runbook (Bicep or Terraform): prereqs, deploy commands, a post-deploy hardening checklist, smoke tests, and teardown |
 | `generate_manifest` | Emit an `az prototype` interchange manifest |
 | `get_waf_rules` | Query WAF rules by pillar or service type |
 | `render_diagram` | Render a diagram as SVG/HTML — with **real Azure icons**, smooth edges, and tiered layout |
 | `export_reactflow_scene` | Produce a React Flow scene for the web app |
+| `import_architecture` | **NEW** — inverse of the export tools: parse a manifest / React Flow scene back to the canonical `{services, connections, groups}` shape |
 
 > **Structured outputs:** `validate_architecture`, `estimate_costs`, and `get_waf_rules` return typed `structuredContent` (validated against a declared `outputSchema`) alongside a concise human summary, and carry read-only/idempotent tool annotations — so agents consume the data machine-readably instead of parsing prose.
+
+> **Resources & prompts:** beyond tools, the server publishes read-only **resources** (`azure://catalog/services`, `azure://waf/rules`, `azure://pricing/meta`) and starter **prompts** (`design-secure-web-app`, `design-event-driven-platform`, `harden-and-cost`) so any MCP client gets browsable reference data and guided entry points. Full reference: [`mcp-server/TOOLS.md`](mcp-server/TOOLS.md).
 
 ### Transport & auth
 - **Dual transport** — stdio (local clients) and **Streamable-HTTP** (remote clients). Launch HTTP with `npm run start:http` (or `MCP_TRANSPORT=http`).
@@ -546,14 +552,15 @@ VITE_AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com/
 VITE_AZURE_OPENAI_API_KEY=your-api-key-here   # optional fallback; bridged to the server only, never bundled
 VITE_AZURE_OPENAI_DEPLOYMENT=your-default-deployment
 
-# Multi-model deployments (12 models)
+# Multi-model deployments (14 models)
 # OpenAI GPT-5.x family
 VITE_AZURE_OPENAI_DEPLOYMENT_GPT51=your-gpt51-deployment
 VITE_AZURE_OPENAI_DEPLOYMENT_GPT52=your-gpt52-deployment
-VITE_AZURE_OPENAI_DEPLOYMENT_GPT52CODEX=your-gpt52-codex-deployment
-VITE_AZURE_OPENAI_DEPLOYMENT_GPT53CODEX=your-gpt53-codex-deployment
 VITE_AZURE_OPENAI_DEPLOYMENT_GPT54=your-gpt54-deployment
 VITE_AZURE_OPENAI_DEPLOYMENT_GPT54MINI=your-gpt54-mini-deployment
+VITE_AZURE_OPENAI_DEPLOYMENT_GPT56SOL=your-gpt56-sol-deployment
+VITE_AZURE_OPENAI_DEPLOYMENT_GPT56TERRA=your-gpt56-terra-deployment
+VITE_AZURE_OPENAI_DEPLOYMENT_GPT56LUNA=your-gpt56-luna-deployment
 # Partner models (Chat Completions API)
 VITE_AZURE_OPENAI_DEPLOYMENT_DEEPSEEK=your-deepseek-v32-speciale-deployment
 VITE_AZURE_OPENAI_DEPLOYMENT_DEEPSEEK_V4_PRO=your-deepseek-v4-pro-deployment
@@ -561,6 +568,7 @@ VITE_AZURE_OPENAI_DEPLOYMENT_GROK4FAST=your-grok-41-fast-deployment
 VITE_AZURE_OPENAI_DEPLOYMENT_GROK43=your-grok-43-deployment
 VITE_AZURE_OPENAI_DEPLOYMENT_MISTRALLARGE3=your-mistral-large-3-deployment
 VITE_AZURE_OPENAI_DEPLOYMENT_KIMIK25=your-kimi-k2-5-deployment
+VITE_AZURE_OPENAI_DEPLOYMENT_KIMIK27CODE=your-kimi-k2-7-code-deployment
 
 # Reasoning model configuration (GPT-5.x models)
 VITE_REASONING_EFFORT=medium  # none | low | medium | high
@@ -635,16 +643,18 @@ docker build -t azure-diagram-builder \
   --build-arg VITE_AZURE_OPENAI_ENDPOINT="..." \
   --build-arg VITE_AZURE_OPENAI_DEPLOYMENT_GPT51="..." \
   --build-arg VITE_AZURE_OPENAI_DEPLOYMENT_GPT52="..." \
-  --build-arg VITE_AZURE_OPENAI_DEPLOYMENT_GPT52CODEX="..." \
-  --build-arg VITE_AZURE_OPENAI_DEPLOYMENT_GPT53CODEX="..." \
   --build-arg VITE_AZURE_OPENAI_DEPLOYMENT_GPT54="..." \
   --build-arg VITE_AZURE_OPENAI_DEPLOYMENT_GPT54MINI="..." \
+  --build-arg VITE_AZURE_OPENAI_DEPLOYMENT_GPT56SOL="..." \
+  --build-arg VITE_AZURE_OPENAI_DEPLOYMENT_GPT56TERRA="..." \
+  --build-arg VITE_AZURE_OPENAI_DEPLOYMENT_GPT56LUNA="..." \
   --build-arg VITE_AZURE_OPENAI_DEPLOYMENT_DEEPSEEK="..." \
   --build-arg VITE_AZURE_OPENAI_DEPLOYMENT_DEEPSEEK_V4_PRO="..." \
   --build-arg VITE_AZURE_OPENAI_DEPLOYMENT_GROK4FAST="..." \
   --build-arg VITE_AZURE_OPENAI_DEPLOYMENT_GROK43="..." \
   --build-arg VITE_AZURE_OPENAI_DEPLOYMENT_MISTRALLARGE3="..." \
   --build-arg VITE_AZURE_OPENAI_DEPLOYMENT_KIMIK25="..." \
+  --build-arg VITE_AZURE_OPENAI_DEPLOYMENT_KIMIK27CODE="..." \
   --build-arg VITE_SPEECH_REGION="westus2" .
 
 # Optional: include App Insights telemetry
@@ -780,7 +790,7 @@ az ad sp update --id <SP_OBJECT_ID> --set appRoleAssignmentRequired=true
 | Category | Technologies |
 |----------|-------------|
 | **Frontend** | React 18, TypeScript, React Flow, Vite |
-| **AI** | Azure OpenAI (GPT-5.1, GPT-5.2, GPT-5.2 Codex, GPT-5.3 Codex, GPT-5.4, GPT-5.4 Mini) + partner models (DeepSeek V3.2 Speciale, DeepSeek V4 Pro, Grok 4.1 Fast, Grok 4.3, Mistral Large 3, Kimi K2.5), Dual API (Responses + Chat Completions) |
+| **AI** | Azure OpenAI (GPT-5.1, GPT-5.2, GPT-5.4, GPT-5.4 Mini, GPT-5.6 Sol, GPT-5.6 Terra, GPT-5.6 Luna) + partner models (DeepSeek V3.2 Speciale, DeepSeek V4 Pro, Grok 4.1 Fast, Grok 4.3, Mistral Large 3, Kimi K2.5, Kimi K2.7 Code), Dual API (Responses + Chat Completions) |
 | **Styling** | CSS3, html-to-image |
 | **Serving** | nginx:alpine (Docker), Vite dev server (local) |
 | **APIs** | Azure Retail Prices API |
@@ -828,7 +838,7 @@ azure-diagrams/
 │   │   ├── avatarPresenter.ts   # Talking avatar: Speech SDK, ICE relay, word-boundary captions
 │   │   └── telemetryService.ts  # Application Insights telemetry
 │   ├── stores/               # State management
-│   │   └── modelSettingsStore.ts  # Multi-model settings (12 models)
+│   │   └── modelSettingsStore.ts  # Multi-model settings (14 models)
 │   ├── hooks/                # Shared React hooks
 │   │   └── useDraggableResizable.ts  # Pointer-capture drag-to-move + drag-to-resize hook
 │   ├── data/                 # Static data
@@ -851,7 +861,7 @@ azure-diagrams/
 │   ├── deploy-mcp-instance.sh  # Deploy the isolated MCP server ACA instance
 │   └── fetch-multi-region-pricing.sh  # Refresh per-region pricing (npm run pricing:refresh)
 ├── Azure_Public_Service_Icons/  # 714 official Azure icons (29 categories)
-├── mcp-server/               # MCP server (8 tools, stdio + HTTP, Bearer auth)
+├── mcp-server/               # MCP server (12 tools + 3 resources + 3 prompts, stdio + HTTP, Bearer auth)
 │   └── src/                  # serviceCatalog, wafDetector, layoutEngine, svgRenderer, htmlRenderer
 ├── SCOUT/                    # Microsoft Scout integration notes & sample session
 ├── DOCS/                     # Documentation
@@ -871,6 +881,17 @@ azure-diagrams/
 ---
 
 ## 🌟 What's New
+
+### July 2026 — New Frontier Models & Expanded MCP Toolset
+
+#### 🤖 14 AI models
+Added three new GPT-5.6 reasoning variants — **GPT-5.6 Sol**, **GPT-5.6 Terra**, and **GPT-5.6 Luna** — plus **Kimi K2.7 Code**, and retired the GPT-5.2 / GPT-5.3 Codex deployments. The lineup is now **14 models**, each assignable per feature (generation, validation, deployment guide, blueprint).
+
+#### 🔌 MCP server grew to 12 tools + resources + prompts
+Four new tools: **`harden_architecture`** (deterministically clears topology WAF anti-patterns in one call), **`generate_terraform`** (azurerm IaC with the same secure defaults as Bicep), **`generate_deployment_guide`** (Markdown deploy runbook), and **`import_architecture`** (round-trips a manifest / React Flow scene back in). The server now also exposes **3 MCP resources** (catalog, WAF rules, pricing) and **3 starter prompts**. See [`mcp-server/TOOLS.md`](mcp-server/TOOLS.md).
+
+#### 🎨 Diagram rendering polish
+Two-line wrapped edge labels with collision-avoided placement, opaque label chips (no more strike-through), a redesigned footer band (wrapped legend + cost total), distinct per-group header colors, and cleaner type-badge abbreviations.
 
 ### June 2026 — MCP Server, Microsoft Scout, Fabric & Pricing Upgrades
 
