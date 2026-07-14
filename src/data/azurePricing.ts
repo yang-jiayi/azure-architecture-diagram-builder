@@ -1280,7 +1280,7 @@ export function getReserved1yrDiscount(serviceType: string): number {
  * The `npm run pricing:refresh` script bumps this automatically after a
  * successful fetch so cost exports can show an accurate "Prices as of" stamp.
  */
-export const PRICING_DATA_AS_OF = '2026-06-25';
+export const PRICING_DATA_AS_OF = '2026-07-14';
 
 /**
  * Check if service has pricing data available
