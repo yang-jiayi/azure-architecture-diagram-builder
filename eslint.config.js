@@ -26,7 +26,7 @@ export default [
       // Keep lint lightweight; this codebase currently contains many `any` and
       // hook-pattern deviations that are better handled as a separate cleanup.
       'no-unused-vars': 'off',
-      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', ignoreRestSiblings: true }],
 
       '@typescript-eslint/no-explicit-any': 'off',
       'react-hooks/rules-of-hooks': 'off',

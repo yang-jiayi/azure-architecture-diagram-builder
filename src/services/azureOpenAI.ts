@@ -31,7 +31,7 @@ export interface ModelOverride {
   reasoningEffort: ReasoningEffort;
 }
 
-export async function callAzureOpenAI(messages: any[], modelOverride?: ModelOverride, jsonOutput = true): Promise<CallResult> {
+export async function callAzureOpenAI(messages: any[], modelOverride?: ModelOverride, jsonOutput = true, operation = 'architecture_generation'): Promise<CallResult> {
   // Use explicit model override if provided, otherwise read from store
   const storeSettings = getModelSettingsForFeature('architectureGeneration');
   const rawStore = getModelSettings();
@@ -120,7 +120,7 @@ export async function callAzureOpenAI(messages: any[], modelOverride?: ModelOver
     // Track model usage telemetry
     trackAIModelUsage({
       model: modelConfig.displayName,
-      operation: 'architecture_generation',
+      operation,
       reasoningEffort: modelConfig.isReasoning ? settings.reasoningEffort : undefined,
       promptTokens: metrics.promptTokens,
       completionTokens: metrics.completionTokens,
@@ -137,6 +137,69 @@ export async function callAzureOpenAI(messages: any[], modelOverride?: ModelOver
     }
     
     throw error;
+  }
+}
+
+// ── Tier 3: change-specific chat follow-up suggestions ──────────────────────
+// A lightweight, non-blocking helper that asks a fast model for 3 tailored
+// "next step" refinements based on the current services and the last change.
+// Failures return [] so the caller falls back to the static (rule-based) chips.
+function pickFastFollowUpModel(): ModelOverride | undefined {
+  // Prefer a cheap/fast model when its deployment is configured; otherwise use
+  // the caller's current model (undefined = no override).
+  const candidates: ModelType[] = ['grok-4.1-fast'];
+  for (const m of candidates) {
+    try {
+      getDeploymentName(m);
+      return { model: m, reasoningEffort: 'none' };
+    } catch {
+      /* deployment not configured — try next */
+    }
+  }
+  return undefined;
+}
+
+export async function generateFollowUpSuggestions(input: {
+  services: string[];
+  lastChange: string;
+  recentRequests: string[];
+  count?: number;
+}): Promise<string[]> {
+  const count = Math.min(Math.max(input.count ?? 3, 1), 5);
+  try {
+    const systemPrompt = `You are an Azure solutions architect helping a user iteratively refine an architecture diagram.
+Given the CURRENT services and the MOST RECENT change, propose exactly ${count} concise, high-value NEXT refinement${count === 1 ? '' : 's'}.
+Rules:
+- Each suggestion is an imperative instruction the user could send to modify the diagram (max ~9 words).
+- Prefer Azure Well-Architected improvements (security, reliability, cost, operations, performance) that are NOT already present.
+- Be specific to this architecture; no duplicates; no trailing punctuation; no numbering.
+${count === 1 ? 'Return the single HIGHEST-IMPACT improvement.' : ''}
+Return ONLY JSON: {"suggestions":["..."]}`;
+
+    const userPrompt = JSON.stringify({
+      currentServices: input.services.slice(0, 40),
+      lastChange: input.lastChange,
+      recentRequests: input.recentRequests.slice(-4),
+    });
+
+    const { content } = await callAzureOpenAI(
+      [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ],
+      pickFastFollowUpModel(),
+      true,
+      'chat_followups',
+    );
+
+    const parsed = JSON.parse(content);
+    const arr = Array.isArray(parsed?.suggestions) ? parsed.suggestions : [];
+    return arr
+      .map((s: any) => String(s).trim().replace(/[.;]+$/, ''))
+      .filter((s: string) => s.length > 0 && s.length <= 80)
+      .slice(0, count);
+  } catch {
+    return [];
   }
 }
 

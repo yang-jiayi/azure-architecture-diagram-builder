@@ -2,8 +2,8 @@
 // Licensed under the MIT License.
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Sparkles, X, Send, Loader2, AlertCircle, MessageSquare, ChevronDown, ChevronUp } from 'lucide-react';
-import { generateArchitectureWithAI, isAzureOpenAIConfigured } from '../services/azureOpenAI';
+import { Sparkles, X, Send, Loader2, AlertCircle, MessageSquare, ChevronDown, ChevronUp, Shield, Activity, DollarSign, Wrench, Zap, Lightbulb, type LucideIcon } from 'lucide-react';
+import { generateArchitectureWithAI, generateFollowUpSuggestions, isAzureOpenAIConfigured } from '../services/azureOpenAI';
 import { useModelSettings, MODEL_CONFIG } from '../stores/modelSettingsStore';
 import {
   buildModificationPrompt,
@@ -97,6 +97,25 @@ function computeRefineSuggestions(nodes: any[]): string[] {
 
 const uid = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
+// Well-Architected pillar tagging for suggestion chips (Tier 4). Heuristic
+// keyword match maps each suggestion to a pillar so chips carry a small icon.
+type Pillar = 'security' | 'reliability' | 'cost' | 'operations' | 'performance';
+const PILLAR_META: Record<Pillar, { label: string; Icon: LucideIcon; className: string }> = {
+  security: { label: 'Security', Icon: Shield, className: 'pillar-security' },
+  reliability: { label: 'Reliability', Icon: Activity, className: 'pillar-reliability' },
+  cost: { label: 'Cost', Icon: DollarSign, className: 'pillar-cost' },
+  operations: { label: 'Operations', Icon: Wrench, className: 'pillar-operations' },
+  performance: { label: 'Performance', Icon: Zap, className: 'pillar-performance' },
+};
+function pillarFor(text: string): Pillar {
+  const t = text.toLowerCase();
+  if (/(private|key vault|waf|firewall|defender|encrypt|rbac|identity|secret|auth|ddos|network isolation)/.test(t)) return 'security';
+  if (/(zone|redundan|availability|failover|backup|geo|replica|resilien|disaster|multi-region|sla)/.test(t)) return 'reliability';
+  if (/(cost|budget|reserved|spot|right-?siz|cheaper|save money|lower tier)/.test(t)) return 'cost';
+  if (/(cache|redis|cdn|front door|latency|throughput|scale out|accelerat|performance)/.test(t)) return 'performance';
+  return 'operations';
+}
+
 const ArchitectureChatPanel: React.FC<ArchitectureChatPanelProps> = ({
   isOpen,
   onClose,
@@ -110,6 +129,13 @@ const ArchitectureChatPanel: React.FC<ArchitectureChatPanelProps> = ({
   // Suggestions the user has already picked this session, so follow-up chips
   // keep advancing instead of re-offering the same ideas.
   const [usedSuggestions, setUsedSuggestions] = useState<Set<string>>(new Set());
+  // Tier 3: change-specific follow-ups from a fast model, keyed to the assistant
+  // turn they were generated for. Null until (and unless) they arrive.
+  const [modelFollowUps, setModelFollowUps] = useState<{ forMsgId: string; items: string[] } | null>(null);
+  // Tier 4: loading flags for the background follow-up fetch and the
+  // "What would you add?" single-best-recommendation button.
+  const [followUpsLoading, setFollowUpsLoading] = useState(false);
+  const [askingBest, setAskingBest] = useState(false);
   const [modelSettings] = useModelSettings();
 
   const threadRef = useRef<HTMLDivElement>(null);
@@ -125,11 +151,17 @@ const ArchitectureChatPanel: React.FC<ArchitectureChatPanelProps> = ({
   // Live, context-aware follow-ups shown under the latest reply during an active
   // chat. Recomputed from the current (post-change) canvas, so they evolve as the
   // diagram grows; already-picked ideas are filtered out.
-  const followUps = hasDiagram
+  const staticFollowUps = hasDiagram
     ? computeRefineSuggestions(currentArchitecture.nodes)
         .filter((s) => !usedSuggestions.has(s))
         .slice(0, 3)
     : [];
+  // Tier 3: prefer the model's change-specific follow-ups when available; fall
+  // back to the static rule-based chips otherwise.
+  const dynamicFollowUps = (modelFollowUps?.items || [])
+    .filter((s) => !usedSuggestions.has(s))
+    .slice(0, 3);
+  const followUps = dynamicFollowUps.length ? dynamicFollowUps : staticFollowUps;
 
   // Auto-scroll to the newest message.
   useEffect(() => {
@@ -176,10 +208,28 @@ const ArchitectureChatPanel: React.FC<ArchitectureChatPanelProps> = ({
         await onApply(result, text, true);
 
         const summary = summarizeArchitectureChange(before, result);
+        const asstId = uid();
         setMessages((prev) => [
           ...prev,
-          { id: uid(), role: 'assistant', text: summary, ts: Date.now() },
+          { id: asstId, role: 'assistant', text: summary, ts: Date.now() },
         ]);
+
+        // Tier 3: fetch change-specific follow-ups in the background (non-blocking).
+        // The static rule-based chips render immediately; these replace them when
+        // they arrive. Uses result.services (post-change) to avoid stale state.
+        const nextServices = Array.isArray((result as any)?.services)
+          ? (result as any).services
+              .map((s: any) => String(s?.label ?? s?.name ?? s?.service ?? '').trim())
+              .filter(Boolean)
+          : [];
+        setModelFollowUps(null);
+        setFollowUpsLoading(true);
+        void generateFollowUpSuggestions({ services: nextServices, lastChange: summary, recentRequests })
+          .then((items) => {
+            if (items.length) setModelFollowUps({ forMsgId: asstId, items });
+          })
+          .catch(() => { /* fall back to static chips */ })
+          .finally(() => setFollowUpsLoading(false));
       } catch (err: any) {
         setMessages((prev) => [
           ...prev,
@@ -196,6 +246,32 @@ const ArchitectureChatPanel: React.FC<ArchitectureChatPanelProps> = ({
     },
     [isSending, messages, currentArchitecture, onApply],
   );
+
+  // Tier 4: "What would you add?" — ask the model for the single highest-impact
+  // next step (from the current canvas) and apply it like a chip click.
+  const handleAskBest = async () => {
+    if (isSending || askingBest || !configured) return;
+    setAskingBest(true);
+    try {
+      const services = currentArchitecture.nodes
+        .filter((n) => n.type === 'azureNode')
+        .map((n) => String(n.data?.label || '').trim())
+        .filter(Boolean);
+      const recent = messages.filter((m) => m.role === 'user').slice(-4).map((m) => m.text);
+      const best = await generateFollowUpSuggestions({
+        services,
+        lastChange: '',
+        recentRequests: recent,
+        count: 1,
+      });
+      if (best[0]) {
+        markUsed(best[0]);
+        await send(best[0]);
+      }
+    } finally {
+      setAskingBest(false);
+    }
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -294,22 +370,52 @@ const ArchitectureChatPanel: React.FC<ArchitectureChatPanelProps> = ({
           </div>
         )}
 
-        {messages.length > 0 && configured && !isSending && followUps.length > 0 && (
+        {messages.length > 0 && configured && !isSending && (hasDiagram ? followUps.length > 0 : true) && (
           <div className="arch-chat-followups">
             <div className="arch-chat-followups-label">
-              <Sparkles size={12} /> Suggested next steps
+              <Sparkles size={12} />
+              {hasDiagram
+                ? (followUpsLoading && dynamicFollowUps.length === 0
+                    ? <>Finding tailored suggestions… <Loader2 size={11} className="spin" /></>
+                    : <>Suggested next steps</>)
+                : <>Start a new architecture</>}
             </div>
-            <div className="arch-chat-suggestions arch-chat-suggestions-inline">
-              {followUps.map((s) => (
+            <div
+              className="arch-chat-suggestions arch-chat-suggestions-inline"
+              role="group"
+              aria-label={hasDiagram ? 'Suggested follow-ups' : 'Starter architectures'}
+            >
+              {(hasDiagram ? followUps : STARTER_SUGGESTIONS).map((s) => {
+                const meta = hasDiagram ? PILLAR_META[pillarFor(s)] : null;
+                const Icon = meta?.Icon;
+                return (
+                  <button
+                    key={s}
+                    className={`arch-chat-chip arch-chat-chip-followup${meta ? ` ${meta.className}` : ''}`}
+                    disabled={isSending || !configured}
+                    title={meta ? `${meta.label} improvement` : undefined}
+                    onClick={() => { markUsed(s); send(s); }}
+                  >
+                    {Icon && <Icon size={12} className="arch-chat-chip-icon" />}
+                    {s}
+                  </button>
+                );
+              })}
+
+              {hasDiagram && (
                 <button
-                  key={s}
-                  className="arch-chat-chip arch-chat-chip-followup"
-                  disabled={isSending || !configured}
-                  onClick={() => { markUsed(s); send(s); }}
+                  type="button"
+                  className="arch-chat-chip arch-chat-chip-ask"
+                  disabled={isSending || askingBest || !configured}
+                  title="Ask the model for the single highest-impact improvement"
+                  onClick={handleAskBest}
                 >
-                  {s}
+                  {askingBest
+                    ? <Loader2 size={12} className="spin arch-chat-chip-icon" />
+                    : <Lightbulb size={12} className="arch-chat-chip-icon" />}
+                  What would you add?
                 </button>
-              ))}
+              )}
             </div>
           </div>
         )}

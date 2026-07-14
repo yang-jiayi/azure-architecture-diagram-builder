@@ -176,6 +176,30 @@
   border-color: rgba(167, 139, 250, 0.4);
 }
 
+/* Tier 4: pillar-tagged chips (icon + accent) and the "what would you add?" ask. */
+.arch-chat-suggestions-inline .arch-chat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.arch-chat-chip-icon { flex: 0 0 auto; }
+.arch-chat-chip.pillar-security    { border-left: 3px solid #fb7185; }
+.arch-chat-chip.pillar-security    .arch-chat-chip-icon { color: #fb7185; }
+.arch-chat-chip.pillar-reliability { border-left: 3px solid #34d399; }
+.arch-chat-chip.pillar-reliability .arch-chat-chip-icon { color: #34d399; }
+.arch-chat-chip.pillar-cost        { border-left: 3px solid #fbbf24; }
+.arch-chat-chip.pillar-cost        .arch-chat-chip-icon { color: #fbbf24; }
+.arch-chat-chip.pillar-operations  { border-left: 3px solid #60a5fa; }
+.arch-chat-chip.pillar-operations  .arch-chat-chip-icon { color: #60a5fa; }
+.arch-chat-chip.pillar-performance { border-left: 3px solid #a78bfa; }
+.arch-chat-chip.pillar-performance .arch-chat-chip-icon { color: #a78bfa; }
+.arch-chat-chip-ask {
+  border-style: dashed;
+  color: #ddd6fe;
+  font-weight: 600;
+}
+.arch-chat-chip-ask .arch-chat-chip-icon { color: #fbbf24; }
+
 .arch-chat-msg {
   display: flex;
   gap: 0.45rem;
