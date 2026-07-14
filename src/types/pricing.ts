@@ -22,6 +22,17 @@ export interface AzureRetailPricesResponse {
 /**
  * Individual price item from Azure Retail Prices API
  */
+/**
+ * A commitment-based rate embedded on a Consumption meter by the Azure Retail
+ * Prices API. `term` is "1 Year" or "3 Years"; the price is the discounted
+ * hourly/usage rate for that Savings Plan for Compute commitment.
+ */
+export interface SavingsPlanRate {
+  term: string;         // e.g. "1 Year", "3 Years"
+  retailPrice: number;
+  unitPrice: number;
+}
+
 export interface AzureRetailPrice {
   currencyCode: string;
   tierMinimumUnits: number;
@@ -43,6 +54,8 @@ export interface AzureRetailPrice {
   type: string;
   isPrimaryMeterRegion: boolean;
   armSkuName: string;
+  /** 1-year / 3-year Savings Plan for Compute rates, when the meter carries them. */
+  savingsPlan?: SavingsPlanRate[];
 }
 
 /**
@@ -55,6 +68,13 @@ export interface PricingTier {
   hourlyPrice?: number;   // Hourly rate if available
   unit: string;           // e.g., "per instance", "per GB", "per hour"
   description?: string;   // Brief description of tier
+  /**
+   * Real 1-year Savings Plan monthly cost for this SKU, derived from the
+   * meter's embedded savingsPlan[] "1 Year" rate. Undefined when the meter
+   * carries no savings-plan rate (then the cost engine falls back to a
+   * representative discount percentage).
+   */
+  reserved1yrMonthly?: number;
 }
 
 /**
@@ -84,6 +104,14 @@ export interface NodePricingConfig {
   isCustom: boolean;          // Whether user manually set price
   customPrice?: number;       // Custom monthly price if set
   isUsageBased?: boolean;     // Whether pricing is usage-based (consumption)
+  /**
+   * Real 1-year Savings Plan monthly cost (per unit) for this SKU, when the
+   * meter carried a savings-plan rate. Used for the reserved-term estimate in
+   * preference to the representative discount table.
+   */
+  reserved1yrCost?: number;
+  /** True when reserved1yrCost came from a real savings-plan meter (not the % fallback). */
+  reservedIsSavingsPlan?: boolean;
   usageEstimate?: {           // For usage-based services
     type: 'light' | 'medium' | 'heavy';
     description: string;
@@ -129,7 +157,7 @@ export interface CostBreakdown {
   lastCalculated: string;
   /** Date the underlying pricing data was last refreshed (YYYY-MM-DD). */
   pricesAsOf?: string;
-  /** Billing term the costs reflect (e.g. "Pay-as-you-go", "Reserved (1-year)"). */
+  /** Billing term the costs reflect (e.g. "Pay-as-you-go", "Savings Plan (1-year)"). */
   pricingTerm?: string;
 }
 

@@ -30,7 +30,8 @@ import {
   USAGE_BASED_SERVICES 
 } from '../data/azurePricing';
 import { 
-  applyRegionalPricing
+  applyRegionalPricing,
+  getPricingFreshness
 } from '../utils/pricingHelpers';
 
 /**
@@ -96,7 +97,9 @@ export async function initializeNodePricing(
         unit: tier.unit,
         lastUpdated: new Date().toISOString(),
         isCustom: false,
-        isUsageBased: isUsageBased
+        isUsageBased: isUsageBased,
+        reserved1yrCost: tier.reserved1yrMonthly,
+        reservedIsSavingsPlan: tier.reserved1yrMonthly != null
       };
     } else {
       // Fallback to static data — use the service's default SKU/level
@@ -160,7 +163,9 @@ export async function updateNodePricing(
     
     if (pricing) {
       const cost = calculateMonthlyCost(pricing, tier, quantity);
-      
+      // Refresh the real 1-year Savings Plan rate for the (possibly new) tier.
+      const selectedTier = pricing.tiers.find(t => t.skuName === tier || t.name === tier);
+
       return {
         ...currentConfig,
         estimatedCost: cost,
@@ -168,7 +173,9 @@ export async function updateNodePricing(
         quantity,
         region,
         lastUpdated: new Date().toISOString(),
-        isCustom: false
+        isCustom: false,
+        reserved1yrCost: selectedTier?.reserved1yrMonthly,
+        reservedIsSavingsPlan: selectedTier?.reserved1yrMonthly != null
       };
     } else {
       // Fallback calculation
@@ -212,8 +219,10 @@ export function setCustomPricing(
 /**
  * Billing term used for cost estimates.
  * - 'payg': pay-as-you-go list price
- * - 'reserved1yr': 1-year reserved/savings-plan (discount applied to
- *   reservation-eligible, non-usage-based services only)
+ * - 'reserved1yr': 1-year commitment. Uses the meter's real 1-year Savings
+ *   Plan rate when available; otherwise falls back to a representative discount
+ *   on reservation-eligible, non-usage-based services. Usage-based/consumption
+ *   services always stay at PAYG.
  */
 export type PricingMode = 'payg' | 'reserved1yr';
 
@@ -236,7 +245,7 @@ export function calculateCostBreakdown(
     currency: 'USD',
     lastCalculated: new Date().toISOString(),
     pricesAsOf: PRICING_DATA_AS_OF,
-    pricingTerm: pricingMode === 'reserved1yr' ? 'Reserved (1-year)' : 'Pay-as-you-go',
+    pricingTerm: pricingMode === 'reserved1yr' ? 'Savings Plan (1-year)' : 'Pay-as-you-go',
   };
 
   // Track costs by group and category
@@ -250,11 +259,17 @@ export function calculateCostBreakdown(
     if (!pricing) return;
 
     let cost = pricing.estimatedCost * pricing.quantity;
-    // Apply 1-year reserved discount to reservation-eligible, non-usage-based
-    // services. Usage-based/consumption services stay at PAYG.
+    // Apply the 1-year commitment to reservation-eligible, non-usage-based
+    // services. Prefer the meter's REAL 1-year Savings Plan rate; only fall
+    // back to the representative discount table when no savings-plan rate is
+    // known (or the price was manually overridden). Usage-based services stay PAYG.
     if (pricingMode === 'reserved1yr' && !pricing.isUsageBased) {
-      const discount = getReserved1yrDiscount(node.data.label || '');
-      if (discount > 0) cost = cost * (1 - discount);
+      if (!pricing.isCustom && pricing.reserved1yrCost != null && pricing.reserved1yrCost > 0) {
+        cost = pricing.reserved1yrCost * pricing.quantity;
+      } else {
+        const discount = getReserved1yrDiscount(node.data.label || '');
+        if (discount > 0) cost = cost * (1 - discount);
+      }
     }
     breakdown.totalMonthlyCost += cost;
 
@@ -356,7 +371,10 @@ export function getCostSummaryText(breakdown: CostBreakdown): string {
   lines.push(`Region: ${breakdown.region}`);
   lines.push(`Currency: ${breakdown.currency}`);
   if (breakdown.pricingTerm) lines.push(`Pricing term: ${breakdown.pricingTerm}`);
-  if (breakdown.pricesAsOf) lines.push(`Prices as of: ${breakdown.pricesAsOf}`);
+  if (breakdown.pricesAsOf) {
+    const f = getPricingFreshness(breakdown.pricesAsOf);
+    lines.push(`Prices as of: ${breakdown.pricesAsOf}${f.isStale ? ` (⚠️ ${f.ageLabel} — refresh with "npm run pricing:refresh")` : ''}`);
+  }
   lines.push(`Last Updated: ${new Date(breakdown.lastCalculated).toLocaleString()}`);
   lines.push('');
   

@@ -326,7 +326,15 @@ function filterPricingItems(
  */
 function parsePricingTiers(items: AzureRetailPrice[]): PricingTier[] {
   const tierMap = new Map<string, PricingTier>();
-  
+
+  // Convert a per-unit rate into a monthly cost given the meter's unit-of-measure.
+  const toMonthly = (rate: number, unitOfMeasure: string): number => {
+    if (unitOfMeasure.includes('/Month') || unitOfMeasure.includes('1/Month')) return rate;
+    if (unitOfMeasure.includes('/Day') || unitOfMeasure.includes('1/Day')) return rate * 30;
+    if (unitOfMeasure === '1K' || unitOfMeasure.includes('1000')) return rate * 100;
+    return rate * 730; // default: hourly × 730 hours/month
+  };
+
   items.forEach(item => {
     const skuName = item.skuName || item.armSkuName;
     if (!skuName) return;
@@ -334,23 +342,18 @@ function parsePricingTiers(items: AzureRetailPrice[]): PricingTier[] {
     // Handle different billing units for AI services
     const unitOfMeasure = (item as any).unitOfMeasure || '1 Hour';
     const hourlyPrice = item.retailPrice || item.unitPrice;
-    let monthlyPrice: number;
-    
-    // Calculate monthly price based on unit of measure
-    if (unitOfMeasure.includes('/Month') || unitOfMeasure.includes('1/Month')) {
-      // Already monthly pricing (commitment tiers)
-      monthlyPrice = hourlyPrice;
-    } else if (unitOfMeasure.includes('/Day') || unitOfMeasure.includes('1/Day')) {
-      // Daily pricing (multiply by 30)
-      monthlyPrice = hourlyPrice * 30;
-    } else if (unitOfMeasure === '1K' || unitOfMeasure.includes('1000')) {
-      // Per-1K pricing (estimate 100K transactions/month for typical usage)
-      monthlyPrice = hourlyPrice * 100;
-    } else {
-      // Default to hourly (730 hours average per month)
-      monthlyPrice = hourlyPrice * 730;
+    const monthlyPrice = toMonthly(hourlyPrice, unitOfMeasure);
+
+    // Real 1-year Savings Plan monthly, when the meter carries a savings-plan rate.
+    let reserved1yrMonthly: number | undefined;
+    const oneYear = Array.isArray(item.savingsPlan)
+      ? item.savingsPlan.find(p => /1\s*year/i.test(p.term || ''))
+      : undefined;
+    if (oneYear) {
+      const spRate = oneYear.retailPrice || oneYear.unitPrice;
+      if (spRate > 0) reserved1yrMonthly = toMonthly(spRate, unitOfMeasure);
     }
-    
+
     // Only add if we don't have this SKU yet, or if this is cheaper
     if (!tierMap.has(skuName) || tierMap.get(skuName)!.monthlyPrice > monthlyPrice) {
       tierMap.set(skuName, {
@@ -359,7 +362,8 @@ function parsePricingTiers(items: AzureRetailPrice[]): PricingTier[] {
         monthlyPrice: monthlyPrice,
         hourlyPrice: hourlyPrice,
         unit: item.unitOfMeasure,
-        description: item.meterName
+        description: item.meterName,
+        reserved1yrMonthly
       });
     }
   });

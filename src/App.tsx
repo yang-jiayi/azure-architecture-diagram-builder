@@ -54,7 +54,8 @@ import { initializeNodePricing, calculateCostBreakdown, exportCostBreakdownCSV, 
 import { prefetchCommonServices } from './services/azurePricingService';
 import { preloadCommonServices, getActiveRegion, AzureRegion, AVAILABLE_REGIONS, RegionInfo } from './services/regionalPricingService';
 import JSZip from 'jszip';
-import { formatMonthlyCost } from './utils/pricingHelpers';
+import { formatMonthlyCost, getPricingFreshness } from './utils/pricingHelpers';
+import { PRICING_DATA_AS_OF } from './data/azurePricing';
 import { costReportToHtml } from './utils/costReportHtml';
 import { validateArchitecture, ArchitectureValidation } from './services/architectureValidator';
 import { bandLabel } from './services/wafMaturity';
@@ -2686,7 +2687,7 @@ function App() {
                 <RegionSelector onRegionChange={handleRegionChange} />
                 {totalMonthlyCost > 0 && (
                   <>
-                    <div className="cost-indicator" title={`Total estimated monthly cost for all services (${pricingMode === 'reserved1yr' ? '1-year reserved' : 'pay-as-you-go'})`}>
+                    <div className="cost-indicator" title={`Total estimated monthly cost for all services (${pricingMode === 'reserved1yr' ? '1-year savings plan' : 'pay-as-you-go'})`}>
                       💰 {formatMonthlyCost(totalMonthlyCost)}
                     </div>
                     <div className="pricing-mode-toggle" role="group" aria-label="Pricing term">
@@ -2700,11 +2701,31 @@ function App() {
                       <button
                         className={`pricing-mode-btn${pricingMode === 'reserved1yr' ? ' active' : ''}`}
                         onClick={() => setPricingMode('reserved1yr')}
-                        title="1-year reserved / savings-plan pricing (estimated discounts; applies to reservation-eligible services only)"
+                        title="1-year Savings Plan pricing. Uses each meter's real 1-year savings-plan rate where available, otherwise a representative discount on reservation-eligible services. Usage-based services stay at PAYG."
                       >
-                        Reserved 1yr
+                        Savings 1yr
                       </button>
                     </div>
+                    {(() => {
+                      const f = getPricingFreshness(PRICING_DATA_AS_OF);
+                      return (
+                        <div
+                          className={`pricing-freshness pricing-freshness--${f.level}`}
+                          title={
+                            f.isStale
+                              ? `⚠️ Azure pricing data is ${f.ageLabel} (as of ${f.dateLabel}). Refresh with "npm run pricing:refresh" so estimates stay accurate.`
+                              : `Azure pricing data as of ${f.dateLabel} (${f.ageLabel}).`
+                          }
+                          role="status"
+                        >
+                          {f.isStale && <span aria-hidden="true">⚠️ </span>}
+                          <span className="pricing-freshness-label">as of {f.dateLabel}</span>
+                          {f.isStale && (
+                            <span className="pricing-freshness-age"> · {f.ageLabel}</span>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </>
                 )}
               </div>

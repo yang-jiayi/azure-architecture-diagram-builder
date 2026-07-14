@@ -60,6 +60,63 @@ export function formatMonthlyCost(amount: number): string {
 }
 
 /**
+ * Freshness of the bundled pricing data relative to today.
+ * - `fresh`  : ≤ 30 days old
+ * - `aging`  : 31–90 days old (subtle warning)
+ * - `stale`  : > 90 days old (strong warning)
+ */
+export type PricingFreshnessLevel = 'fresh' | 'aging' | 'stale';
+
+export interface PricingFreshness {
+  /** Whole days between the data date and today (0 if in the future/today). */
+  ageDays: number;
+  level: PricingFreshnessLevel;
+  /** Short human label, e.g. "12 days old" / "3 months old". */
+  ageLabel: string;
+  /** Localized data date, e.g. "Jun 25, 2026" (falls back to the raw string). */
+  dateLabel: string;
+  /** True when the data warrants a refresh warning (> 30 days). */
+  isStale: boolean;
+}
+
+/**
+ * Compute how stale the pricing data is from its "as of" date (YYYY-MM-DD).
+ * Used to surface a data-freshness guardrail in the cost UI so estimates never
+ * silently age out.
+ */
+export function getPricingFreshness(
+  asOf: string,
+  now: Date = new Date()
+): PricingFreshness {
+  const asOfDate = new Date(`${asOf}T00:00:00Z`);
+  const valid = !Number.isNaN(asOfDate.getTime());
+  const msPerDay = 86_400_000;
+  const ageDays = valid
+    ? Math.max(0, Math.floor((now.getTime() - asOfDate.getTime()) / msPerDay))
+    : 0;
+
+  const level: PricingFreshnessLevel =
+    ageDays > 90 ? 'stale' : ageDays > 30 ? 'aging' : 'fresh';
+
+  let ageLabel: string;
+  if (ageDays < 1) ageLabel = 'today';
+  else if (ageDays === 1) ageLabel = '1 day old';
+  else if (ageDays < 60) ageLabel = `${ageDays} days old`;
+  else ageLabel = `${Math.round(ageDays / 30)} months old`;
+
+  const dateLabel = valid
+    ? asOfDate.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        timeZone: 'UTC',
+      })
+    : asOf;
+
+  return { ageDays, level, ageLabel, dateLabel, isStale: ageDays > 30 };
+}
+
+/**
  * Convert hourly rate to monthly cost (730 hours average per month)
  */
 export function hourlyToMonthly(hourlyRate: number): number {

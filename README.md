@@ -149,7 +149,7 @@ Get instant cost estimates across **8 Azure regions**:
 - 🇺🇸 East US 2 · 🇦🇺 Australia East · 🇨🇦 Canada Central · 🇧🇷 Brazil South · 🇲🇽 Mexico Central · 🇳🇱 West Europe · 🇸🇪 Sweden Central · 🇸🇬 Southeast Asia
 
 Features include:
-- **PAYG ↔ Reserved (1-year) toggle** — flip the entire estimate between pay-as-you-go and 1-year reserved pricing. The reserved discount applies only to reservation-eligible services (VMs, AKS, SQL, Cosmos, App Service, Redis, …) and is **exact for Microsoft Fabric Capacity**; usage-based services stay at PAYG.
+- **PAYG ↔ Savings Plan (1-year) toggle** — flip the entire estimate between pay-as-you-go and 1-year commitment pricing. Each meter's **real 1-year Savings Plan rate** (from the Azure Retail Prices API) is used per-SKU when available; services without a savings-plan meter fall back to a representative discount, and Microsoft Fabric Capacity is **exact**. Usage-based services stay at PAYG.
 - **“Prices as of” stamp** — every cost export records the pricing-data refresh date and the selected billing term.
 - **True per-region meters** — pricing is pre-fetched per region from the Azure Retail Prices API (refresh anytime with `npm run pricing:refresh`), including per-region **Microsoft Fabric** capacity (CU) and OneLake storage rates.
 - Color-coded legend (green/yellow/red based on cost thresholds)

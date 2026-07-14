@@ -1242,12 +1242,13 @@ export function getFabricCapacityMonthly(
 }
 
 /**
- * 1-year reserved discount (fraction OFF pay-as-you-go) for reservation-eligible
- * services. Reservations/savings plans apply to provisioned compute-style
- * resources; usage-based/consumption services (storage, bandwidth, OneLake,
- * serverless) are NOT reservation-eligible and stay at PAYG. Values are
- * representative 1-year Reserved Instance / Savings Plan discounts; Fabric is
- * exact (matches FABRIC_CAPACITY_SKUS). Treat as estimates.
+ * FALLBACK 1-year discount (fraction OFF pay-as-you-go) for reservation-eligible
+ * services. This is only used when a meter carries NO real 1-year Savings Plan
+ * rate — the cost engine prefers each meter's actual savingsPlan[] "1 Year" rate
+ * (see regionalPricingService.parsePricingTiers) and falls back to these
+ * representative values otherwise. Usage-based/consumption services (storage,
+ * bandwidth, OneLake, serverless) are NOT eligible and stay at PAYG. Fabric is
+ * exact (matches FABRIC_CAPACITY_SKUS). Treat the fallbacks as estimates.
  */
 export const RESERVED_1YR_DISCOUNT: Record<string, number> = {
   'Virtual Machines': 0.37,

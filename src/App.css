@@ -349,6 +349,46 @@ body.dark-mode .toolbar-dropdown-separator {
   border-left: 1px solid rgba(255, 255, 255, 0.3);
 }
 
+/* Pricing data-freshness badge (guardrail against stale estimates) */
+.pricing-freshness {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.3rem 0.55rem;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  white-space: nowrap;
+  line-height: 1;
+  cursor: default;
+  border: 1px solid transparent;
+}
+
+/* Fresh: quiet, low-emphasis stamp */
+.pricing-freshness--fresh {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.75);
+}
+
+/* Aging (>30d): subtle amber warning */
+.pricing-freshness--aging {
+  background: rgba(251, 191, 36, 0.18);
+  color: #fde68a;
+  border-color: rgba(251, 191, 36, 0.5);
+}
+
+/* Stale (>90d): stronger red warning */
+.pricing-freshness--stale {
+  background: rgba(248, 113, 113, 0.2);
+  color: #fecaca;
+  border-color: rgba(248, 113, 113, 0.6);
+}
+
+.pricing-freshness-age {
+  opacity: 0.85;
+  font-weight: 500;
+}
+
 .btn {
   display: inline-flex;
   align-items: center;
