@@ -35,10 +35,42 @@ Auth is keyless end-to-end (Entra ID). The container app's system-assigned manag
 identity and the developer account both hold **Cosmos DB Built-in Data Contributor**
 on the account.
 
-## Reading comments (CLI — the read path)
+## Reading comments (admin endpoint — the read path)
 
-Comments are read with the CLI utility [../server/read-feedback.js](../server/read-feedback.js).
-It uses keyless auth (`az login` locally), so no keys or connection strings are needed.
+> ⚠️ The Cosmos account has **public network access disabled** (policy-locked). It is
+> reachable **only** from inside the VNet via a private endpoint. Reading directly from a
+> laptop (including the `read-feedback.js` CLI below) therefore **fails** — the app itself
+> is now the read path.
+
+The web app exposes a token-protected admin endpoint that reads verbatim comments from
+Cosmos server-side, over the private endpoint:
+
+```
+GET /api/feedback/list            # newest first
+GET /api/feedback/list?limit=50   # cap results (default 200, max 1000)
+```
+
+Protected by the `FEEDBACK_ADMIN_TOKEN` env var (a secret on the container app; generated
+into `.env` by `scripts/vnet-migration/03-deploy-webapp.sh`). Pass it as a bearer token or
+the `X-Admin-Token` header. The endpoint returns `503` when the token is unset and `401`
+on mismatch.
+
+```bash
+# From the repo root (.env holds FEEDBACK_ADMIN_TOKEN)
+APP="https://azure-diagram-builder-vnet.thankfulbeach-7e8f01bc.eastus2.azurecontainerapps.io"
+TOKEN=$(grep '^FEEDBACK_ADMIN_TOKEN=' .env | cut -d= -f2-)
+curl -s -H "Authorization: Bearer $TOKEN" "$APP/api/feedback/list?limit=20" | python3 -m json.tool
+```
+
+Implemented in [../server/token-server.js](../server/token-server.js) (`GET /api/feedback/list`),
+using the same `getFeedbackContainer()` and env vars as the write path.
+
+### Legacy CLI (only works when Cosmos is publicly reachable)
+
+The CLI utility [../server/read-feedback.js](../server/read-feedback.js) uses keyless auth
+(`az login`) and reads the same container, but it only works from a network that can reach
+Cosmos — i.e. **not** from a laptop while public access is disabled. Kept for use from
+inside the VNet or if public access is ever temporarily enabled.
 
 ```bash
 cd server
@@ -46,15 +78,8 @@ node read-feedback.js          # formatted, newest first
 node read-feedback.js --json   # raw JSON
 ```
 
-Prerequisites:
-
-- `az login` to the subscription `ARTURO-MngEnvMCAP094150` (`7a28b21e-…`).
-- The signed-in identity needs **Cosmos DB Built-in Data Contributor** (or Data
-  Reader) on `aqcosmosdb007` — already granted for the admin account.
-
-The script reads endpoint/database/container from the same environment variables the
-server uses (`AZURE_COSMOS_ENDPOINT`, `COSMOS_DATABASE_ID`, `COSMOS_FEEDBACK_CONTAINER_ID`),
-falling back to the production values if unset.
+Prerequisites: `az login` to `ARTURO-MngEnvMCAP094150` (`7a28b21e-…`) with **Cosmos DB
+Built-in Data Contributor** (or Data Reader) on `aqcosmosdb007`.
 
 ## Trends (workbook)
 
@@ -171,19 +196,23 @@ union
 | order by timestamp desc
 ```
 
-> The persisted comments themselves live in Cosmos — read them with
-> `cd server && node read-feedback.js` (newest first) or `--json`.
+> The persisted comments themselves live in Cosmos — read them via the
+> `GET /api/feedback/list` admin endpoint (see **Reading comments** above).
 
-### Durable fixes (still open)
+### Durable fix (implemented ✅)
 
-The telemetry fallback prevents data loss but does not keep Cosmos reachable. To
-make writes always succeed during the nightly lockout, either:
+Option 2 below was implemented on 2026-07-14: the web app runs in a
+**VNet-integrated Container Apps environment** and reaches Cosmos via a
+**private endpoint**, so writes succeed with public access disabled. Scripts live in
+[../scripts/vnet-migration/](../scripts/vnet-migration/) (`01-network.sh`,
+`02-aca-env.sh`, `03-deploy-webapp.sh`).
 
 1. **Policy exemption** — exempt `aqcosmosdb007` from the policy that disables
-   public access (fastest; acceptable for a single-owner dev/demo account), or
-2. **Private connectivity** — a Cosmos **Private Endpoint** + a **VNet-integrated
-   Container Apps environment** (enterprise-correct; requires recreating the
-   environment, since VNet integration is set at creation time).
+   public access (not used; the MCAPS policy reverts it), or
+2. **Private connectivity** ✅ — a Cosmos **Private Endpoint** + a **VNet-integrated
+   Container Apps environment**. VNet integration is set at creation, so a new
+   environment (`aca-env-azure-diagrams-vnet`) and app (`azure-diagram-builder-vnet`)
+   were stood up blue/green alongside the originals.
 
 ## Files
 
@@ -192,6 +221,7 @@ make writes always succeed during the nightly lockout, either:
 | [../src/components/FeedbackModal.tsx](../src/components/FeedbackModal.tsx) | Modal UI + submit logic |
 | [../src/services/feedbackService.ts](../src/services/feedbackService.ts) | `submitFeedback()` — Cosmos write + telemetry fallback on failure |
 | [../src/services/telemetryService.ts](../src/services/telemetryService.ts) | `trackFeedback()` + `trackFeedbackPersistFailed()` → App Insights |
-| [../server/token-server.js](../server/token-server.js) | `POST /api/feedback` → Cosmos |
-| [../server/read-feedback.js](../server/read-feedback.js) | CLI read utility (comments) |
+| [../server/token-server.js](../server/token-server.js) | `POST /api/feedback` → Cosmos; `GET /api/feedback/list` admin read (token-protected) |
+| [../server/read-feedback.js](../server/read-feedback.js) | Legacy CLI read utility (only works when Cosmos is publicly reachable) |
+| [../scripts/vnet-migration/](../scripts/vnet-migration/) | VNet + private-endpoint migration scripts (durable fix) |
 | [../infra/feedback-workbook.json](../infra/feedback-workbook.json) | Trends workbook (ARM) |
