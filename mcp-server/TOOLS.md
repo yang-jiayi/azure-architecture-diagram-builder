@@ -112,7 +112,9 @@ config-level WAF findings a diagram can't express are resolved out of the gate.
 | Key Vault | soft-delete 90d, purge protection, RBAC |
 | Storage | HTTPS-only, TLS 1.2, no public blob access |
 | Cosmos DB | automatic failover, continuous backup |
+| SQL Database | server + DB, **TDE**, **auditing** (Azure Monitor), TLS 1.2, no public network, Entra-only admin |
 | Redis | TLS 1.2 minimum |
+| Front Door / WAF Policy | Premium profile + WAF policy (Prevention mode, Microsoft managed rule set) |
 | AI Search / Container Apps | keyless / HTTPS-only ingress, managed identity |
 | Monitoring | Log Analytics + Application Insights |
 
@@ -299,7 +301,9 @@ config-level WAF findings resolve out of the gate.
 | Key Vault | `azurerm_key_vault` | soft-delete 90d, purge protection, RBAC, no public network |
 | Storage | `azurerm_storage_account` | HTTPS-only, TLS 1.2, no public/nested access, ZRS |
 | Cosmos DB | `azurerm_cosmosdb_account` | automatic failover, continuous backup, Session consistency |
+| SQL Database | `azurerm_mssql_server` + `azurerm_mssql_database` + `azurerm_mssql_server_extended_auditing_policy` | TDE, auditing, TLS 1.2, no public network, Entra-only admin |
 | Redis | `azurerm_redis_cache` | TLS 1.2 min, non-SSL port disabled |
+| Front Door / WAF | `azurerm_cdn_frontdoor_profile` + `azurerm_cdn_frontdoor_firewall_policy` | Premium profile + WAF (Prevention mode, Microsoft managed rules) |
 | AI Search | `azurerm_search_service` | keyless (`local_authentication_enabled = false`), identity |
 | Container Apps | `azurerm_container_app*` | HTTPS-only ingress, managed identity, LA-backed env |
 | Monitoring | `azurerm_log_analytics_workspace` + `azurerm_application_insights` | workspace-based |

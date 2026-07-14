@@ -81,6 +81,8 @@ const TYPE_ABBR: Record<string, string> = {
   'Azure Cognitive Search': 'srch',
   'Container Apps': 'aca',
   'SQL Database': 'sql',
+  'Azure Front Door': 'fd',
+  'Web Application Firewall': 'waf',
 };
 
 interface EmitCtx {
@@ -404,6 +406,77 @@ resource "azurerm_application_insights" "${ctx.sym}" {
 
 type Emitter = (svc: TfService, ctx: EmitCtx) => Emitted;
 
+function emitSqlDatabase(svc: TfService, ctx: EmitCtx): Emitted {
+  const findings: TfFindingResolved[] = [
+    { ruleId: 'sql-tde', pillar: 'Security', service: svc.name, setting: 'Transparent Data Encryption enabled', terraformAttribute: 'transparent_data_encryption_enabled = true' },
+    { ruleId: 'sql-auditing', pillar: 'Security', service: svc.name, setting: 'Extended auditing to Log Analytics', terraformAttribute: 'azurerm_mssql_server_extended_auditing_policy' },
+  ];
+  const hcl = `
+# ${svc.name} — Azure SQL (server + database, TDE on, auditing, TLS 1.2, no public network, Entra-only admin)
+resource "azurerm_mssql_server" "${ctx.sym}" {
+  name                          = "\${var.name_prefix}-${ctx.nameExpr}-${ctx.sym.replace(/_/g, '-')}"
+  resource_group_name           = azurerm_resource_group.main.name
+  location                      = azurerm_resource_group.main.location
+  version                       = "12.0"
+  minimum_tls_version           = "1.2"
+  public_network_access_enabled = false
+
+  azuread_administrator {
+    login_username              = "sql-admins"
+    # Replace with your Entra ID admin group/user object ID before deploying.
+    object_id                   = "00000000-0000-0000-0000-000000000000"
+    tenant_id                   = data.azurerm_client_config.current.tenant_id
+    azuread_authentication_only = true
+  }
+}
+
+resource "azurerm_mssql_database" "${ctx.sym}" {
+  name                                = "${ctx.nameExpr}-db"
+  server_id                           = azurerm_mssql_server.${ctx.sym}.id
+  sku_name                            = "S3"
+  transparent_data_encryption_enabled = true
+}
+
+resource "azurerm_mssql_server_extended_auditing_policy" "${ctx.sym}" {
+  server_id              = azurerm_mssql_server.${ctx.sym}.id
+  log_monitoring_enabled = true
+}
+`;
+  return { hcl, findings };
+}
+
+function emitFrontDoor(svc: TfService, ctx: EmitCtx): Emitted {
+  const hcl = `
+# ${svc.name} — Azure Front Door (Premium profile; add endpoints/routes + attach the WAF policy)
+resource "azurerm_cdn_frontdoor_profile" "${ctx.sym}" {
+  name                = "\${var.name_prefix}-${ctx.nameExpr}"
+  resource_group_name = azurerm_resource_group.main.name
+  sku_name            = "Premium_AzureFrontDoor"
+}
+`;
+  return { hcl, findings: [] };
+}
+
+function emitWaf(svc: TfService, ctx: EmitCtx): Emitted {
+  const hcl = `
+# ${svc.name} — Front Door WAF policy (Prevention mode, Microsoft managed default rule set)
+resource "azurerm_cdn_frontdoor_firewall_policy" "${ctx.sym}" {
+  name                = replace("\${var.name_prefix}${ctx.nameExpr}", "-", "")
+  resource_group_name = azurerm_resource_group.main.name
+  sku_name            = "Premium_AzureFrontDoor"
+  enabled             = true
+  mode                = "Prevention"
+
+  managed_rule {
+    type    = "Microsoft_DefaultRuleSet"
+    version = "2.1"
+    action  = "Block"
+  }
+}
+`;
+  return { hcl, findings: [] };
+}
+
 const EMITTERS: Record<string, Emitter> = {
   'App Service': emitAppService,
   'Key Vault': emitKeyVault,
@@ -412,6 +485,9 @@ const EMITTERS: Record<string, Emitter> = {
   'Redis Cache': emitRedis,
   'Azure Cognitive Search': emitSearch,
   'Container Apps': emitContainerApps,
+  'SQL Database': emitSqlDatabase,
+  'Azure Front Door': emitFrontDoor,
+  'Web Application Firewall': emitWaf,
 };
 
 const MONITORING_KEYS = new Set(['Azure Monitor', 'Application Insights', 'Log Analytics']);

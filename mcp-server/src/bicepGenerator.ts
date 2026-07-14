@@ -80,6 +80,8 @@ const TYPE_ABBR: Record<string, string> = {
   'Azure Cognitive Search': 'srch',
   'Container Apps': 'aca',
   'SQL Database': 'sql',
+  'Azure Front Door': 'fd',
+  'Web Application Firewall': 'waf',
 };
 
 type Emitter = (svc: BicepService, ctx: EmitContext) => EmittedResource | null;
@@ -328,6 +330,93 @@ resource ${ctx.sym} 'Microsoft.Insights/components@2020-02-02' = {
   return { bicep, covered: true, findings: [] };
 }
 
+function emitSqlDatabase(svc: BicepService, ctx: EmitContext): EmittedResource {
+  const serverSym = `${ctx.sym}Server`;
+  const findings: FindingResolved[] = [
+    { ruleId: 'sql-tde', pillar: 'Security', service: svc.name, setting: 'Transparent Data Encryption enabled', bicepProperty: "transparentDataEncryption.state: 'Enabled'" },
+    { ruleId: 'sql-auditing', pillar: 'Security', service: svc.name, setting: 'Auditing to Azure Monitor', bicepProperty: 'auditingSettings.isAzureMonitorTargetEnabled' },
+  ];
+  const bicep = `
+// ${svc.name} — Azure SQL (server + database, TDE on, auditing enabled, TLS 1.2, public network disabled, Entra-only admin)
+resource ${serverSym} 'Microsoft.Sql/servers@2023-08-01-preview' = {
+  name: toLower('\${namePrefix}-${ctx.nameExpr}-\${uniqueString(resourceGroup().id, '${ctx.sym}')}')
+  location: location
+  properties: {
+    version: '12.0'
+    minimalTlsVersion: '1.2'
+    publicNetworkAccess: 'Disabled'
+    administrators: {
+      administratorType: 'ActiveDirectory'
+      principalType: 'Group'
+      login: 'sql-admins'
+      // Replace with your Entra ID admin group/user object ID before deploying.
+      sid: '00000000-0000-0000-0000-000000000000'
+      tenantId: subscription().tenantId
+      azureADOnlyAuthentication: true
+    }
+  }
+}
+
+resource ${ctx.sym} 'Microsoft.Sql/servers/databases@2023-08-01-preview' = {
+  parent: ${serverSym}
+  name: '${ctx.nameExpr}-db'
+  location: location
+  sku: { name: 'S3', tier: 'Standard' }
+}
+
+resource ${ctx.sym}Tde 'Microsoft.Sql/servers/databases/transparentDataEncryption@2023-08-01-preview' = {
+  parent: ${ctx.sym}
+  name: 'current'
+  properties: { state: 'Enabled' }
+}
+
+resource ${serverSym}Audit 'Microsoft.Sql/servers/auditingSettings@2023-08-01-preview' = {
+  parent: ${serverSym}
+  name: 'default'
+  properties: {
+    state: 'Enabled'
+    isAzureMonitorTargetEnabled: true
+  }
+}
+`;
+  return { bicep, covered: true, findings };
+}
+
+function emitFrontDoor(svc: BicepService, ctx: EmitContext): EmittedResource {
+  const bicep = `
+// ${svc.name} — Azure Front Door (Premium profile; add endpoints/routes + attach the WAF security policy)
+resource ${ctx.sym} 'Microsoft.Cdn/profiles@2024-02-01' = {
+  name: '\${namePrefix}-${ctx.nameExpr}'
+  location: 'global'
+  sku: { name: 'Premium_AzureFrontDoor' }
+  properties: {
+    originResponseTimeoutSeconds: 60
+  }
+}
+`;
+  return { bicep, covered: true, findings: [] };
+}
+
+function emitWaf(svc: BicepService, ctx: EmitContext): EmittedResource {
+  const bicep = `
+// ${svc.name} — Front Door WAF policy (Prevention mode, Microsoft managed default rule set)
+resource ${ctx.sym} 'Microsoft.Network/FrontDoorWebApplicationFirewallPolicies@2024-02-01' = {
+  name: replace('\${namePrefix}${ctx.nameExpr}', '-', '')
+  location: 'global'
+  sku: { name: 'Premium_AzureFrontDoor' }
+  properties: {
+    policySettings: { enabledState: 'Enabled', mode: 'Prevention' }
+    managedRules: {
+      managedRuleSets: [
+        { ruleSetType: 'Microsoft_DefaultRuleSet', ruleSetVersion: '2.1' }
+      ]
+    }
+  }
+}
+`;
+  return { bicep, covered: true, findings: [] };
+}
+
 // Map a resolved catalog key → emitter.
 const EMITTERS: Record<string, Emitter> = {
   'App Service': emitAppService,
@@ -337,6 +426,9 @@ const EMITTERS: Record<string, Emitter> = {
   'Redis Cache': emitRedis,
   'Azure Cognitive Search': emitSearch,
   'Container Apps': emitContainerApps,
+  'SQL Database': emitSqlDatabase,
+  'Azure Front Door': emitFrontDoor,
+  'Web Application Firewall': emitWaf,
 };
 
 // Monitoring services all share one emitter (first one emits the pair).
