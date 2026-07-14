@@ -37,7 +37,7 @@ export interface ModelSettings {
 const STORAGE_KEY = 'azure-diagrams-model-settings';
 
 const DEFAULT_SETTINGS: ModelSettings = {
-  model: 'gpt-5.2',
+  model: 'gpt-5.6-luna',
   reasoningEffort: 'medium',
   featureOverrides: {}
 };
