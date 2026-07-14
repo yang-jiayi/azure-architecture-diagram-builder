@@ -447,6 +447,26 @@ The Diagram Builder ships a **Model Context Protocol (MCP) server** (`mcp-server
 ### Use it from Scout
 Register the deployed MCP endpoint (`https://<your-mcp-host>/mcp`) as a **custom remote MCP server** in Scout's Extensions panel with your Bearer token (stored encrypted). See [`SCOUT/README.md`](SCOUT/README.md) for the walkthrough, and deploy an isolated MCP instance with [`scripts/deploy-mcp-instance.sh`](scripts/deploy-mcp-instance.sh).
 
+### Use it from VS Code (GitHub Copilot)
+The MCP server also works in **GitHub Copilot agent mode** in VS Code — no code changes, just a config entry. Create a `.vscode/mcp.json` pointing at the deployed server, with the bearer token supplied via an input prompt so no secret is committed:
+
+```jsonc
+{
+  "servers": {
+    "azure-diagram-builder": {
+      "type": "http",
+      "url": "https://<your-mcp-host>/mcp",
+      "headers": { "Authorization": "Bearer ${input:aadb-token}" }
+    }
+  },
+  "inputs": [
+    { "id": "aadb-token", "type": "promptString", "description": "AADB MCP bearer token", "password": true }
+  ]
+}
+```
+
+Reload the MCP servers (**MCP: List Servers**), paste your token when prompted (the value in `.env.mcp`), and the 12 tools appear in Copilot Chat. Attach resources via **Add Context > MCP Resources**, and invoke prompts with `/azure-diagram-builder.design-secure-web-app`. Prefer local development? The bundled config also defines a `stdio` server that runs `mcp-server/dist/index.js` (run `npm run build` in `mcp-server/` first).
+
 ---
 
 ## ⚡ One-command deploy with Azure Developer CLI (azd)
