@@ -1,11 +1,21 @@
 #!/usr/bin/env bash
 # deploy-workbook.sh — Deploy the Azure Diagram Builder usage analytics workbook
-# Usage: ./scripts/deploy-workbook.sh
+#
+# Usage: ./scripts/deploy-workbook.sh [WORKBOOK_ID]
+#
+# By default this UPDATES the existing "Usage Analytics" workbook in place
+# (stable ID below) so repeated deploys don't create duplicates. To create a
+# brand-new workbook instead, pass NEW as the argument (or a specific UUID):
+#   ./scripts/deploy-workbook.sh NEW           # generate a fresh workbook
+#   ./scripts/deploy-workbook.sh <uuid>        # target a specific workbook
+# The ID can also be overridden via the WORKBOOK_ID env var.
 set -euo pipefail
 
 RG="AQ-FOUNDRY-RG"
 APP_INSIGHTS="aq-app-insights-001"
 WORKBOOK_DISPLAY_NAME="Azure Diagram Builder — Usage Analytics"
+# Stable ID of the live workbook — update-in-place by default (avoids duplicates).
+DEFAULT_WORKBOOK_ID="c6480daa-a23d-4aa0-a6c5-800b82f1149b"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 CONTENT_FILE="$SCRIPT_DIR/workbook-content.json"
 
@@ -13,7 +23,17 @@ echo "🔍 Resolving subscription and App Insights resource..."
 SUBSCRIPTION=$(az account show --query id -o tsv)
 SOURCE_ID="/subscriptions/$SUBSCRIPTION/resourceGroups/$RG/providers/microsoft.insights/components/$APP_INSIGHTS"
 LOCATION=$(az monitor app-insights component show --app "$APP_INSIGHTS" -g "$RG" --query location -o tsv)
-WORKBOOK_ID=$(uuidgen | tr '[:upper:]' '[:lower:]')
+
+# Resolve target workbook ID: CLI arg > env var > stable default.
+# Pass "NEW" (case-insensitive) to mint a fresh workbook.
+WORKBOOK_ID="${1:-${WORKBOOK_ID:-$DEFAULT_WORKBOOK_ID}}"
+if [[ "$(printf '%s' "$WORKBOOK_ID" | tr '[:upper:]' '[:lower:]')" == "new" ]]; then
+  WORKBOOK_ID=$(uuidgen | tr '[:upper:]' '[:lower:]')
+  echo "   Mode         : creating NEW workbook"
+else
+  WORKBOOK_ID=$(printf '%s' "$WORKBOOK_ID" | tr '[:upper:]' '[:lower:]')
+  echo "   Mode         : update-in-place"
+fi
 
 echo "   Subscription : $SUBSCRIPTION"
 echo "   Source       : $SOURCE_ID"
