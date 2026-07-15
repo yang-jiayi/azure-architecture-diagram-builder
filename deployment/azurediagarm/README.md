@@ -7,6 +7,7 @@ The production site is deployed to Azure Container Apps and exposed only through
 - Azure Front Door uses the Standard tier, matching the `SQLServerEvo_rg` reference architecture.
 - The Container App uses the Consumption workload profile and can scale to zero.
 - Images use the existing `sqlserverevoacr` Basic registry instead of creating another paid registry.
+- AI generation uses a single pay-as-you-go `gpt-5.4-mini` GlobalStandard deployment with low reasoning effort by default.
 - Upstream checks and deployments run in public-repository GitHub Actions every two hours, so no continuously allocated updater compute is required.
 - Azure Communication Services sends mail only after a deployment succeeds or fails.
 
@@ -20,3 +21,4 @@ The production site is deployed to Azure Container Apps and exposed only through
 - WAF runs in Prevention mode with rate limiting and known AI crawler `User-Agent` blocking.
 - The origin validates `X-Azure-FDID`, preventing direct Container Apps access from bypassing WAF.
 - Application responses include anti-indexing headers and `robots.txt`; these controls discourage compliant crawlers while WAF handles known automated clients.
+- Azure OpenAI requests are proxied server-side and authorized with the Container App's user-assigned managed identity; no API key is embedded in the browser bundle.

@@ -160,6 +160,8 @@ jobs:
           tags: ${{ steps.image.outputs.image }}
           build-args: |
             FRONT_DOOR_ID=${{ steps.frontdoor.outputs.id }}
+            VITE_AZURE_OPENAI_ENDPOINT=${{ vars.AZURE_OPENAI_ENDPOINT }}
+            VITE_AZURE_OPENAI_DEPLOYMENT_GPT54MINI=${{ vars.AZURE_OPENAI_DEPLOYMENT_GPT54MINI }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -177,6 +179,8 @@ jobs:
             --revision-suffix "$revision_suffix" \
             --set-env-vars \
               "PUBLIC_URL=${{ vars.AZURE_APP_URL }}" \
+              "AZURE_CLIENT_ID=${{ vars.AZURE_RUNTIME_CLIENT_ID }}" \
+              "AZURE_OPENAI_ENDPOINT=${{ vars.AZURE_OPENAI_ENDPOINT }}" \
               "UPSTREAM_COMMIT=${{ steps.source.outputs.upstream_commit }}" \
               "CUSTOMIZATION_COMMIT=${{ steps.source.outputs.fork_commit }}" \
               "DEPLOYED_AT=$deployed_at" \

@@ -37,8 +37,8 @@ export interface ModelSettings {
 const STORAGE_KEY = 'azure-diagrams-model-settings';
 
 const DEFAULT_SETTINGS: ModelSettings = {
-  model: 'gpt-5.6-luna',
-  reasoningEffort: 'medium',
+  model: 'gpt-5.4-mini',
+  reasoningEffort: 'low',
   featureOverrides: {}
 };
 
@@ -54,20 +54,20 @@ export const FEATURE_CONFIG: Record<FeatureType, {
   architectureGeneration: {
     displayName: 'Architecture Generation',
     description: 'Creating Azure architecture diagrams',
-    recommendedModel: 'gpt-5.2',
-    recommendedReasoning: 'medium'
+    recommendedModel: 'gpt-5.4-mini',
+    recommendedReasoning: 'low'
   },
   validation: {
     displayName: 'Architecture Validation',
     description: 'WAF validation and security analysis',
-    recommendedModel: 'gpt-5.2',
+    recommendedModel: 'gpt-5.4-mini',
     recommendedReasoning: 'low'
   },
   deploymentGuide: {
     displayName: 'Deployment Guide & Bicep',
     description: 'Generating deployment guides and IaC templates',
-    recommendedModel: 'gpt-5.2',
-    recommendedReasoning: 'medium'
+    recommendedModel: 'gpt-5.4-mini',
+    recommendedReasoning: 'low'
   },
   blueprint: {
     displayName: 'Blueprint Diagrams',
@@ -257,25 +257,38 @@ export function getDeploymentName(model: ModelType): string {
  * Load settings from localStorage
  */
 function loadSettings(): ModelSettings {
+  const availableModels = getAvailableModels();
+  const fallbackModel = availableModels.includes(DEFAULT_SETTINGS.model)
+    ? DEFAULT_SETTINGS.model
+    : (availableModels[0] || DEFAULT_SETTINGS.model);
+
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
       const parsed = JSON.parse(stored);
       // Validate model type
       if (parsed.model && MODEL_CONFIG[parsed.model as ModelType]) {
+        const storedModel = parsed.model as ModelType;
+        const featureOverrides = Object.fromEntries(
+          Object.entries(parsed.featureOverrides || {}).filter(([, override]) => {
+            if (!override || typeof override !== 'object' || !('model' in override)) return false;
+            return isModelAvailable((override as FeatureModelOverride).model);
+          }),
+        ) as Partial<Record<FeatureType, FeatureModelOverride>>;
+
         return {
-          model: parsed.model as ModelType,
+          model: isModelAvailable(storedModel) ? storedModel : fallbackModel,
           reasoningEffort: ['none', 'low', 'medium', 'high'].includes(parsed.reasoningEffort) 
             ? parsed.reasoningEffort 
             : DEFAULT_SETTINGS.reasoningEffort,
-          featureOverrides: parsed.featureOverrides || {}
+          featureOverrides,
         };
       }
     }
   } catch (e) {
     console.warn('Failed to load model settings:', e);
   }
-  return DEFAULT_SETTINGS;
+  return { ...DEFAULT_SETTINGS, model: fallbackModel };
 }
 
 /**

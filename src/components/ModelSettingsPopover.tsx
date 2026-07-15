@@ -264,7 +264,7 @@ const ModelSettingsPopover = forwardRef<HTMLDivElement, ModelSettingsPopoverProp
             <div className="toolbar-dropdown-separator" role="separator" />
 
             <div className="toolbar-dropdown-hint">
-              {' '}{t("Recommended: GPT-5.2 (medium) for generation, GPT-5.1 (none) for fast tasks")}{' '}</div>
+              {' '}{t("Recommended: GPT-5.4 Mini (low) for cost-efficient generation and validation")}{' '}</div>
           </div>
         )}
       </div>

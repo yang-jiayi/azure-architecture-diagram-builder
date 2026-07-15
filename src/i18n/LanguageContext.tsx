@@ -210,6 +210,7 @@ const exactJapanese: Readonly<Record<string, string>> = {
   'Reasoning:': 'Reasoning:',
   'Recent exports': '最近のエクスポート',
   'Recommended settings (from testing):': '推奨設定（テスト結果）:',
+  'Recommended: GPT-5.4 Mini (low) for cost-efficient generation and validation': '推奨: コスト効率の高い生成と Validation には GPT-5.4 Mini（low）',
   'Reference': '参照',
   'Region': 'リージョン',
   'Reliability': '信頼性',

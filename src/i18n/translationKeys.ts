@@ -498,7 +498,7 @@ export const translationKeys = [
   "Recommendation:",
   "Recommended settings (from testing):",
   "Recommended:",
-  "Recommended: GPT-5.2 (medium) for generation, GPT-5.1 (none) for fast tasks",
+  "Recommended: GPT-5.4 Mini (low) for cost-efficient generation and validation",
   "Reference",
   "Reference Architecture",
   "Reference architecture diagram",
