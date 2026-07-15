@@ -5,12 +5,14 @@ import React, { useState } from 'react';
 import { setActiveRegion, getActiveRegion, AVAILABLE_REGIONS, AzureRegion, RegionInfo } from '../services/regionalPricingService';
 import { trackRegionChange } from '../services/telemetryService';
 import './RegionSelector.css';
+import { useLanguage } from '../i18n/LanguageContext';
 
 interface RegionSelectorProps {
   onRegionChange?: (region: AzureRegion) => void;
 }
 
 const RegionSelector: React.FC<RegionSelectorProps> = ({ onRegionChange }) => {
+  const { t } = useLanguage();
   const [selectedRegion, setSelectedRegion] = useState<AzureRegion>(getActiveRegion());
   const [isOpen, setIsOpen] = useState(false);
 
@@ -32,7 +34,7 @@ const RegionSelector: React.FC<RegionSelectorProps> = ({ onRegionChange }) => {
       <button 
         className="region-selector-button"
         onClick={() => setIsOpen(!isOpen)}
-        title="Select pricing region"
+        title={t("Select pricing region")}
       >
         <span className="region-flag">{currentRegionInfo?.flag}</span>
         <span className="region-name">{currentRegionInfo?.displayName}</span>
@@ -55,9 +57,9 @@ const RegionSelector: React.FC<RegionSelectorProps> = ({ onRegionChange }) => {
                     {region.regionType}
                   </span>
                 </div>
-                <div className="region-location">{region.location}, {region.geography}</div>
+                <div className="region-location">{region.location}{t(",")}{' '}{region.geography}</div>
               </div>
-              {selectedRegion === region.id && <span className="checkmark">✓</span>}
+              {selectedRegion === region.id && <span className="checkmark">{t("✓")}</span>}
             </button>
           ))}
         </div>

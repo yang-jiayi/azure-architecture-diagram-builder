@@ -34,6 +34,7 @@ import type {
 import { getServiceIconMapping } from '../data/serviceIconMapping';
 import { loadIcon } from '../utils/iconLoader';
 import './ReferenceArchitectureCanvas.css';
+import { useLanguage } from '../i18n/LanguageContext';
 
 export interface ReferenceArchitectureCanvasProps {
   data: ReferenceArchitecture;
@@ -59,6 +60,7 @@ const ReferenceArchitectureCanvas: React.FC<ReferenceArchitectureCanvasProps> = 
   iconMap,
   actorIconUrl,
 }) => {
+  const { t } = useLanguage();
   // Map each service id to the workflow step numbers it participates in,
   // so tiles can show small numbered badges that tie back to the narrative
   // legend at the bottom of the diagram. This replaces tile-to-tile arrows
@@ -106,7 +108,7 @@ const ReferenceArchitectureCanvas: React.FC<ReferenceArchitectureCanvasProps> = 
     >
       <header className="ref-arch-header">
         <div className="ref-arch-header-text">
-          <div className="ref-arch-eyebrow">Reference Architecture</div>
+          <div className="ref-arch-eyebrow">{t("Reference Architecture")}</div>
           <h1 className="ref-arch-title">{data.title}</h1>
         </div>
         {author && <div className="ref-arch-author">{author}</div>}
@@ -125,7 +127,7 @@ const ReferenceArchitectureCanvas: React.FC<ReferenceArchitectureCanvasProps> = 
       <div className="ref-arch-body">
         {data.dataSources && data.dataSources.length > 0 && (
           <aside className="ref-arch-datasources">
-            <div className="ref-arch-col-header">Data sources</div>
+            <div className="ref-arch-col-header">{t("Data sources")}</div>
             {data.dataSources.map((ds) => (
               <div key={ds.category} className="ref-arch-ds-group">
                 <div className="ref-arch-ds-label">{ds.category}</div>
@@ -165,14 +167,14 @@ const ReferenceArchitectureCanvas: React.FC<ReferenceArchitectureCanvasProps> = 
 
         {data.actors && data.actors.length > 0 && (
           <aside className="ref-arch-actors">
-            <div className="ref-arch-col-header">Actors</div>
+            <div className="ref-arch-col-header">{t("Actors")}</div>
             {data.actors.map((a) => (
               <div key={a.id} className="ref-arch-actor">
                 <div className="ref-arch-actor-icon" aria-hidden>
                   {actorIconUrl ? (
-                    <img src={actorIconUrl} alt="" draggable={false} />
+                    <img src={actorIconUrl} alt={t("")} draggable={false} />
                   ) : (
-                    <span className="ref-arch-actor-glyph">◉</span>
+                    <span className="ref-arch-actor-glyph">{t("◉")}</span>
                   )}
                 </div>
                 <div className="ref-arch-actor-label">{a.label}</div>
@@ -184,7 +186,7 @@ const ReferenceArchitectureCanvas: React.FC<ReferenceArchitectureCanvasProps> = 
 
       {data.foundation && data.foundation.length > 0 && (
         <div className="ref-arch-strip ref-arch-foundation">
-          <span className="ref-arch-strip-label">Foundation</span>
+          <span className="ref-arch-strip-label">{t("Foundation")}</span>
           <div className="ref-arch-strip-items">
             {data.foundation.map((f) => (
               <span key={f} className="ref-arch-chip">
@@ -197,7 +199,7 @@ const ReferenceArchitectureCanvas: React.FC<ReferenceArchitectureCanvasProps> = 
 
       {data.crossCutting && data.crossCutting.length > 0 && (
         <div className="ref-arch-strip ref-arch-crosscutting">
-          <span className="ref-arch-strip-label">Security &amp; Governance</span>
+          <span className="ref-arch-strip-label">{t("Security & Governance")}</span>
           <div className="ref-arch-strip-items">
             {data.crossCutting.map((c) => (
               <span key={c} className="ref-arch-chip ref-arch-chip-muted">
@@ -230,6 +232,7 @@ const ServiceTile: React.FC<{
   steps?: number[];
   band?: string;
 }> = ({ service, preloadedIconUrl, steps, band }) => {
+  const { t } = useLanguage();
   const [iconUrl, setIconUrl] = useState<string>(preloadedIconUrl || '');
   const mountedRef = useRef(true);
 
@@ -266,7 +269,7 @@ const ServiceTile: React.FC<{
       )}
       <div className="ref-arch-tile-icon">
         {iconUrl ? (
-          <img src={iconUrl} alt="" draggable={false} />
+          <img src={iconUrl} alt={t("")} draggable={false} />
         ) : (
           <div className="ref-arch-tile-icon-placeholder" />
         )}

@@ -10,6 +10,7 @@ import {
   EdgeLabelRenderer,
   BaseEdge,
 } from 'reactflow';
+import { useLanguage } from '../i18n/LanguageContext';
 
 const EditableEdge: React.FC<EdgeProps> = ({
   id,
@@ -25,6 +26,7 @@ const EditableEdge: React.FC<EdgeProps> = ({
   data,
   label,
 }) => {
+  const { t } = useLanguage();
   const [isEditing, setIsEditing] = useState(false);
   const [editLabel, setEditLabel] = useState(label?.toString() || '');
   const [isDragging, setIsDragging] = useState(false);
@@ -214,7 +216,7 @@ const EditableEdge: React.FC<EdgeProps> = ({
                 textOverflow: 'ellipsis',
                 userSelect: 'none',
               }}
-              title={`${editLabel || 'Double-click to edit label'}\n(Drag to reposition)`}
+              title={`${editLabel || t("Double-click to edit label")}\n(Drag to reposition)`}
             >
               {editLabel || '(click to add label)'}
             </div>

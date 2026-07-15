@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { trackHelpOpened } from '../services/telemetryService';
 import './HelpLearnPanel.css';
+import { useLanguage } from '../i18n/LanguageContext';
 
 interface HelpLearnPanelProps {
   isOpen: boolean;
@@ -49,6 +50,7 @@ const FEATURES: { icon: React.ReactNode; title: string; body: string }[] = [
 ];
 
 const HelpLearnPanel: React.FC<HelpLearnPanelProps> = ({ isOpen, onClose }) => {
+  const { t, translate } = useLanguage();
   const [section, setSection] = useState<SectionId>('quick-start');
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
 
@@ -83,20 +85,20 @@ const HelpLearnPanel: React.FC<HelpLearnPanelProps> = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="help-overlay" role="dialog" aria-modal="true" aria-label="Help and Learn" onClick={onClose}>
+    <div className="help-overlay" role="dialog" aria-modal="true" aria-label={t("Help and Learn")} onClick={onClose}>
       <div className="help-modal" onClick={(e) => e.stopPropagation()}>
         <div className="help-header">
           <div className="help-title">
             <BookOpen size={20} />
-            <span>Help &amp; Learn</span>
+            <span>{t("Help & Learn")}</span>
           </div>
-          <button className="help-close" onClick={onClose} title="Close" aria-label="Close help">
+          <button className="help-close" onClick={onClose} title={t("Close")} aria-label={t("Close help")}>
             <X size={18} />
           </button>
         </div>
 
         <div className="help-body">
-          <nav className="help-nav" aria-label="Help sections">
+          <nav className="help-nav" aria-label={t("Help sections")}>
             {SECTIONS.map((s) => (
               <button
                 key={s.id}
@@ -104,7 +106,7 @@ const HelpLearnPanel: React.FC<HelpLearnPanelProps> = ({ isOpen, onClose }) => {
                 onClick={() => goToSection(s.id)}
               >
                 {s.icon}
-                <span>{s.label}</span>
+                <span>{translate(s.label)}</span>
               </button>
             ))}
           </nav>
@@ -112,41 +114,31 @@ const HelpLearnPanel: React.FC<HelpLearnPanelProps> = ({ isOpen, onClose }) => {
           <div className="help-content">
             {section === 'quick-start' && (
               <div className="help-section">
-                <h3>Get your first diagram in 3 steps</h3>
+                <h3>{t("Get your first diagram in 3 steps")}</h3>
                 <ol className="help-steps">
                   <li>
-                    <strong>Start it.</strong> Describe your architecture in the <em>Chat</em>
-                    panel (it opens automatically) — or click <em>Generate with AI</em> to type a
-                    prompt or upload a diagram image — then pick a model.
-                  </li>
+                    <strong>{t("Start it.")}</strong> {' '}{t("Describe your architecture in the")}{' '}<em>{t("Chat")}</em>
+                    {' '}{t("panel (it opens automatically) — or click")}{' '}<em>{t("Generate with AI")}</em> {' '}{t("to type a prompt or upload a diagram image — then pick a model.")}{' '}</li>
                   <li>
-                    <strong>Refine it.</strong> Keep chatting to ask for changes —
-                    e.g. “add a load balancer in front of the VMs”. The canvas updates and each
-                    change is saved to version history.
-                  </li>
+                    <strong>{t("Refine it.")}</strong> {' '}{t("Keep chatting to ask for changes — e.g. “add a load balancer in front of the VMs”. The canvas updates and each change is saved to version history.")}{' '}</li>
                   <li>
-                    <strong>Use it.</strong> <em>Validate</em> against the Well‑Architected
-                    Framework, estimate <em>Cost</em>, generate a <em>Deployment Guide</em>, or
-                    export to PNG / Visio / Draw.io / PowerPoint.
-                  </li>
+                    <strong>{t("Use it.")}</strong> <em>{t("Validate")}</em> {' '}{t("against the Well‑Architected Framework, estimate")}{' '}<em>{t("Cost")}</em>{t(", generate a")}{' '}<em>{t("Deployment Guide")}</em>{t(", or export to PNG / Visio / Draw.io / PowerPoint.")}{' '}</li>
                 </ol>
                 <p className="help-callout">
-                  💡 New here? Skim the <button className="help-link" onClick={() => goToSection('features')}>Feature Tour</button> and try an
-                  <button className="help-link" onClick={() => goToSection('prompts')}>Example Prompt</button>.
-                </p>
+                  {' '}{t("💡 New here? Skim the")}{' '}<button className="help-link" onClick={() => goToSection('features')}>{t("Feature Tour")}</button> {' '}{t("and try an")}{' '}<button className="help-link" onClick={() => goToSection('prompts')}>{t("Example Prompt")}</button>{t(".")}{' '}</p>
               </div>
             )}
 
             {section === 'features' && (
               <div className="help-section">
-                <h3>What the tool can do</h3>
+                <h3>{t("What the tool can do")}</h3>
                 <div className="help-feature-list">
                   {FEATURES.map((f) => (
                     <div key={f.title} className="help-feature">
                       <div className="help-feature-icon">{f.icon}</div>
                       <div>
-                        <div className="help-feature-title">{f.title}</div>
-                        <div className="help-feature-body">{f.body}</div>
+                        <div className="help-feature-title">{translate(f.title)}</div>
+                        <div className="help-feature-body">{translate(f.body)}</div>
                       </div>
                     </div>
                   ))}
@@ -156,11 +148,11 @@ const HelpLearnPanel: React.FC<HelpLearnPanelProps> = ({ isOpen, onClose }) => {
 
             {section === 'prompts' && (
               <div className="help-section">
-                <h3>Example prompts</h3>
-                <p className="help-muted">Click to copy, then paste into <em>Generate with AI</em>.</p>
+                <h3>{t("Example prompts")}</h3>
+                <p className="help-muted">{t("Click to copy, then paste into")}{' '}<em>{t("Generate with AI")}</em>{t(".")}</p>
                 <div className="help-prompts">
                   {EXAMPLE_PROMPTS.map((p, i) => (
-                    <button key={i} className="help-prompt" onClick={() => copyPrompt(p, i)} title="Copy prompt">
+                    <button key={i} className="help-prompt" onClick={() => copyPrompt(p, i)} title={t("Copy prompt")}>
                       <span>{p}</span>
                       {copiedIndex === i ? <Check size={16} className="help-prompt-icon copied" /> : <Copy size={16} className="help-prompt-icon" />}
                     </button>
@@ -171,31 +163,31 @@ const HelpLearnPanel: React.FC<HelpLearnPanelProps> = ({ isOpen, onClose }) => {
 
             {section === 'tips' && (
               <div className="help-section">
-                <h3>Tips &amp; FAQ</h3>
+                <h3>{t("Tips & FAQ")}</h3>
                 <div className="help-faq">
                   <div className="help-faq-item">
-                    <div className="help-faq-q">Which model should I use?</div>
-                    <div className="help-faq-a">Start with the recommended default (GPT‑5.2) for balanced quality. Use higher reasoning effort for complex enterprise architectures; lighter models are faster and cheaper for quick drafts.</div>
+                    <div className="help-faq-q">{t("Which model should I use?")}</div>
+                    <div className="help-faq-a">{t("Start with the recommended default (GPT‑5.2) for balanced quality. Use higher reasoning effort for complex enterprise architectures; lighter models are faster and cheaper for quick drafts.")}</div>
                   </div>
                   <div className="help-faq-item">
-                    <div className="help-faq-q">My diagram isn’t quite right — what now?</div>
-                    <div className="help-faq-a">Use <em>Chat</em> to make targeted edits instead of regenerating from scratch. You can also drag nodes, edit connections, and resize groups directly on the canvas.</div>
+                    <div className="help-faq-q">{t("My diagram isn’t quite right — what now?")}</div>
+                    <div className="help-faq-a">{t("Use")}{' '}<em>{t("Chat")}</em> {' '}{t("to make targeted edits instead of regenerating from scratch. You can also drag nodes, edit connections, and resize groups directly on the canvas.")}</div>
                   </div>
                   <div className="help-faq-item">
-                    <div className="help-faq-q">I can’t see my whole diagram — how do I navigate?</div>
-                    <div className="help-faq-a">Scroll to zoom and right‑click‑drag to pan, or drag the mini‑map (bottom‑right) to move around. Click <em>Fit‑to‑view</em> to frame the whole diagram, and use <em>Focus</em> / <em>Hide Toolbar</em> for more space.</div>
+                    <div className="help-faq-q">{t("I can’t see my whole diagram — how do I navigate?")}</div>
+                    <div className="help-faq-a">{t("Scroll to zoom and right‑click‑drag to pan, or drag the mini‑map (bottom‑right) to move around. Click")}{' '}<em>{t("Fit‑to‑view")}</em> {' '}{t("to frame the whole diagram, and use")}{' '}<em>{t("Focus")}</em> {' '}{t("/")}{' '}<em>{t("Hide Toolbar")}</em> {' '}{t("for more space.")}</div>
                   </div>
                   <div className="help-faq-item">
-                    <div className="help-faq-q">Can I import existing infrastructure?</div>
-                    <div className="help-faq-a">Yes — import a Bicep, Terraform, or ARM template, or upload a diagram image, and the AI reconstructs an editable diagram.</div>
+                    <div className="help-faq-q">{t("Can I import existing infrastructure?")}</div>
+                    <div className="help-faq-a">{t("Yes — import a Bicep, Terraform, or ARM template, or upload a diagram image, and the AI reconstructs an editable diagram.")}</div>
                   </div>
                   <div className="help-faq-item">
-                    <div className="help-faq-q">How do I undo an AI change?</div>
-                    <div className="help-faq-a">Open <em>Version History</em> — a snapshot is saved automatically before each AI regeneration, so you can restore any prior state.</div>
+                    <div className="help-faq-q">{t("How do I undo an AI change?")}</div>
+                    <div className="help-faq-a">{t("Open")}{' '}<em>{t("Version History")}</em> {' '}{t("— a snapshot is saved automatically before each AI regeneration, so you can restore any prior state.")}</div>
                   </div>
                   <div className="help-faq-item">
-                    <div className="help-faq-q">Are deployment guides accurate?</div>
-                    <div className="help-faq-a">They’re grounded in official Microsoft Learn docs with citations. Always review commands and Bicep before running them in your environment.</div>
+                    <div className="help-faq-q">{t("Are deployment guides accurate?")}</div>
+                    <div className="help-faq-a">{t("They’re grounded in official Microsoft Learn docs with citations. Always review commands and Bicep before running them in your environment.")}</div>
                   </div>
                 </div>
               </div>
@@ -203,16 +195,15 @@ const HelpLearnPanel: React.FC<HelpLearnPanelProps> = ({ isOpen, onClose }) => {
 
             {section === 'resources' && (
               <div className="help-section">
-                <h3>Resources</h3>
+                <h3>{t("Resources")}</h3>
                 <ul className="help-resources">
                   <li>
                     <a href="https://techcommunity.microsoft.com/blog/azurearchitectureblog/from-prompt-to-production-building-azure-architecture-diagrams-with-ai/4520336" target="_blank" rel="noopener noreferrer">
-                      From Prompt to Production — blog post
-                    </a>
+                      {' '}{t("From Prompt to Production — blog post")}{' '}</a>
                   </li>
-                  <li>Share feedback any time via the <em>Feedback</em> button (bottom‑right).</li>
+                  <li>{t("Share feedback any time via the")}{' '}<em>{t("Feedback")}</em> {' '}{t("button (bottom‑right).")}</li>
                 </ul>
-                <p className="help-muted">More guided content is on the way — see the Help &amp; Learn plan in the repo docs.</p>
+                <p className="help-muted">{t("More guided content is on the way — see the Help & Learn plan in the repo docs.")}</p>
               </div>
             )}
           </div>

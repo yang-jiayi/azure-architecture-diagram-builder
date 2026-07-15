@@ -9,6 +9,7 @@ import { NodePricingConfig } from '../types/pricing';
 import { formatMonthlyCost, getCostColor } from '../utils/pricingHelpers';
 import { isCapacityConsumed } from '../data/serviceIconMapping';
 import './AzureNode.css';
+import { useLanguage } from '../i18n/LanguageContext';
 
 // Map categories to colors
 const getCategoryColor = (category: string): string => {
@@ -36,6 +37,7 @@ const getCategoryColor = (category: string): string => {
 };
 
 const AzureNode: React.FC<NodeProps> = memo(({ data, selected, id }) => {
+  const { t } = useLanguage();
   const [iconUrl, setIconUrl] = useState<string>('');
   const [isEditingLabel, setIsEditingLabel] = useState(false);
   const [label, setLabel] = useState(data.label || 'Azure Service');
@@ -134,7 +136,7 @@ const AzureNode: React.FC<NodeProps> = memo(({ data, selected, id }) => {
         <button
           className="ungroup-button"
           onClick={handleUngroup}
-          title="Remove from group (you can then drag into another group)"
+          title={t("Remove from group (you can then drag into another group)")}
         >
           <Unlink size={14} />
         </button>
@@ -175,7 +177,7 @@ const AzureNode: React.FC<NodeProps> = memo(({ data, selected, id }) => {
             title={
               pricing.isUsageBased
                 ? `Usage-based pricing estimate\n~${formatMonthlyCost(totalCost)}/month\nBased on typical usage patterns\nActual cost varies with consumption\n\nTier: ${pricing.tier}\nRegion: ${pricing.region}`
-                : `Estimated monthly cost\nTier: ${pricing.tier}\nQuantity: ${pricing.quantity}\nRegion: ${pricing.region}\n${pricing.isCustom ? 'Custom pricing' : 'Auto-calculated'}`
+                : `Estimated monthly cost\nTier: ${pricing.tier}\nQuantity: ${pricing.quantity}\nRegion: ${pricing.region}\n${pricing.isCustom ? t("Custom pricing") : t("Auto-calculated")}`
             }
             style={{ 
               background: pricing.isUsageBased
@@ -185,17 +187,16 @@ const AzureNode: React.FC<NodeProps> = memo(({ data, selected, id }) => {
           >
             {pricing.isUsageBased && <Zap size={12} style={{ marginRight: '2px', display: 'inline-block', verticalAlign: 'middle' }} />}
             {pricing.isUsageBased && '~'}{formatMonthlyCost(totalCost)}
-            {pricing.quantity > 1 && <span className="cost-quantity"> x{pricing.quantity}</span>}
+            {pricing.quantity > 1 && <span className="cost-quantity"> {' '}{t("x")}{pricing.quantity}</span>}
           </div>
         )}
         {capacityConsumed && showPricing && (
           <div
             className="cost-badge cost-badge--capacity"
-            title={`Cost included in Fabric Capacity\nThis item consumes Capacity Units (CUs) from the workspace's Fabric Capacity\nrather than billing separately. See the Microsoft Fabric Capacity node for the cost.`}
+            title={t("Cost included in Fabric Capacity\nThis item consumes Capacity Units (CUs) from the workspace's Fabric Capacity\nrather than billing separately. See the Microsoft Fabric Capacity node for the cost.")}
           >
             <Layers size={12} style={{ marginRight: '2px', display: 'inline-block', verticalAlign: 'middle' }} />
-            incl. capacity
-          </div>
+            {' '}{t("incl. capacity")}{' '}</div>
         )}
         {iconUrl ? (
           <img src={iconUrl} alt={label} className={`node-icon ${stylePreset === 'presentation' ? 'node-icon--presentation' : ''}`} />
@@ -221,7 +222,7 @@ const AzureNode: React.FC<NodeProps> = memo(({ data, selected, id }) => {
               <div
                 className="node-label"
                 onDoubleClick={handleLabelDoubleClick}
-                title="Double-click to edit"
+                title={t("Double-click to edit")}
               >
                 {label}
               </div>

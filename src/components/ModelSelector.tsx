@@ -21,12 +21,14 @@ import {
   hasFeatureOverride
 } from '../stores/modelSettingsStore';
 import './ModelSelector.css';
+import { useLanguage } from '../i18n/LanguageContext';
 
 interface ModelSelectorProps {
   compact?: boolean;
 }
 
 const ModelSelector: React.FC<ModelSelectorProps> = ({ compact = false }) => {
+  const { t } = useLanguage();
   const [settings, updateSettings] = useModelSettings();
   const [showAdvanced, setShowAdvanced] = useState(false);
   const availableModels = getAvailableModels();
@@ -130,18 +132,18 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({ compact = false }) => {
                   value={settings.reasoningEffort}
                   onChange={handleReasoningChange}
                   className="reasoning-select"
-                  title="Reasoning effort level"
+                  title={t("Reasoning effort level")}
                 >
-                  <option value="low">Low</option>
-                  <option value="medium">Med</option>
-                  <option value="high">High</option>
+                  <option value="low">{t("Low")}</option>
+                  <option value="medium">{t("Med")}</option>
+                  <option value="high">{t("High")}</option>
                 </select>
               )}
               
               <button
                 className={`advanced-toggle-compact ${showAdvanced ? 'expanded' : ''} ${hasAnyOverride ? 'has-overrides' : ''}`}
                 onClick={() => setShowAdvanced(!showAdvanced)}
-                title="Per-feature model settings"
+                title={t("Per-feature model settings")}
               >
                 <Settings size={14} />
                 {hasAnyOverride && <span className="override-dot" />}
@@ -151,9 +153,9 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({ compact = false }) => {
             {showAdvanced && (
               <div className="compact-advanced-panel">
                 <div className="compact-advanced-header">
-                  <span>Per-Feature Model Overrides</span>
+                  <span>{t("Per-Feature Model Overrides")}</span>
                   {hasAnyOverride && (
-                    <button className="reset-overrides-compact" onClick={resetAllOverrides} title="Reset all to default">
+                    <button className="reset-overrides-compact" onClick={resetAllOverrides} title={t("Reset all to default")}>
                       <RotateCcw size={12} />
                     </button>
                   )}
@@ -175,7 +177,7 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({ compact = false }) => {
                           onChange={(e) => handleFeatureModelChange(feature, e.target.value)}
                           className="compact-feature-select"
                         >
-                          <option value="default">Default ({MODEL_CONFIG[settings.model].displayName})</option>
+                          <option value="default">{t("Default (")}{MODEL_CONFIG[settings.model].displayName}{t(")")}</option>
                           {availableModels.map(model => (
                             <option key={model} value={model}>
                               {MODEL_CONFIG[model].displayName}
@@ -189,9 +191,9 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({ compact = false }) => {
                             onChange={(e) => handleFeatureReasoningChange(feature, e.target.value as ReasoningEffort)}
                             className="compact-reasoning-select"
                           >
-                            <option value="low">Low</option>
-                            <option value="medium">Med</option>
-                            <option value="high">High</option>
+                            <option value="low">{t("Low")}</option>
+                            <option value="medium">{t("Med")}</option>
+                            <option value="high">{t("High")}</option>
                           </select>
                         )}
                       </div>
@@ -200,7 +202,7 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({ compact = false }) => {
                 })}
                 
                 <div className="compact-advanced-footer">
-                  <span className="compact-hint">Rec: {FEATURE_CONFIG.architectureGeneration.recommendedModel} for generation</span>
+                  <span className="compact-hint">{t("Rec:")}{' '}{FEATURE_CONFIG.architectureGeneration.recommendedModel} {' '}{t("for generation")}</span>
                 </div>
               </div>
             )}
@@ -208,19 +210,19 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({ compact = false }) => {
           
           <div className="model-help-panel">
             <div className="help-item">
-              <span className="help-label">Reasoning:</span>
-              <span className="help-text">Low = faster, Med = balanced, High = thorough</span>
+              <span className="help-label">{t("Reasoning:")}</span>
+              <span className="help-text">{t("Low = faster, Med = balanced, High = thorough")}</span>
             </div>
             <div className="help-item">
               <span className="help-icon"><Settings size={10} /></span>
-              <span className="help-text">Click gear for per-feature model overrides</span>
+              <span className="help-text">{t("Click gear for per-feature model overrides")}</span>
             </div>
             <div className="help-divider" />
-            <div className="help-subtitle">Recommended settings (from testing):</div>
+            <div className="help-subtitle">{t("Recommended settings (from testing):")}</div>
             <div className="help-defaults">
-              <span>• Architecture: GPT-5.2 (medium)</span>
-              <span>• Validation: GPT-5.2 (low)</span>
-              <span>• Deployment: GPT-5.2 (medium)</span>
+              <span>{t("• Architecture: GPT-5.2 (medium)")}</span>
+              <span>{t("• Validation: GPT-5.2 (low)")}</span>
+              <span>{t("• Deployment: GPT-5.2 (medium)")}</span>
             </div>
           </div>
         </div>
@@ -232,12 +234,12 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({ compact = false }) => {
     <div className="model-selector">
       <div className="model-selector-header">
         <Settings size={16} />
-        <span>AI Model Settings</span>
+        <span>{t("AI Model Settings")}</span>
       </div>
       
       <div className="model-selector-content">
         <div className="model-selector-group">
-          <label className="model-label">Default Model</label>
+          <label className="model-label">{t("Default Model")}</label>
           <div className="model-buttons">
             {availableModels.map(model => (
               <button
@@ -256,7 +258,7 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({ compact = false }) => {
         
         {currentConfig.isReasoning && (
           <div className="model-selector-group">
-            <label className="model-label">Default Reasoning Effort</label>
+            <label className="model-label">{t("Default Reasoning Effort")}</label>
             <div className="reasoning-buttons">
               {(['none', 'low', 'medium', 'high'] as ReasoningEffort[]).map(level => (
                 <button
@@ -284,15 +286,14 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({ compact = false }) => {
             onClick={() => setShowAdvanced(!showAdvanced)}
           >
             {showAdvanced ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-            <span>Advanced (per-feature)</span>
+            <span>{t("Advanced (per-feature)")}</span>
             {hasAnyOverride && <span className="override-badge">{Object.keys(settings.featureOverrides || {}).length}</span>}
           </button>
           
           {showAdvanced && (
             <div className="advanced-content">
               <p className="advanced-hint">
-                Override the default model for specific features. Leave as "Use default" to use the settings above.
-              </p>
+                {' '}{t("Override the default model for specific features. Leave as \"Use default\" to use the settings above.")}{' '}</p>
               
               {(Object.keys(FEATURE_CONFIG) as FeatureType[]).map(feature => {
                 const featureConfig = FEATURE_CONFIG[feature];
@@ -313,7 +314,7 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({ compact = false }) => {
                         onChange={(e) => handleFeatureModelChange(feature, e.target.value)}
                         className="feature-model-select"
                       >
-                        <option value="default">Use default</option>
+                        <option value="default">{t("Use default")}</option>
                         {availableModels.map(model => (
                           <option key={model} value={model}>
                             {MODEL_CONFIG[model].displayName}
@@ -327,15 +328,15 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({ compact = false }) => {
                           onChange={(e) => handleFeatureReasoningChange(feature, e.target.value as ReasoningEffort)}
                           className="feature-reasoning-select"
                         >
-                          <option value="none">None</option>
-                          <option value="low">Low</option>
-                          <option value="medium">Med</option>
-                          <option value="high">High</option>
+                          <option value="none">{t("None")}</option>
+                          <option value="low">{t("Low")}</option>
+                          <option value="medium">{t("Med")}</option>
+                          <option value="high">{t("High")}</option>
                         </select>
                       )}
                     </div>
                     <div className="feature-recommended">
-                      Recommended: {MODEL_CONFIG[featureConfig.recommendedModel].displayName}
+                      {' '}{t("Recommended:")}{' '}{MODEL_CONFIG[featureConfig.recommendedModel].displayName}
                       {featureConfig.recommendedReasoning && ` (${featureConfig.recommendedReasoning})`}
                     </div>
                   </div>
@@ -345,8 +346,7 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({ compact = false }) => {
               {hasAnyOverride && (
                 <button className="reset-overrides" onClick={resetAllOverrides}>
                   <RotateCcw size={12} />
-                  Reset all to default
-                </button>
+                  {' '}{t("Reset all to default")}{' '}</button>
               )}
             </div>
           )}

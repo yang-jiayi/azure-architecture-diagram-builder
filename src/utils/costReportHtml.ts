@@ -175,7 +175,7 @@ export function costReportToHtml(title: string, markdown: string): string {
   <style>
     :root { color-scheme: light dark; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      font-family: 'Yu Gothic UI', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
       line-height: 1.55; margin: 0; padding: 2rem 1.5rem; max-width: 960px;
       margin-inline: auto; color: #1b1f23; background: #ffffff;
     }
@@ -200,7 +200,7 @@ export function costReportToHtml(title: string, markdown: string): string {
       border-left: 4px solid #0078d4; border-radius: 4px;
     }
     code {
-      font-family: 'SF Mono', Consolas, 'Courier New', monospace;
+      font-family: 'Yu Gothic UI', 'SF Mono', Consolas, 'Courier New', monospace;
       background: #f0f1f3; padding: .1rem .35rem; border-radius: 4px; font-size: .88em;
     }
     pre.mermaid { text-align: center; margin: 1.5rem 0; }

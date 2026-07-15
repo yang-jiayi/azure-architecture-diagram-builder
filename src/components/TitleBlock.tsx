@@ -3,6 +3,7 @@
 
 import React, { useState, useRef, useCallback } from 'react';
 import './TitleBlock.css';
+import { useLanguage } from '../i18n/LanguageContext';
 
 interface TitleBlockProps {
   architectureName?: string;
@@ -19,6 +20,7 @@ const TitleBlock: React.FC<TitleBlockProps> = ({
   date = new Date().toLocaleDateString(),
   onUpdate,
 }) => {
+  const { t } = useLanguage();
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({
     architectureName,
@@ -92,61 +94,61 @@ const TitleBlock: React.FC<TitleBlockProps> = ({
       {isEditing ? (
         <div className="title-block-edit">
           <div className="title-block-row">
-            <label>Name:</label>
+            <label>{t("Name:")}</label>
             <input
               type="text"
               value={editData.architectureName}
               onChange={(e) => setEditData({ ...editData, architectureName: e.target.value })}
-              placeholder="Architecture name"
+              placeholder={t("Architecture name")}
             />
           </div>
           <div className="title-block-row">
-            <label>Author:</label>
+            <label>{t("Author:")}</label>
             <input
               type="text"
               value={editData.author}
               onChange={(e) => setEditData({ ...editData, author: e.target.value })}
-              placeholder="Your name"
+              placeholder={t("Your name")}
             />
           </div>
           <div className="title-block-row">
-            <label>Version:</label>
+            <label>{t("Version:")}</label>
             <input
               type="text"
               value={editData.version}
               onChange={(e) => setEditData({ ...editData, version: e.target.value })}
-              placeholder="1.0"
+              placeholder={t("1.0")}
             />
           </div>
           <div className="title-block-actions">
-            <button onClick={handleSave} className="btn-save">Save</button>
-            <button onClick={handleCancel} className="btn-cancel">Cancel</button>
+            <button onClick={handleSave} className="btn-save">{t("Save")}</button>
+            <button onClick={handleCancel} className="btn-cancel">{t("Cancel")}</button>
           </div>
         </div>
       ) : (
         <div className="title-block-display" onDoubleClick={handleEdit}>
           <div className="title-block-header">
-            <span className="title-block-label">ARCHITECTURE DIAGRAM</span>
+            <span className="title-block-label">{t("ARCHITECTURE DIAGRAM")}</span>
           </div>
           <div className="title-block-content">
             <div className="title-block-row">
-              <span className="title-block-field">Name:</span>
+              <span className="title-block-field">{t("Name:")}</span>
               <span className="title-block-value">{architectureName}</span>
             </div>
             <div className="title-block-row">
-              <span className="title-block-field">Author:</span>
+              <span className="title-block-field">{t("Author:")}</span>
               <span className="title-block-value">{author}</span>
             </div>
             <div className="title-block-row">
-              <span className="title-block-field">Date:</span>
+              <span className="title-block-field">{t("Date:")}</span>
               <span className="title-block-value">{date}</span>
             </div>
             <div className="title-block-row">
-              <span className="title-block-field">Version:</span>
+              <span className="title-block-field">{t("Version:")}</span>
               <span className="title-block-value">{version}</span>
             </div>
           </div>
-          <div className="title-block-hint">Double-click to edit</div>
+          <div className="title-block-hint">{t("Double-click to edit")}</div>
         </div>
       )}
     </div>

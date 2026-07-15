@@ -7,6 +7,7 @@ import { isAzureOpenAIConfigured, generateValidationCritique, ModelOverride } fr
 import { validateArchitecture, ArchitectureValidation, ValidationModelOverride, AIMetrics } from '../services/architectureValidator';
 import { buildValidationConsensus, renderConsensusMarkdown, ConsensusResult } from '../services/validationConsensus';
 import { trackValidationCompared, trackValidationCritiqueRanked, trackValidationFindings } from '../services/telemetryService';
+import { useLanguage } from '../i18n/LanguageContext';
 
 /** Parse the critique's #1-ranked / recommended model from its Markdown. */
 function parseCritiqueWinner(text: string): string | null {
@@ -79,6 +80,7 @@ interface CompareValidationModalProps {
 const CompareValidationModal: React.FC<CompareValidationModalProps> = ({
   isOpen, onClose, onApply, services, connections, groups, architectureDescription,
 }) => {
+  const { t } = useLanguage();
   const availableModels = getAvailableModels();
   const currentSettings = getModelSettings();
 
@@ -656,16 +658,16 @@ const CompareValidationModal: React.FC<CompareValidationModalProps> = ({
         <div className="modal-header cv-header">
           <div className="modal-title">
             <Shield size={20} />
-            <h2>Compare Validation Across Models</h2>
+            <h2>{t("Compare Validation Across Models")}</h2>
           </div>
           <div className="cv-header-actions">
-            <label className="score-toggle" title="Show the underlying 0-100 numeric scores alongside the maturity bands">
+            <label className="score-toggle" title={t("Show the underlying 0-100 numeric scores alongside the maturity bands")}>
               <input
                 type="checkbox"
                 checked={displayPrefs.showNumericScore}
                 onChange={(e) => setDisplayPrefs({ showNumericScore: e.target.checked })}
               />
-              <span>Show numeric score</span>
+              <span>{t("Show numeric score")}</span>
             </label>
             <button className="modal-close" onClick={onClose}>
               <X size={20} />
@@ -678,17 +680,16 @@ const CompareValidationModal: React.FC<CompareValidationModalProps> = ({
           <div className="compare-section cv-arch-summary">
             <h3 className="compare-section-title">
               <Info size={16} />
-              Architecture Being Validated
-            </h3>
+              {' '}{t("Architecture Being Validated")}{' '}</h3>
             <div className="cv-arch-info">
-              <span className="cv-arch-stat">{services.length} services</span>
-              <span className="cv-arch-dot">•</span>
-              <span className="cv-arch-stat">{connections.length} connections</span>
-              <span className="cv-arch-dot">•</span>
-              <span className="cv-arch-stat">{groups?.length || 0} groups</span>
+              <span className="cv-arch-stat">{services.length} {' '}{t("services")}</span>
+              <span className="cv-arch-dot">{t("•")}</span>
+              <span className="cv-arch-stat">{connections.length} {' '}{t("connections")}</span>
+              <span className="cv-arch-dot">{t("•")}</span>
+              <span className="cv-arch-stat">{groups?.length || 0} {' '}{t("groups")}</span>
               {architectureDescription && (
                 <>
-                  <span className="cv-arch-dot">•</span>
+                  <span className="cv-arch-dot">{t("•")}</span>
                   <span className="cv-arch-desc">{architectureDescription.slice(0, 80)}{architectureDescription.length > 80 ? '...' : ''}</span>
                 </>
               )}
@@ -698,21 +699,19 @@ const CompareValidationModal: React.FC<CompareValidationModalProps> = ({
           {/* WAF Pillars Info */}
           <div className="cv-waf-info">
             <p className="cv-waf-intro">
-              Each model validates your architecture against the <strong>Azure Well-Architected Framework</strong> — 
-              Microsoft's set of guiding tenets for improving the quality of cloud workloads across five pillars:
-            </p>
+              {' '}{t("Each model validates your architecture against the")}{' '}<strong>{t("Azure Well-Architected Framework")}</strong> {' '}{t("— Microsoft's set of guiding tenets for improving the quality of cloud workloads across five pillars:")}{' '}</p>
             <div className="cv-waf-pillars">
-              <span className="cv-waf-pillar"><strong>Cost Optimization</strong></span>
-              <span className="cv-waf-pillar"><strong>Operational Excellence</strong></span>
-              <span className="cv-waf-pillar"><strong>Performance Efficiency</strong></span>
-              <span className="cv-waf-pillar"><strong>Reliability</strong></span>
-              <span className="cv-waf-pillar"><strong>Security</strong></span>
+              <span className="cv-waf-pillar"><strong>{t("Cost Optimization")}</strong></span>
+              <span className="cv-waf-pillar"><strong>{t("Operational Excellence")}</strong></span>
+              <span className="cv-waf-pillar"><strong>{t("Performance Efficiency")}</strong></span>
+              <span className="cv-waf-pillar"><strong>{t("Reliability")}</strong></span>
+              <span className="cv-waf-pillar"><strong>{t("Security")}</strong></span>
             </div>
           </div>
 
           {/* Model Selection */}
           <div className="compare-section">
-            <h3 className="compare-section-title">Select Models to Compare</h3>
+            <h3 className="compare-section-title">{t("Select Models to Compare")}</h3>
             <div className="compare-model-grid">
               {availableModels.map(model => {
                 const config = MODEL_CONFIG[model];
@@ -726,7 +725,7 @@ const CompareValidationModal: React.FC<CompareValidationModalProps> = ({
                     title={config.description}
                   >
                     <span className="compare-model-chip-name">{config.displayName}</span>
-                    {config.isReasoning && <span className="compare-model-chip-tag">reasoning</span>}
+                    {config.isReasoning && <span className="compare-model-chip-tag">{t("reasoning")}</span>}
                   </button>
                 );
               })}
@@ -734,7 +733,7 @@ const CompareValidationModal: React.FC<CompareValidationModalProps> = ({
 
             {Array.from(selectedModels).some(m => MODEL_CONFIG[m].isReasoning) && (
               <div className="compare-reasoning-row">
-                <span>Reasoning Effort (for reasoning models):</span>
+                <span>{t("Reasoning Effort (for reasoning models):")}</span>
                 <div className="compare-reasoning-buttons">
                   {(['none', 'low', 'medium', 'high'] as ReasoningEffort[]).map(level => (
                     <button
@@ -759,15 +758,14 @@ const CompareValidationModal: React.FC<CompareValidationModalProps> = ({
               disabled={isRunning || services.length === 0 || selectedModels.size < 2}
             >
               <GitCompare size={18} />
-              Compare Validation Across {selectedModels.size} Models
-            </button>
+              {' '}{t("Compare Validation Across")}{' '}{selectedModels.size} {' '}{t("Models")}{' '}</button>
           )}
 
           {/* Progress */}
           {isRunning && (
             <div className="compare-progress">
               <Loader2 size={16} className="spinner" />
-              <span>Validating with {completedCount}/{results.length} models...</span>
+              <span>{t("Validating with")}{' '}{completedCount}{t("/")}{results.length} {' '}{t("models...")}</span>
             </div>
           )}
 
@@ -775,25 +773,22 @@ const CompareValidationModal: React.FC<CompareValidationModalProps> = ({
           {hasResults && (
             <div className="compare-section">
               <h3 className="compare-section-title">
-                Validation Results
-                {!isRunning && successResults.length > 0 && (
+                {' '}{t("Validation Results")}{' '}{!isRunning && successResults.length > 0 && (
                   <div className="compare-save-actions">
                     <button
                       className="compare-save-btn compare-save-report-btn"
                       onClick={saveComparisonReport}
-                      title="Download a single JSON with all validation results for analysis"
+                      title={t("Download a single JSON with all validation results for analysis")}
                     >
                       <FileJson size={14} />
-                      Save JSON
-                    </button>
+                      {' '}{t("Save JSON")}{' '}</button>
                     <button
                       className="compare-save-btn compare-save-report-btn"
                       onClick={saveComparisonReportMd}
-                      title="Download a formatted markdown report of the comparison"
+                      title={t("Download a formatted markdown report of the comparison")}
                     >
                       <FileText size={14} />
-                      Save Markdown
-                    </button>
+                      {' '}{t("Save Markdown")}{' '}</button>
                   </div>
                 )}
                 {!isRunning && (
@@ -806,10 +801,9 @@ const CompareValidationModal: React.FC<CompareValidationModalProps> = ({
                       setCritiqueByModel(null);
                       handleDismissAvatar();
                     }}
-                    title="Clear results and try again"
+                    title={t("Clear results and try again")}
                   >
-                    New Comparison
-                  </button>
+                    {' '}{t("New Comparison")}{' '}</button>
                 )}
               </h3>
 
@@ -824,11 +818,11 @@ const CompareValidationModal: React.FC<CompareValidationModalProps> = ({
                     </div>
 
                     {result.status === 'pending' && (
-                      <div className="compare-result-pending">Waiting...</div>
+                      <div className="compare-result-pending">{t("Waiting...")}</div>
                     )}
 
                     {result.status === 'running' && (
-                      <div className="compare-result-running">Validating...</div>
+                      <div className="compare-result-running">{t("Validating...")}</div>
                     )}
 
                     {result.status === 'error' && (
@@ -843,7 +837,7 @@ const CompareValidationModal: React.FC<CompareValidationModalProps> = ({
                             {displayPrefs.showNumericScore ? (
                               <>
                                 <span className="cv-score-value">{result.overallScore}</span>
-                                <span className="cv-score-label">/ 100</span>
+                                <span className="cv-score-label">{t("/ 100")}</span>
                               </>
                             ) : (
                               <span
@@ -858,7 +852,7 @@ const CompareValidationModal: React.FC<CompareValidationModalProps> = ({
                             {bandLabel(result.overallScore || 0)}
                           </span>
                           {result.overallScore === highestScore && (
-                            <span className="compare-badge cv-badge-score">Best Score</span>
+                            <span className="compare-badge cv-badge-score">{t("Best Score")}</span>
                           )}
                         </div>
 
@@ -880,23 +874,23 @@ const CompareValidationModal: React.FC<CompareValidationModalProps> = ({
                         <div className="cv-findings-bar">
                           <div className="cv-findings-header">
                             <AlertTriangle size={13} />
-                            <span>{result.totalFindings} findings</span>
+                            <span>{result.totalFindings} {' '}{t("findings")}</span>
                             {result.totalFindings === mostFindings && result.totalFindings! > 0 && (
-                              <span className="compare-badge cv-badge-findings">Most Thorough</span>
+                              <span className="compare-badge cv-badge-findings">{t("Most Thorough")}</span>
                             )}
                           </div>
                           <div className="cv-severity-row">
                             {result.criticalCount! > 0 && (
-                              <span className="cv-sev cv-sev-critical">{result.criticalCount} critical</span>
+                              <span className="cv-sev cv-sev-critical">{result.criticalCount} {' '}{t("critical")}</span>
                             )}
                             {result.highCount! > 0 && (
-                              <span className="cv-sev cv-sev-high">{result.highCount} high</span>
+                              <span className="cv-sev cv-sev-high">{result.highCount} {' '}{t("high")}</span>
                             )}
                             {result.mediumCount! > 0 && (
-                              <span className="cv-sev cv-sev-medium">{result.mediumCount} medium</span>
+                              <span className="cv-sev cv-sev-medium">{result.mediumCount} {' '}{t("medium")}</span>
                             )}
                             {result.lowCount! > 0 && (
-                              <span className="cv-sev cv-sev-low">{result.lowCount} low</span>
+                              <span className="cv-sev cv-sev-low">{result.lowCount} {' '}{t("low")}</span>
                             )}
                           </div>
                         </div>
@@ -904,7 +898,7 @@ const CompareValidationModal: React.FC<CompareValidationModalProps> = ({
                         {/* Quick Wins */}
                         {result.quickWinCount! > 0 && (
                           <div className="cv-quickwins">
-                            ⚡ {result.quickWinCount} quick win{result.quickWinCount! > 1 ? 's' : ''}
+                            {' '}{t("⚡")}{' '}{result.quickWinCount} {' '}{t("quick win")}{result.quickWinCount! > 1 ? 's' : ''}
                           </div>
                         )}
 
@@ -912,21 +906,21 @@ const CompareValidationModal: React.FC<CompareValidationModalProps> = ({
                         <div className="compare-result-metrics">
                           <div className={`compare-metric ${result.metrics.elapsedTimeMs === fastestTime ? 'highlight' : ''}`}>
                             <Clock size={12} />
-                            <span>{(result.metrics.elapsedTimeMs / 1000).toFixed(1)}s</span>
-                            {result.metrics.elapsedTimeMs === fastestTime && <span className="compare-badge">Fastest</span>}
+                            <span>{(result.metrics.elapsedTimeMs / 1000).toFixed(1)}{t("s")}</span>
+                            {result.metrics.elapsedTimeMs === fastestTime && <span className="compare-badge">{t("Fastest")}</span>}
                           </div>
                           <div className={`compare-metric ${result.metrics.totalTokens === leastTokens ? 'highlight' : ''}`}>
                             <Zap size={12} />
-                            <span>{result.metrics.totalTokens?.toLocaleString()} tokens</span>
-                            {result.metrics.totalTokens === leastTokens && <span className="compare-badge">Cheapest</span>}
+                            <span>{result.metrics.totalTokens?.toLocaleString()} {' '}{t("tokens")}</span>
+                            {result.metrics.totalTokens === leastTokens && <span className="compare-badge">{t("Cheapest")}</span>}
                           </div>
                         </div>
 
                         {/* Token breakdown */}
                         <div className="compare-result-tokens">
-                          <span>{result.metrics.promptTokens?.toLocaleString()} in</span>
-                          <span>→</span>
-                          <span>{result.metrics.completionTokens?.toLocaleString()} out</span>
+                          <span>{result.metrics.promptTokens?.toLocaleString()} {' '}{t("in")}</span>
+                          <span>{t("→")}</span>
+                          <span>{result.metrics.completionTokens?.toLocaleString()} {' '}{t("out")}</span>
                         </div>
 
                         {/* Apply button */}
@@ -935,8 +929,7 @@ const CompareValidationModal: React.FC<CompareValidationModalProps> = ({
                           onClick={() => handleApply(result)}
                         >
                           <Shield size={14} />
-                          Use This Validation
-                        </button>
+                          {' '}{t("Use This Validation")}{' '}</button>
                       </>
                     )}
                   </div>
@@ -949,20 +942,16 @@ const CompareValidationModal: React.FC<CompareValidationModalProps> = ({
           {!isRunning && consensus && consensus.findings.length > 0 && (
             <div className="compare-section cv-consensus">
               <h3 className="compare-section-title">
-                🤝 Consensus Findings
-                <span className="cv-consensus-sub">{consensus.totalModels} models · {consensus.highConfidenceCount} high-confidence</span>
+                {' '}{t("🤝 Consensus Findings")}{' '}<span className="cv-consensus-sub">{consensus.totalModels} {' '}{t("models ·")}{' '}{consensus.highConfidenceCount} {' '}{t("high-confidence")}</span>
               </h3>
               <p className="cv-consensus-intro">
-                Merged across all models. Confidence = the share of models that independently flagged
-                each topic — the more models agree, the more you can trust it. Single-model items are
-                kept as <em>exploratory</em> so unique risks aren't lost.
-              </p>
+                {' '}{t("Merged across all models. Confidence = the share of models that independently flagged each topic — the more models agree, the more you can trust it. Single-model items are kept as")}{' '}<em>{t("exploratory")}</em> {' '}{t("so unique risks aren't lost.")}{' '}</p>
               <div className="cv-consensus-list">
                 {consensus.findings.map(f => (
                   <div key={f.topicId} className={`cv-consensus-card band-${f.confidenceBand}`}>
                     <div className="cv-consensus-head">
                       <span className={`cv-conf-pill band-${f.confidenceBand}`}>
-                        {f.confidenceBand === 'high' ? 'High' : f.confidenceBand === 'medium' ? 'Medium' : 'Exploratory'} · {f.modelCount}/{f.totalModels}
+                        {f.confidenceBand === 'high' ? t('High') : f.confidenceBand === 'medium' ? t('Medium') : t('Exploratory')} {' '}{t("·")}{' '}{f.modelCount}{t("/")}{f.totalModels}
                       </span>
                       <span className={`cv-sev-badge sev-${f.severity}`}>{f.severity.toUpperCase()}</span>
                       <span className="cv-consensus-pillar">{f.pillar}</span>
@@ -970,13 +959,13 @@ const CompareValidationModal: React.FC<CompareValidationModalProps> = ({
                     <div className="cv-conf-bar"><span style={{ width: `${Math.round(f.confidence * 100)}%` }} /></div>
                     <div className="cv-consensus-label">{f.label}</div>
                     <div className="cv-consensus-issue">{f.issue}</div>
-                    <div className="cv-consensus-rec"><strong>Fix:</strong> {f.recommendation}</div>
+                    <div className="cv-consensus-rec"><strong>{t("Fix:")}</strong> {f.recommendation}</div>
                     {f.resources.length > 0 && (
                       <div className="cv-consensus-resources">
                         {f.resources.map((r, i) => <span key={i} className="cv-res-chip">{r}</span>)}
                       </div>
                     )}
-                    <div className="cv-consensus-models">Flagged by: {f.models.join(', ')}</div>
+                    <div className="cv-consensus-models">{t("Flagged by:")}{' '}{f.models.join(', ')}</div>
                   </div>
                 ))}
               </div>
@@ -988,10 +977,9 @@ const CompareValidationModal: React.FC<CompareValidationModalProps> = ({
             <div className="compare-section">
               <h3 className="compare-section-title">
                 <Brain size={16} style={{ marginRight: 6 }} />
-                AI Critique
-              </h3>
+                {' '}{t("AI Critique")}{' '}</h3>
               <div className="compare-critique-controls">
-                <span className="compare-critique-label">Critic model:</span>
+                <span className="compare-critique-label">{t("Critic model:")}</span>
                 <select
                   className="compare-critique-model-select"
                   value={criticModel}
@@ -1008,31 +996,30 @@ const CompareValidationModal: React.FC<CompareValidationModalProps> = ({
                   disabled={isCritiquing}
                 >
                   {isCritiquing ? <Loader2 size={14} className="spinner" /> : <Brain size={14} />}
-                  {isCritiquing ? 'Analyzing...' : (critiqueText ? 'Regenerate Critique' : 'Generate AI Critique')}
+                  {isCritiquing ? t('Analyzing...') : (critiqueText ? t('Regenerate Critique') : t('Generate AI Critique'))}
                 </button>
                 {critiqueText && !isCritiquing && (
                   <button
                     className="compare-save-btn compare-save-report-btn"
                     onClick={saveCritiqueAsMd}
-                    title="Save the AI critique as a standalone Markdown file"
+                    title={t("Save the AI critique as a standalone Markdown file")}
                   >
                     <FileText size={14} />
-                    Save Critique
-                  </button>
+                    {' '}{t("Save Critique")}{' '}</button>
                 )}
                 {critiqueText && !isCritiquing && isSpeechConfigured && (
                   <button
                     className={`compare-save-btn compare-avatar-btn${avatarStatus === 'speaking' ? ' active' : ''}`}
                     onClick={avatarStatus === 'speaking' ? handleStopPresenting : handlePresent}
                     disabled={avatarStatus === 'connecting'}
-                    title={avatarStatus === 'speaking' ? 'Stop the avatar presentation' : 'Have an AI avatar present the ranking and recommendation'}
+                    title={avatarStatus === 'speaking' ? t("Stop the avatar presentation") : t("Have an AI avatar present the ranking and recommendation")}
                   >
                     {avatarStatus === 'connecting'
                       ? <Loader2 size={14} className="spinner" />
                       : avatarStatus === 'speaking'
                       ? <StopCircle size={14} />
                       : <MonitorPlay size={14} />}
-                    {avatarStatus === 'connecting' ? 'Connecting...' : avatarStatus === 'speaking' ? 'Stop' : 'Present'}
+                    {avatarStatus === 'connecting' ? t('Connecting...') : avatarStatus === 'speaking' ? t('Stop') : t('Present')}
                   </button>
                 )}
               </div>
@@ -1042,7 +1029,7 @@ const CompareValidationModal: React.FC<CompareValidationModalProps> = ({
               {critiqueText && critiqueByModel && (
                 <div className="compare-critique-output">
                   <div className="compare-critique-reviewer">
-                    Reviewed by {MODEL_CONFIG[critiqueByModel].displayName}
+                    {' '}{t("Reviewed by")}{' '}{MODEL_CONFIG[critiqueByModel].displayName}
                   </div>
                   <pre className="compare-critique-text">{critiqueText}</pre>
                 </div>
@@ -1065,24 +1052,23 @@ const CompareValidationModal: React.FC<CompareValidationModalProps> = ({
           <div className="compare-avatar-panel-header" onPointerDown={onDragStart}>
             <span className="compare-avatar-panel-title">
               {avatarStatus === 'connecting' && <Loader2 size={12} className="spinner" />}
-              {avatarStatus === 'connecting' ? ' Connecting...' :
-               avatarStatus === 'speaking' ? '▶ Presenting' :
-               avatarStatus === 'error' ? 'Error' : 'Ready'}
+              {avatarStatus === 'connecting' ? t('Connecting...') :
+               avatarStatus === 'speaking' ? <>▶ {t('Presenting')}</> :
+               avatarStatus === 'error' ? t('Error') : t('Ready')}
             </span>
             <button
               className="compare-avatar-dismiss"
               onClick={handleDismissAvatar}
               onPointerDown={e => e.stopPropagation()}
-              title="Close"
+              title={t("Close")}
             >
-              ✕
-            </button>
+              {' '}{t("✕")}{' '}</button>
           </div>
           <div className="compare-avatar-video-wrap">
             {avatarStatus === 'connecting' && (
               <div className="compare-avatar-connecting">
                 <Loader2 size={28} className="spinner" />
-                <span>Starting avatar session…</span>
+                <span>{t("Starting avatar session…")}</span>
               </div>
             )}
             {avatarStatus === 'error' && (
@@ -1111,11 +1097,11 @@ const CompareValidationModal: React.FC<CompareValidationModalProps> = ({
           {(avatarStatus === 'ready' || avatarStatus === 'speaking') && critiqueText && (
             <div className="compare-avatar-panel-controls">
               {avatarStatus === 'speaking'
-                ? <button className="compare-avatar-action-btn stop" onClick={handleStopPresenting}><StopCircle size={13} /> Stop</button>
-                : <button className="compare-avatar-action-btn" onClick={handlePresent}><MonitorPlay size={13} /> Re-present</button>}
+                ? <button className="compare-avatar-action-btn stop" onClick={handleStopPresenting}><StopCircle size={13} /> {' '}{t("Stop")}</button>
+                : <button className="compare-avatar-action-btn" onClick={handlePresent}><MonitorPlay size={13} /> {' '}{t("Re-present")}</button>}
             </div>
           )}
-          <div className="avatar-resize-handle" onPointerDown={onResizeStart} title="Drag to resize" />
+          <div className="avatar-resize-handle" onPointerDown={onResizeStart} title={t("Drag to resize")} />
         </div>
       </div>
     </div>

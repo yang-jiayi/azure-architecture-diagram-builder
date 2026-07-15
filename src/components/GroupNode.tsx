@@ -6,6 +6,7 @@ import { NodeProps, NodeResizer, useReactFlow } from 'reactflow';
 import { Palette, Minimize2 } from 'lucide-react';
 import { fitGroupToContent } from '../utils/groupUtils';
 import './GroupNode.css';
+import { useLanguage } from '../i18n/LanguageContext';
 
 // Predefined color palette for groups
 const COLOR_PALETTE = [
@@ -75,6 +76,7 @@ const getGroupColors = (label: string): { bg: string; border: string; header: st
 };
 
 const GroupNode: React.FC<NodeProps> = memo(({ id, data, selected }) => {
+  const { t } = useLanguage();
   const [isEditingLabel, setIsEditingLabel] = useState(false);
   const [label, setLabel] = useState(data.label || 'Group');
   const [showColorPicker, setShowColorPicker] = useState(false);
@@ -149,7 +151,7 @@ const GroupNode: React.FC<NodeProps> = memo(({ id, data, selected }) => {
             <div
               className="group-label"
               onDoubleClick={handleLabelDoubleClick}
-              title="Double-click to edit"
+              title={t("Double-click to edit")}
               style={labelStyle}
             >
               {label}
@@ -158,7 +160,7 @@ const GroupNode: React.FC<NodeProps> = memo(({ id, data, selected }) => {
           <button
             className="fit-to-content-button"
             onClick={handleFitToContent}
-            title="Fit to content"
+            title={t("Fit to content")}
             style={{ color: colors.header }}
           >
             <Minimize2 size={16} />
@@ -166,7 +168,7 @@ const GroupNode: React.FC<NodeProps> = memo(({ id, data, selected }) => {
           <button
             className="color-picker-button"
             onClick={() => setShowColorPicker(!showColorPicker)}
-            title="Change color"
+            title={t("Change color")}
             style={{ color: colors.header }}
           >
             <Palette size={18} />
@@ -175,7 +177,7 @@ const GroupNode: React.FC<NodeProps> = memo(({ id, data, selected }) => {
         
         {showColorPicker && (
           <div className="color-picker-panel">
-            <div className="color-picker-title">Choose Color</div>
+            <div className="color-picker-title">{t("Choose Color")}</div>
             <div className="color-picker-grid">
               {COLOR_PALETTE.map((colorScheme) => (
                 <button

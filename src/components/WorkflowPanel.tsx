@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight, ListOrdered, MonitorPlay, StopCircle, Loader
 import { AvatarPresenter, AvatarStatus } from '../services/avatarPresenter';
 import { useDraggableResizable } from '../hooks/useDraggableResizable';
 import './WorkflowPanel.css';
+import { useLanguage } from '../i18n/LanguageContext';
 
 interface WorkflowStep {
   step: number;
@@ -26,6 +27,7 @@ const WorkflowPanel: React.FC<WorkflowPanelProps> = ({
   onServiceLeave,
   forceCollapsed 
 }) => {
+  const { t } = useLanguage();
   const [isExpanded, setIsExpanded] = useState(true);
   // Click-to-pin: a clicked step keeps its services highlighted until clicked
   // again. Hover still previews; pinned highlight is re-asserted on mouse-leave.
@@ -150,8 +152,8 @@ const WorkflowPanel: React.FC<WorkflowPanelProps> = ({
         <div className="workflow-header" onClick={() => setIsExpanded(!isExpanded)}>
           <div className="workflow-title">
             <ListOrdered size={20} />
-            <h3>Architecture Workflow</h3>
-            <span className="workflow-count">{workflow.length} steps</span>
+            <h3>{t("Architecture Workflow")}</h3>
+            <span className="workflow-count">{workflow.length} {' '}{t("steps")}</span>
           </div>
           <div className="workflow-header-actions">
             {isSpeechConfigured && isExpanded && (
@@ -159,14 +161,14 @@ const WorkflowPanel: React.FC<WorkflowPanelProps> = ({
                 className={`workflow-narrate-btn${avatarStatus === 'speaking' ? ' active' : ''}`}
                 onClick={handleNarrateClick}
                 disabled={avatarStatus === 'connecting'}
-                title={avatarStatus === 'speaking' ? 'Stop narration' : 'Have an AI avatar narrate this workflow'}
+                title={avatarStatus === 'speaking' ? t("Stop narration") : t("Have an AI avatar narrate this workflow")}
               >
                 {avatarStatus === 'connecting'
                   ? <Loader2 size={13} className="spinner" />
                   : avatarStatus === 'speaking'
                   ? <StopCircle size={13} />
                   : <MonitorPlay size={13} />}
-                {avatarStatus === 'connecting' ? 'Connecting…' : avatarStatus === 'speaking' ? 'Stop' : 'Narrate'}
+                {avatarStatus === 'connecting' ? t('Connecting…') : avatarStatus === 'speaking' ? t('Stop') : t('Narrate')}
               </button>
             )}
             <button className="workflow-toggle">
@@ -207,8 +209,8 @@ const WorkflowPanel: React.FC<WorkflowPanelProps> = ({
                     <p>{step.description}</p>
                     {step.services && step.services.length > 0 && (
                       <div className="step-services">
-                        <span className="services-label">Services:</span>
-                        <span className="services-count">{step.services.length} service{step.services.length > 1 ? 's' : ''}</span>
+                        <span className="services-label">{t("Services:")}</span>
+                        <span className="services-count">{step.services.length} {' '}{t("service")}{step.services.length > 1 ? 's' : ''}</span>
                       </div>
                     )}
                   </div>
@@ -232,24 +234,23 @@ const WorkflowPanel: React.FC<WorkflowPanelProps> = ({
         <div className="workflow-avatar-panel-header" onPointerDown={onDragStart}>
           <span className="workflow-avatar-panel-title">
             {avatarStatus === 'connecting' && <Loader2 size={12} className="spinner" />}
-            {avatarStatus === 'connecting' ? ' Connecting...' :
-             avatarStatus === 'speaking' ? '▶ Narrating' :
-             avatarStatus === 'error' ? 'Error' : 'Ready'}
+            {avatarStatus === 'connecting' ? t('Connecting...') :
+             avatarStatus === 'speaking' ? <>▶ {t('Narrating')}</> :
+             avatarStatus === 'error' ? t('Error') : t('Ready')}
           </span>
           <button
             className="workflow-avatar-dismiss"
             onClick={handleDismissAvatar}
             onPointerDown={e => e.stopPropagation()}
-            title="Close"
+            title={t("Close")}
           >
-            ✕
-          </button>
+            {' '}{t("✕")}{' '}</button>
         </div>
         <div className="workflow-avatar-video-wrap">
           {avatarStatus === 'connecting' && (
             <div className="workflow-avatar-connecting">
               <Loader2 size={28} className="spinner" />
-              <span>Starting avatar session…</span>
+              <span>{t("Starting avatar session…")}</span>
             </div>
           )}
           {avatarStatus === 'error' && (
@@ -278,11 +279,11 @@ const WorkflowPanel: React.FC<WorkflowPanelProps> = ({
         {(avatarStatus === 'ready' || avatarStatus === 'speaking') && (
           <div className="workflow-avatar-panel-controls">
             {avatarStatus === 'speaking'
-              ? <button className="workflow-avatar-action-btn stop" onClick={() => { cancelledRef.current = true; void presenterRef.current?.stopSpeaking(); }}><StopCircle size={13} /> Stop</button>
-              : <button className="workflow-avatar-action-btn" onClick={() => void startNarration()}><MonitorPlay size={13} /> Re-narrate</button>}
+              ? <button className="workflow-avatar-action-btn stop" onClick={() => { cancelledRef.current = true; void presenterRef.current?.stopSpeaking(); }}><StopCircle size={13} /> {' '}{t("Stop")}</button>
+              : <button className="workflow-avatar-action-btn" onClick={() => void startNarration()}><MonitorPlay size={13} /> {' '}{t("Re-narrate")}</button>}
           </div>
         )}
-        <div className="avatar-resize-handle" onPointerDown={onResizeStart} title="Drag to resize" />
+        <div className="avatar-resize-handle" onPointerDown={onResizeStart} title={t("Drag to resize")} />
       </div>
     </>
   );

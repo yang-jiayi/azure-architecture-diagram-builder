@@ -5,6 +5,7 @@ import { useState, useCallback } from 'react';
 import { Terminal, Upload, X, AlertCircle, Check } from 'lucide-react';
 import { importFromAzPrototype, type ImportResult } from '../services/azPrototypeService';
 import './AzPrototypeImportModal.css';
+import { useLanguage } from '../i18n/LanguageContext';
 
 export interface AzPrototypeImportModalProps {
   isOpen: boolean;
@@ -20,6 +21,7 @@ export default function AzPrototypeImportModal({
   onClose,
   onImport,
 }: AzPrototypeImportModalProps) {
+  const { t } = useLanguage();
   const [stage, setStage] = useState<ImportStage>('select');
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
@@ -74,9 +76,9 @@ export default function AzPrototypeImportModal({
         <div className="azp-modal-header">
           <div className="azp-modal-title">
             <Terminal size={22} />
-            <span>Import from az prototype</span>
+            <span>{t("Import from az prototype")}</span>
           </div>
-          <button className="azp-modal-close" onClick={handleClose} aria-label="Close">
+          <button className="azp-modal-close" onClick={handleClose} aria-label={t("Close")}>
             <X size={20} />
           </button>
         </div>
@@ -85,20 +87,14 @@ export default function AzPrototypeImportModal({
           {stage === 'select' && (
             <>
               <p className="azp-modal-description">
-                Import an architecture manifest produced by <code>az prototype design</code> or
-                exported from the Azure Diagram Builder. The architecture will be rendered as an
-                interactive, editable diagram with official Azure icons, workflow animation, and
-                multi-region cost estimation.
-              </p>
+                {' '}{t("Import an architecture manifest produced by")}{' '}<code>{t("az prototype design")}</code> {' '}{t("or exported from the Azure Diagram Builder. The architecture will be rendered as an interactive, editable diagram with official Azure icons, workflow animation, and multi-region cost estimation.")}{' '}</p>
 
               <label className="azp-import-dropzone">
                 <Upload size={32} />
                 <span className="azp-import-dropzone-text">
-                  Click to select an <code>az-prototype-manifest.json</code> file
-                </span>
+                  {' '}{t("Click to select an")}{' '}<code>{t("az-prototype-manifest.json")}</code> {' '}{t("file")}{' '}</span>
                 <span className="azp-import-dropzone-hint">
-                  Accepts .json files (az prototype manifest or raw architecture JSON)
-                </span>
+                  {' '}{t("Accepts .json files (az prototype manifest or raw architecture JSON)")}{' '}</span>
                 <input
                   type="file"
                   accept=".json"
@@ -113,51 +109,51 @@ export default function AzPrototypeImportModal({
             <>
               <div className="azp-import-success">
                 <Check size={18} />
-                <span>Successfully parsed <strong>{fileName}</strong></span>
+                <span>{t("Successfully parsed")}{' '}<strong>{fileName}</strong></span>
               </div>
 
               <div className="azp-modal-stats">
                 <div className="azp-stat">
                   <span className="azp-stat-value">{importResult.stats.services}</span>
-                  <span className="azp-stat-label">Services</span>
+                  <span className="azp-stat-label">{t("Services")}</span>
                 </div>
                 <div className="azp-stat">
                   <span className="azp-stat-value">{importResult.stats.connections}</span>
-                  <span className="azp-stat-label">Connections</span>
+                  <span className="azp-stat-label">{t("Connections")}</span>
                 </div>
                 <div className="azp-stat">
                   <span className="azp-stat-value">{importResult.stats.groups}</span>
-                  <span className="azp-stat-label">Groups</span>
+                  <span className="azp-stat-label">{t("Groups")}</span>
                 </div>
                 <div className="azp-stat">
                   <span className="azp-stat-value">{importResult.stats.workflowSteps}</span>
-                  <span className="azp-stat-label">Workflow Steps</span>
+                  <span className="azp-stat-label">{t("Workflow Steps")}</span>
                 </div>
               </div>
 
               <div className="azp-import-project-info">
                 <div className="azp-import-project-row">
-                  <span className="azp-import-project-key">Project</span>
+                  <span className="azp-import-project-key">{t("Project")}</span>
                   <span className="azp-import-project-val">{importResult.projectInfo.name}</span>
                 </div>
                 <div className="azp-import-project-row">
-                  <span className="azp-import-project-key">Region</span>
+                  <span className="azp-import-project-key">{t("Region")}</span>
                   <span className="azp-import-project-val">{importResult.projectInfo.location}</span>
                 </div>
                 <div className="azp-import-project-row">
-                  <span className="azp-import-project-key">IaC tool</span>
+                  <span className="azp-import-project-key">{t("IaC tool")}</span>
                   <span className="azp-import-project-val">{importResult.projectInfo.iacTool}</span>
                 </div>
                 {importResult.hasCostData && (
                   <div className="azp-import-project-row">
-                    <span className="azp-import-project-key">Cost data</span>
-                    <span className="azp-import-project-val azp-import-project-val--green">Included</span>
+                    <span className="azp-import-project-key">{t("Cost data")}</span>
+                    <span className="azp-import-project-val azp-import-project-val--green">{t("Included")}</span>
                   </div>
                 )}
               </div>
 
               <div className="azp-import-services-preview">
-                <div className="azp-import-services-title">Services to import:</div>
+                <div className="azp-import-services-title">{t("Services to import:")}</div>
                 <div className="azp-import-services-list">
                   {importResult.architecture.services.map((svc) => (
                     <span key={svc.id} className="azp-import-service-chip">{svc.name}</span>
@@ -171,28 +167,25 @@ export default function AzPrototypeImportModal({
             <div className="azp-import-error">
               <AlertCircle size={20} />
               <div>
-                <strong>Import failed</strong>
+                <strong>{t("Import failed")}</strong>
                 <p>{errorMessage}</p>
               </div>
               <button className="azp-btn azp-btn--secondary" onClick={reset}>
-                Try again
-              </button>
+                {' '}{t("Try again")}{' '}</button>
             </div>
           )}
         </div>
 
         <div className="azp-modal-footer">
           <button className="azp-btn azp-btn--secondary" onClick={handleClose}>
-            Cancel
-          </button>
+            {' '}{t("Cancel")}{' '}</button>
           {stage === 'preview' && (
             <button
               className="azp-btn azp-btn--primary"
               onClick={handleConfirmImport}
             >
               <Upload size={18} />
-              Import to Diagram
-            </button>
+              {' '}{t("Import to Diagram")}{' '}</button>
           )}
         </div>
       </div>

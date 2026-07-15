@@ -4,6 +4,7 @@
 import { useState } from 'react';
 import { Terminal, Download, X } from 'lucide-react';
 import './AzPrototypeExportModal.css';
+import { useLanguage } from '../i18n/LanguageContext';
 
 export interface AzPrototypeExportModalProps {
   isOpen: boolean;
@@ -55,6 +56,7 @@ export default function AzPrototypeExportModal({
   hasCostData,
   architectureName,
 }: AzPrototypeExportModalProps) {
+  const { t } = useLanguage();
   const [projectName, setProjectName] = useState(
     () => (architectureName || 'my-prototype').toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').slice(0, 40),
   );
@@ -76,51 +78,48 @@ export default function AzPrototypeExportModal({
         <div className="azp-modal-header">
           <div className="azp-modal-title">
             <Terminal size={22} />
-            <span>Export to az prototype</span>
+            <span>{t("Export to az prototype")}</span>
           </div>
-          <button className="azp-modal-close" onClick={onClose} aria-label="Close">
+          <button className="azp-modal-close" onClick={onClose} aria-label={t("Close")}>
             <X size={20} />
           </button>
         </div>
 
         <div className="azp-modal-body">
           <p className="azp-modal-description">
-            Export this architecture as an <code>az prototype</code> manifest. Use the downloaded file
-            with <code>az prototype design --import</code> to skip the discovery phase and go straight
-            to IaC generation with full governance, security review, and staged deployment.
-          </p>
+            {' '}{t("Export this architecture as an")}{' '}<code>{t("az prototype")}</code> {' '}{t("manifest. Use the downloaded file with")}{' '}<code>{t("az prototype design --import")}</code> {' '}{t("to skip the discovery phase and go straight to IaC generation with full governance, security review, and staged deployment.")}{' '}</p>
 
           <div className="azp-modal-stats">
             <div className="azp-stat">
               <span className="azp-stat-value">{serviceCount}</span>
-              <span className="azp-stat-label">Services</span>
+              <span className="azp-stat-label">{t("Services")}</span>
             </div>
             <div className="azp-stat">
               <span className="azp-stat-value">{connectionCount}</span>
-              <span className="azp-stat-label">Connections</span>
+              <span className="azp-stat-label">{t("Connections")}</span>
             </div>
             <div className="azp-stat">
               <span className="azp-stat-value">{groupCount}</span>
-              <span className="azp-stat-label">Groups</span>
+              <span className="azp-stat-label">{t("Groups")}</span>
             </div>
           </div>
 
           <div className="azp-form">
             <div className="azp-form-group">
-              <label htmlFor="azp-project-name">Project name</label>
+              <label htmlFor="azp-project-name">{t("Project name")}</label>
               <input
                 id="azp-project-name"
                 type="text"
                 value={projectName}
                 onChange={(e) => setProjectName(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))}
-                placeholder="my-prototype"
+                placeholder={t("my-prototype")}
                 maxLength={40}
               />
-              <span className="azp-form-hint">Used by <code>az prototype init --name</code></span>
+              <span className="azp-form-hint">{t("Used by")}{' '}<code>{t("az prototype init --name")}</code></span>
             </div>
 
             <div className="azp-form-group">
-              <label htmlFor="azp-location">Azure region</label>
+              <label htmlFor="azp-location">{t("Azure region")}</label>
               <select
                 id="azp-location"
                 value={location}
@@ -130,20 +129,20 @@ export default function AzPrototypeExportModal({
                   <option key={r.value} value={r.value}>{r.label}</option>
                 ))}
               </select>
-              <span className="azp-form-hint">Used by <code>az prototype init --location</code></span>
+              <span className="azp-form-hint">{t("Used by")}{' '}<code>{t("az prototype init --location")}</code></span>
             </div>
 
             <div className="azp-form-group">
-              <label htmlFor="azp-iac-tool">IaC tool</label>
+              <label htmlFor="azp-iac-tool">{t("IaC tool")}</label>
               <select
                 id="azp-iac-tool"
                 value={iacTool}
                 onChange={(e) => setIacTool(e.target.value as 'bicep' | 'terraform')}
               >
-                <option value="bicep">Bicep</option>
-                <option value="terraform">Terraform</option>
+                <option value="bicep">{t("Bicep")}</option>
+                <option value="terraform">{t("Terraform")}</option>
               </select>
-              <span className="azp-form-hint">Used by <code>az prototype init --iac-tool</code></span>
+              <span className="azp-form-hint">{t("Used by")}{' '}<code>{t("az prototype init --iac-tool")}</code></span>
             </div>
 
             <div className="azp-form-group azp-form-group--checkbox">
@@ -153,8 +152,7 @@ export default function AzPrototypeExportModal({
                   checked={includeWorkflow}
                   onChange={(e) => setIncludeWorkflow(e.target.checked)}
                 />
-                Include workflow steps
-              </label>
+                {' '}{t("Include workflow steps")}{' '}</label>
             </div>
 
             <div className="azp-form-group azp-form-group--checkbox">
@@ -165,14 +163,13 @@ export default function AzPrototypeExportModal({
                   onChange={(e) => setIncludeCosts(e.target.checked)}
                   disabled={!hasCostData}
                 />
-                Include cost estimates
-                {!hasCostData && <span className="azp-form-hint"> (no pricing data on diagram)</span>}
+                {' '}{t("Include cost estimates")}{' '}{!hasCostData && <span className="azp-form-hint"> {' '}{t("(no pricing data on diagram)")}</span>}
               </label>
             </div>
           </div>
 
           <div className="azp-cli-preview">
-            <div className="azp-cli-preview-title">After downloading, run:</div>
+            <div className="azp-cli-preview-title">{t("After downloading, run:")}</div>
             <pre className="azp-cli-code">
 {`# Initialize the project
 az prototype init --name ${projectName || 'my-prototype'} \\
@@ -192,16 +189,14 @@ az prototype deploy`}
 
         <div className="azp-modal-footer">
           <button className="azp-btn azp-btn--secondary" onClick={onClose}>
-            Cancel
-          </button>
+            {' '}{t("Cancel")}{' '}</button>
           <button
             className="azp-btn azp-btn--primary"
             onClick={handleExport}
             disabled={serviceCount === 0}
           >
             <Download size={18} />
-            Export Manifest
-          </button>
+            {' '}{t("Export Manifest")}{' '}</button>
         </div>
       </div>
     </div>

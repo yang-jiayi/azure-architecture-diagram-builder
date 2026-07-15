@@ -221,7 +221,7 @@
   border-radius: 6px;
   overflow-x: auto;
   margin: 0;
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', monospace;
+  font-family: 'Yu Gothic UI', 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', monospace;
   font-size: 13px;
   line-height: 1.5;
 }
@@ -306,7 +306,7 @@
   padding: 2px 6px;
   background: #f3f4f6;
   border-radius: 3px;
-  font-family: 'Monaco', 'Menlo', monospace;
+  font-family: 'Yu Gothic UI', 'Monaco', 'Menlo', monospace;
   font-size: 13px;
   color: #1f2937;
 }
@@ -503,7 +503,7 @@
   background: #bae6fd;
   padding: 2px 6px;
   border-radius: 4px;
-  font-family: 'Monaco', 'Menlo', monospace;
+  font-family: 'Yu Gothic UI', 'Monaco', 'Menlo', monospace;
   font-size: 12px;
   color: #075985;
 }
@@ -565,7 +565,7 @@
 .bicep-template-filename {
   font-size: 12px;
   color: #64748b;
-  font-family: 'Monaco', 'Menlo', monospace;
+  font-family: 'Yu Gothic UI', 'Monaco', 'Menlo', monospace;
 }
 
 .bicep-template-actions {
@@ -618,7 +618,7 @@
   background: #1e293b;
   color: #e2e8f0;
   font-size: 12px;
-  font-family: 'Monaco', 'Menlo', monospace;
+  font-family: 'Yu Gothic UI', 'Monaco', 'Menlo', monospace;
 }
 
 .bicep-code-header .copy-button {
@@ -632,7 +632,7 @@
   padding: 16px;
   background: #0f172a;
   color: #e2e8f0;
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', monospace;
+  font-family: 'Yu Gothic UI', 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', monospace;
   font-size: 13px;
   line-height: 1.6;
   overflow-x: auto;

@@ -5,6 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { X, MessageSquare, Send, CheckCircle2 } from 'lucide-react';
 import { submitFeedback, FeedbackContext } from '../services/feedbackService';
 import './FeedbackModal.css';
+import { useLanguage } from '../i18n/LanguageContext';
 
 interface FeedbackModalProps {
   isOpen: boolean;
@@ -32,6 +33,7 @@ const CATEGORIES = [
 ];
 
 const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose, context, preselectedRating }) => {
+  const { t, translate } = useLanguage();
   const [rating, setRating] = useState<number | null>(null);
   const [category, setCategory] = useState(CATEGORIES[0]);
   const [comment, setComment] = useState('');
@@ -63,7 +65,7 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose, context,
 
   const handleSubmit = async () => {
     if (rating === null) {
-      setError('Please pick a rating so we know how you feel.');
+      setError(translate('Please pick a rating so we know how you feel.'));
       return;
     }
     setError(null);
@@ -85,9 +87,8 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose, context,
         <div className="modal-header">
           <h2>
             <MessageSquare size={24} />
-            Share Feedback
-          </h2>
-          <button className="modal-close" onClick={handleClose} title="Close">
+            {' '}{t("Share Feedback")}{' '}</h2>
+          <button className="modal-close" onClick={handleClose} title={t("Close")}>
             <X size={24} />
           </button>
         </div>
@@ -95,28 +96,27 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose, context,
         {submitted ? (
           <div className="modal-body feedback-thanks">
             <CheckCircle2 size={48} className="feedback-thanks-icon" />
-            <h3>Thank you!</h3>
-            <p>Your feedback helps us improve the Azure Architecture Diagram Builder.</p>
-            <button className="btn-primary" onClick={handleClose}>Done</button>
+            <h3>{t("Thank you!")}</h3>
+            <p>{t("Your feedback helps us improve the Azure Architecture Diagram Builder.")}</p>
+            <button className="btn-primary" onClick={handleClose}>{t("Done")}</button>
           </div>
         ) : (
           <>
             <div className="modal-body">
               <p className="feedback-intro">
-                How is your experience so far? Your input shapes what we build next.
-              </p>
+                {' '}{t("How is your experience so far? Your input shapes what we build next.")}{' '}</p>
 
               <div className="form-group">
-                <label>How do you feel about the app?</label>
-                <div className="feedback-ratings" role="radiogroup" aria-label="Rating">
+                <label>{t("How do you feel about the app?")}</label>
+                <div className="feedback-ratings" role="radiogroup" aria-label={t("Rating")}>
                   {RATINGS.map((r) => (
                     <button
                       key={r.value}
                       type="button"
                       role="radio"
                       aria-checked={rating === r.value}
-                      aria-label={r.label}
-                      title={r.label}
+                      aria-label={translate(r.label)}
+                      title={translate(r.label)}
                       className={`feedback-rating ${rating === r.value ? 'selected' : ''}`}
                       onClick={() => { setRating(r.value); setError(null); }}
                       disabled={isSubmitting}
@@ -128,7 +128,7 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose, context,
               </div>
 
               <div className="form-group">
-                <label htmlFor="feedback-category">Category</label>
+                <label htmlFor="feedback-category">{t("Category")}</label>
                 <select
                   id="feedback-category"
                   className="feedback-category"
@@ -137,51 +137,46 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose, context,
                   disabled={isSubmitting}
                 >
                   {CATEGORIES.map((c) => (
-                    <option key={c} value={c}>{c}</option>
+                    <option key={c} value={c}>{translate(c)}</option>
                   ))}
                 </select>
               </div>
 
               <div className="form-group">
                 <label htmlFor="feedback-comment">
-                  Tell us more (optional)
-                  <span className="label-hint">What worked well, what was confusing, what you'd love to see</span>
+                  {' '}{t("Tell us more (optional)")}{' '}<span className="label-hint">{t("What worked well, what was confusing, what you'd love to see")}</span>
                 </label>
                 <textarea
                   id="feedback-comment"
                   className="feedback-comment"
-                  placeholder="e.g., The diagram generation is great, but I'd love to export to Visio..."
+                  placeholder={t("e.g., The diagram generation is great, but I'd love to export to Visio...")}
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
                   rows={4}
                   maxLength={1000}
                   disabled={isSubmitting}
                 />
-                <div className="character-count">{comment.length}/1000</div>
+                <div className="character-count">{comment.length}{t("/1000")}</div>
               </div>
 
               {error && <div className="feedback-error">{error}</div>}
 
               <div className="feedback-hint">
-                🔒 We collect your rating and comment to improve the app. Don't include sensitive information.
-              </div>
+                {' '}{t("🔒 We collect your rating and comment to improve the app. Don't include sensitive information.")}{' '}</div>
             </div>
 
             <div className="modal-actions">
               <button className="btn-secondary" onClick={handleClose} disabled={isSubmitting}>
-                Cancel
-              </button>
+                {' '}{t("Cancel")}{' '}</button>
               <button className="btn-primary" onClick={handleSubmit} disabled={isSubmitting}>
                 {isSubmitting ? (
                   <>
                     <div className="spinner-small"></div>
-                    Sending...
-                  </>
+                    {' '}{t("Sending...")}{' '}</>
                 ) : (
                   <>
                     <Send size={18} />
-                    Send Feedback
-                  </>
+                    {' '}{t("Send Feedback")}{' '}</>
                 )}
               </button>
             </div>

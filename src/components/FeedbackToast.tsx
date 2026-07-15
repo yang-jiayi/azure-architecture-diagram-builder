@@ -5,6 +5,7 @@ import React, { useState } from 'react';
 import { X, MessageSquarePlus, CheckCircle2 } from 'lucide-react';
 import { submitFeedback, FeedbackContext } from '../services/feedbackService';
 import './FeedbackToast.css';
+import { useLanguage } from '../i18n/LanguageContext';
 
 interface FeedbackToastProps {
   isOpen: boolean;
@@ -23,6 +24,7 @@ const RATINGS: { value: number; emoji: string; label: string }[] = [
 ];
 
 const FeedbackToast: React.FC<FeedbackToastProps> = ({ isOpen, onClose, onAddComment, context }) => {
+  const { t, translate } = useLanguage();
   const [rated, setRated] = useState<number | null>(null);
 
   const handleRate = (rating: number) => {
@@ -36,32 +38,31 @@ const FeedbackToast: React.FC<FeedbackToastProps> = ({ isOpen, onClose, onAddCom
   if (!isOpen) return null;
 
   return (
-    <div className={`feedback-toast ${rated ? 'rated' : ''}`} role="dialog" aria-label="Quick feedback">
-      <button className="feedback-toast-close" onClick={onClose} title="Dismiss" aria-label="Dismiss">
+    <div className={`feedback-toast ${rated ? 'rated' : ''}`} role="dialog" aria-label={t("Quick feedback")}>
+      <button className="feedback-toast-close" onClick={onClose} title={t("Dismiss")} aria-label={t("Dismiss")}>
         <X size={16} />
       </button>
 
       {rated ? (
         <div className="feedback-toast-thanks">
           <CheckCircle2 size={18} className="feedback-toast-thanks-icon" />
-          <span>Thanks! Want to add a quick note?</span>
+          <span>{t("Thanks! Want to add a quick note?")}</span>
           <button className="feedback-toast-link" onClick={() => onAddComment(rated)}>
             <MessageSquarePlus size={15} />
-            Add a comment
-          </button>
+            {' '}{t("Add a comment")}{' '}</button>
         </div>
       ) : (
         <>
-          <div className="feedback-toast-prompt">How did that diagram turn out?</div>
-          <div className="feedback-toast-ratings" role="radiogroup" aria-label="Rating">
+          <div className="feedback-toast-prompt">{t("How did that diagram turn out?")}</div>
+          <div className="feedback-toast-ratings" role="radiogroup" aria-label={t("Rating")}>
             {RATINGS.map((r) => (
               <button
                 key={r.value}
                 type="button"
                 role="radio"
                 aria-checked="false"
-                aria-label={r.label}
-                title={r.label}
+                aria-label={translate(r.label)}
+                title={translate(r.label)}
                 className="feedback-toast-rating"
                 onClick={() => handleRate(r.value)}
               >

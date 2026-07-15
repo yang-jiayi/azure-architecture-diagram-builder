@@ -5,12 +5,14 @@ import React, { useState, useEffect } from 'react';
 import { Search, ChevronDown, ChevronRight, ChevronLeft } from 'lucide-react';
 import { iconCategories, loadIconsFromCategory, AzureIcon, loadIcon } from '../utils/iconLoader';
 import './IconPalette.css';
+import { useLanguage } from '../i18n/LanguageContext';
 
 interface IconPaletteProps {
   forceCollapsed?: number;
 }
 
 const IconPalette: React.FC<IconPaletteProps> = ({ forceCollapsed }) => {
+  const { t } = useLanguage();
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   useEffect(() => {
@@ -113,12 +115,12 @@ const IconPalette: React.FC<IconPaletteProps> = ({ forceCollapsed }) => {
       <button 
         className="collapse-toggle" 
         onClick={() => setIsCollapsed(!isCollapsed)}
-        title={isCollapsed ? 'Expand panel' : 'Collapse panel'}
+        title={isCollapsed ? t("Expand panel") : t("Collapse panel")}
       >
         {isCollapsed ? (
           <>
             <ChevronRight size={20} />
-            <span className="collapse-label">Azure Services</span>
+            <span className="collapse-label">{t("Azure Services")}</span>
           </>
         ) : (
           <ChevronLeft size={20} />
@@ -127,12 +129,12 @@ const IconPalette: React.FC<IconPaletteProps> = ({ forceCollapsed }) => {
       {!isCollapsed && (
         <>
           <div className="palette-header">
-            <h2>Azure Services</h2>
+            <h2>{t("Azure Services")}</h2>
             <div className="search-box">
           <Search size={16} />
           <input
             type="text"
-            placeholder="Search services..."
+            placeholder={t("Search services...")}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -155,7 +157,7 @@ const IconPalette: React.FC<IconPaletteProps> = ({ forceCollapsed }) => {
               >
                 {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                 <span className="category-title">{category}</span>
-                {isExpanded && <span className="icon-count">({filteredIcons.length})</span>}
+                {isExpanded && <span className="icon-count">{t("(")}{filteredIcons.length}{t(")")}</span>}
               </div>
               
               {isExpanded && (
@@ -174,14 +176,14 @@ const IconPalette: React.FC<IconPaletteProps> = ({ forceCollapsed }) => {
                           {iconUrl ? (
                             <img src={iconUrl} alt={icon.name} className="icon-image" />
                           ) : (
-                            <div className="icon-placeholder">Loading...</div>
+                            <div className="icon-placeholder">{t("Loading...")}</div>
                           )}
                           <span className="icon-label">{icon.name}</span>
                         </div>
                       );
                     })
                   ) : (
-                    <div className="no-icons">Loading icons...</div>
+                    <div className="no-icons">{t("Loading icons...")}</div>
                   )}
                 </div>
               )}

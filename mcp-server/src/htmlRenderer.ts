@@ -71,7 +71,7 @@ export function renderHtml(layout: LayoutResult, title?: string, options: Render
 <title>${esc(diagramTitle)}</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: #f8f9fa; overflow: hidden; }
+  body { font-family: 'Yu Gothic UI', 'Segoe UI', system-ui, -apple-system, sans-serif; background: #f8f9fa; overflow: hidden; }
 
   /* Dark theme */
   body.dark { background: #1E1E1E; }
@@ -122,7 +122,7 @@ export function renderHtml(layout: LayoutResult, title?: string, options: Render
   .edges-layer { position: absolute; top: 0; left: 0; pointer-events: none; }
   .edge-path { fill: none; stroke-width: 1.5; }
   .edge-label {
-    font-family: 'Segoe UI', system-ui, sans-serif; font-size: 10px;
+    font-family: 'Yu Gothic UI', 'Segoe UI', system-ui, sans-serif; font-size: 10px;
     paint-order: stroke; stroke: white; stroke-width: 3px;
   }
 

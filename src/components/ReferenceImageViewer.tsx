@@ -4,6 +4,7 @@
 import React, { useState, useRef } from 'react';
 import { Image, X, Maximize2, Minimize2 } from 'lucide-react';
 import './ReferenceImageViewer.css';
+import { useLanguage } from '../i18n/LanguageContext';
 
 interface ReferenceImageViewerProps {
   imageUrl: string;
@@ -16,6 +17,7 @@ const MAX_W = 700;
 const MAX_H = 700;
 
 const ReferenceImageViewer: React.FC<ReferenceImageViewerProps> = ({ imageUrl, onDismiss }) => {
+  const { t } = useLanguage();
   const [isExpanded, setIsExpanded] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [pos, setPos] = useState(() => ({
@@ -74,7 +76,7 @@ const ReferenceImageViewer: React.FC<ReferenceImageViewerProps> = ({ imageUrl, o
         onClick={() => setIsCollapsed(false)}
       >
         <Image size={16} />
-        <span>Reference</span>
+        <span>{t("Reference")}</span>
       </div>
     );
   }
@@ -86,12 +88,12 @@ const ReferenceImageViewer: React.FC<ReferenceImageViewerProps> = ({ imageUrl, o
         <div className="ref-image-overlay" onClick={() => setIsExpanded(false)}>
           <div className="ref-image-overlay-content" onClick={(e) => e.stopPropagation()}>
             <div className="ref-image-overlay-header">
-              <span><Image size={16} /> Reference Diagram</span>
-              <button onClick={() => setIsExpanded(false)} className="ref-image-close-btn" title="Close">
+              <span><Image size={16} /> {' '}{t("Reference Diagram")}</span>
+              <button onClick={() => setIsExpanded(false)} className="ref-image-close-btn" title={t("Close")}>
                 <X size={18} />
               </button>
             </div>
-            <img src={imageUrl} alt="Reference architecture diagram" className="ref-image-full" />
+            <img src={imageUrl} alt={t("Reference architecture diagram")} className="ref-image-full" />
           </div>
         </div>
       )}
@@ -109,23 +111,22 @@ const ReferenceImageViewer: React.FC<ReferenceImageViewerProps> = ({ imageUrl, o
         >
           <span className="ref-image-label">
             <Image size={12} />
-            Reference
-          </span>
+            {' '}{t("Reference")}{' '}</span>
           <div className="ref-image-actions">
-            <button onPointerDown={e => e.stopPropagation()} onClick={() => setIsExpanded(true)} title="Expand" className="ref-image-btn">
+            <button onPointerDown={e => e.stopPropagation()} onClick={() => setIsExpanded(true)} title={t("Expand")} className="ref-image-btn">
               <Maximize2 size={12} />
             </button>
-            <button onPointerDown={e => e.stopPropagation()} onClick={() => setIsCollapsed(true)} title="Minimize" className="ref-image-btn">
+            <button onPointerDown={e => e.stopPropagation()} onClick={() => setIsCollapsed(true)} title={t("Minimize")} className="ref-image-btn">
               <Minimize2 size={12} />
             </button>
-            <button onPointerDown={e => e.stopPropagation()} onClick={onDismiss} title="Dismiss" className="ref-image-btn ref-image-btn-dismiss">
+            <button onPointerDown={e => e.stopPropagation()} onClick={onDismiss} title={t("Dismiss")} className="ref-image-btn ref-image-btn-dismiss">
               <X size={12} />
             </button>
           </div>
         </div>
         <img
           src={imageUrl}
-          alt="Reference architecture diagram"
+          alt={t("Reference architecture diagram")}
           className="ref-image-thumb"
           style={{ height: imageHeight }}
           onClick={() => setIsExpanded(true)}

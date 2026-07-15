@@ -109,7 +109,7 @@ export async function exportDiagramAsPptx(
     fontSize: 24,
     bold: true,
     color: t.titleText,
-    fontFace: 'Segoe UI',
+    fontFace: 'Yu Gothic UI',
     valign: 'middle',
     wrap: true,
   });
@@ -119,7 +119,7 @@ export async function exportDiagramAsPptx(
     x: 9.9, y: ACCENT_H + 0.05, w: 3.08, h: HEADER_H - 0.1,
     fontSize: 10,
     color: t.metaText,
-    fontFace: 'Segoe UI',
+    fontFace: 'Yu Gothic UI',
     align: 'right',
     valign: 'middle',
   });
@@ -146,7 +146,7 @@ export async function exportDiagramAsPptx(
     x: 0.35, y: FOOTER_Y, w: W - 0.7, h: FOOTER_H,
     fontSize: 8,
     color: t.footerText,
-    fontFace: 'Segoe UI',
+    fontFace: 'Yu Gothic UI',
     valign: 'middle',
   });
 

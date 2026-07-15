@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { Node } from 'reactflow';
 import './AlignmentToolbar.css';
+import { useLanguage } from '../i18n/LanguageContext';
 
 interface AlignmentToolbarProps {
   selectedNodes: Node[];
@@ -21,29 +22,30 @@ interface AlignmentToolbarProps {
 }
 
 const AlignmentToolbar: React.FC<AlignmentToolbarProps> = ({ selectedNodes, onAlign }) => {
+  const { t } = useLanguage();
   if (selectedNodes.length < 2) return null;
 
   return (
     <div className="alignment-toolbar">
       <div className="toolbar-section">
-        <span className="toolbar-label">Align:</span>
+        <span className="toolbar-label">{t("Align:")}</span>
         <button 
           onClick={() => onAlign('left')} 
-          title="Align Left"
+          title={t("Align Left")}
           className="toolbar-btn"
         >
           <AlignStartHorizontal size={18} />
         </button>
         <button 
           onClick={() => onAlign('center-h')} 
-          title="Align Center Horizontal"
+          title={t("Align Center Horizontal")}
           className="toolbar-btn"
         >
           <AlignCenterHorizontal size={18} />
         </button>
         <button 
           onClick={() => onAlign('right')} 
-          title="Align Right"
+          title={t("Align Right")}
           className="toolbar-btn"
         >
           <AlignEndHorizontal size={18} />
@@ -55,21 +57,21 @@ const AlignmentToolbar: React.FC<AlignmentToolbarProps> = ({ selectedNodes, onAl
       <div className="toolbar-section">
         <button 
           onClick={() => onAlign('top')} 
-          title="Align Top"
+          title={t("Align Top")}
           className="toolbar-btn"
         >
           <AlignStartVertical size={18} />
         </button>
         <button 
           onClick={() => onAlign('center-v')} 
-          title="Align Center Vertical"
+          title={t("Align Center Vertical")}
           className="toolbar-btn"
         >
           <AlignCenterVertical size={18} />
         </button>
         <button 
           onClick={() => onAlign('bottom')} 
-          title="Align Bottom"
+          title={t("Align Bottom")}
           className="toolbar-btn"
         >
           <AlignEndVertical size={18} />
@@ -79,17 +81,17 @@ const AlignmentToolbar: React.FC<AlignmentToolbarProps> = ({ selectedNodes, onAl
       <div className="toolbar-separator"></div>
 
       <div className="toolbar-section">
-        <span className="toolbar-label">Distribute:</span>
+        <span className="toolbar-label">{t("Distribute:")}</span>
         <button 
           onClick={() => onAlign('distribute-h')} 
-          title="Distribute Horizontally"
+          title={t("Distribute Horizontally")}
           className="toolbar-btn"
         >
           <AlignHorizontalDistributeCenter size={18} />
         </button>
         <button 
           onClick={() => onAlign('distribute-v')} 
-          title="Distribute Vertically"
+          title={t("Distribute Vertically")}
           className="toolbar-btn"
         >
           <AlignVerticalDistributeCenter size={18} />
@@ -97,8 +99,7 @@ const AlignmentToolbar: React.FC<AlignmentToolbarProps> = ({ selectedNodes, onAl
       </div>
 
       <div className="toolbar-info">
-        {selectedNodes.length} nodes selected
-      </div>
+        {selectedNodes.length} {' '}{t("nodes selected")}{' '}</div>
     </div>
   );
 };

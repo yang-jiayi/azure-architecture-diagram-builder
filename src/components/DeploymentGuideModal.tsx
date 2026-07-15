@@ -5,6 +5,7 @@ import React, { useState } from 'react';
 import { X, Download, Copy, Check, ChevronDown, ChevronUp, FileCode, Package, Clock, Zap } from 'lucide-react';
 import { DeploymentGuide, downloadDeploymentGuide, downloadBicepTemplate, downloadAllBicepTemplates, BicepModule } from '../services/deploymentGuideGenerator';
 import './DeploymentGuideModal.css';
+import { useLanguage } from '../i18n/LanguageContext';
 
 interface DeploymentGuideModalProps {
   guide: DeploymentGuide | null;
@@ -14,6 +15,7 @@ interface DeploymentGuideModalProps {
 }
 
 const DeploymentGuideModal: React.FC<DeploymentGuideModalProps> = ({ guide, isOpen, onClose, isLoading }) => {
+  const { t } = useLanguage();
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [expandedSections, setExpandedSections] = useState<Set<number>>(new Set([0]));
   const [expandedBicep, setExpandedBicep] = useState<Set<number>>(new Set([0]));
@@ -64,7 +66,7 @@ const DeploymentGuideModal: React.FC<DeploymentGuideModalProps> = ({ guide, isOp
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content deployment-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>📋 Deployment Guide</h2>
+          <h2>{t("📋 Deployment Guide")}</h2>
           <button className="modal-close" onClick={onClose}>
             <X size={24} />
           </button>
@@ -73,7 +75,7 @@ const DeploymentGuideModal: React.FC<DeploymentGuideModalProps> = ({ guide, isOp
         {isLoading ? (
           <div className="modal-loading">
             <div className="spinner"></div>
-            <p>Generating comprehensive deployment guide...</p>
+            <p>{t("Generating comprehensive deployment guide...")}</p>
           </div>
         ) : guide ? (
           <>
@@ -84,22 +86,20 @@ const DeploymentGuideModal: React.FC<DeploymentGuideModalProps> = ({ guide, isOp
               <p className="guide-overview">{guide.overview}</p>
               <div className="guide-meta">
                 <span className="meta-item">
-                  ⏱️ Estimated Time: <strong>{guide.estimatedTime}</strong>
+                  {' '}{t("⏱️ Estimated Time:")}{' '}<strong>{guide.estimatedTime}</strong>
                 </span>
                 {guide.metrics && (
                   <span className="meta-item ai-metrics-inline">
                     <Clock size={14} />
-                    Generated in {(guide.metrics.elapsedTimeMs / 1000).toFixed(1)}s
-                    <Zap size={14} style={{ marginLeft: '12px' }} />
-                    {guide.metrics.promptTokens.toLocaleString()} in → {guide.metrics.completionTokens.toLocaleString()} out ({guide.metrics.totalTokens.toLocaleString()} tokens)
-                  </span>
+                    {' '}{t("Generated in")}{' '}{(guide.metrics.elapsedTimeMs / 1000).toFixed(1)}{t("s")}{' '}<Zap size={14} style={{ marginLeft: '12px' }} />
+                    {guide.metrics.promptTokens.toLocaleString()} {' '}{t("in →")}{' '}{guide.metrics.completionTokens.toLocaleString()} {' '}{t("out (")}{guide.metrics.totalTokens.toLocaleString()} {' '}{t("tokens)")}{' '}</span>
                 )}
               </div>
             </div>
 
             {/* Prerequisites */}
             <div className="guide-section">
-              <h4>✅ Prerequisites</h4>
+              <h4>{t("✅ Prerequisites")}</h4>
               <ul className="prerequisites-list">
                 {guide.prerequisites.map((prereq, index) => (
                   <li key={index}>{prereq}</li>
@@ -109,7 +109,7 @@ const DeploymentGuideModal: React.FC<DeploymentGuideModalProps> = ({ guide, isOp
 
             {/* Deployment Steps */}
             <div className="guide-section">
-              <h4>🚀 Deployment Steps</h4>
+              <h4>{t("🚀 Deployment Steps")}</h4>
               <div className="steps-list">
                 {guide.deploymentSteps.map((step, index) => (
                   <div key={index} className="step-card">
@@ -135,7 +135,7 @@ const DeploymentGuideModal: React.FC<DeploymentGuideModalProps> = ({ guide, isOp
                         {step.commands && step.commands.length > 0 && (
                           <div className="commands-section">
                             <div className="commands-header">
-                              <span>Commands</span>
+                              <span>{t("Commands")}</span>
                             </div>
                             {step.commands.map((cmd, cmdIndex) => (
                               <div key={cmdIndex} className="command-block">
@@ -143,7 +143,7 @@ const DeploymentGuideModal: React.FC<DeploymentGuideModalProps> = ({ guide, isOp
                                 <button
                                   className="copy-button"
                                   onClick={() => handleCopy(cmd, index * 100 + cmdIndex)}
-                                  title="Copy to clipboard"
+                                  title={t("Copy to clipboard")}
                                 >
                                   {copiedIndex === index * 100 + cmdIndex ? (
                                     <Check size={16} />
@@ -158,7 +158,7 @@ const DeploymentGuideModal: React.FC<DeploymentGuideModalProps> = ({ guide, isOp
 
                         {step.notes && (
                           <div className="step-notes">
-                            <strong>📝 Note:</strong> {step.notes}
+                            <strong>{t("📝 Note:")}</strong> {step.notes}
                           </div>
                         )}
                       </div>
@@ -171,7 +171,7 @@ const DeploymentGuideModal: React.FC<DeploymentGuideModalProps> = ({ guide, isOp
             {/* Configuration */}
             {guide.configuration && guide.configuration.length > 0 && (
               <div className="guide-section">
-                <h4>⚙️ Configuration</h4>
+                <h4>{t("⚙️ Configuration")}</h4>
                 {guide.configuration.map((section, sectionIndex) => (
                   <div key={sectionIndex} className="configuration-section">
                     <h5>{section.section}</h5>
@@ -179,9 +179,9 @@ const DeploymentGuideModal: React.FC<DeploymentGuideModalProps> = ({ guide, isOp
                       <table>
                         <thead>
                           <tr>
-                            <th>Setting</th>
-                            <th>Value</th>
-                            <th>Description</th>
+                            <th>{t("Setting")}</th>
+                            <th>{t("Value")}</th>
+                            <th>{t("Description")}</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -205,7 +205,7 @@ const DeploymentGuideModal: React.FC<DeploymentGuideModalProps> = ({ guide, isOp
             {/* Post-Deployment */}
             {guide.postDeployment && guide.postDeployment.length > 0 && (
               <div className="guide-section">
-                <h4>✔️ Post-Deployment Validation</h4>
+                <h4>{t("✔️ Post-Deployment Validation")}</h4>
                 <ul className="validation-list">
                   {guide.postDeployment.map((item, index) => (
                     <li key={index}>
@@ -220,10 +220,9 @@ const DeploymentGuideModal: React.FC<DeploymentGuideModalProps> = ({ guide, isOp
             {/* References — Microsoft Learn grounding (Phase 1) */}
             {guide.groundingSources && guide.groundingSources.length > 0 && (
               <div className="guide-section grounding-section">
-                <h4>📚 Grounded with Microsoft Learn</h4>
+                <h4>{t("📚 Grounded with Microsoft Learn")}</h4>
                 <p className="grounding-note">
-                  This guide was informed by the following official documentation:
-                </p>
+                  {' '}{t("This guide was informed by the following official documentation:")}{' '}</p>
                 <ul className="grounding-list">
                   {guide.groundingSources.map((src, index) => (
                     <li key={index}>
@@ -238,19 +237,17 @@ const DeploymentGuideModal: React.FC<DeploymentGuideModalProps> = ({ guide, isOp
             {guide.bicepTemplates && guide.bicepTemplates.length > 0 && (
               <div className="guide-section bicep-section">
                 <div className="bicep-header">
-                  <h4><FileCode size={20} /> Infrastructure as Code (Bicep)</h4>
+                  <h4><FileCode size={20} /> {' '}{t("Infrastructure as Code (Bicep)")}</h4>
                   <button 
                     className="btn-download-all-bicep"
                     onClick={handleDownloadAllBicep}
-                    title="Download all Bicep templates"
+                    title={t("Download all Bicep templates")}
                   >
                     <Package size={16} />
-                    Download All Templates
-                  </button>
+                    {' '}{t("Download All Templates")}{' '}</button>
                 </div>
                 <p className="bicep-description">
-                  Production-ready Bicep templates for automated infrastructure deployment. 
-                  Deploy with: <code>az deployment group create --resource-group &lt;rg-name&gt; --template-file main.bicep</code>
+                  {' '}{t("Production-ready Bicep templates for automated infrastructure deployment. Deploy with:")}{' '}<code>{t("az deployment group create --resource-group <rg-name> --template-file main.bicep")}</code>
                 </p>
                 <div className="bicep-templates-list">
                   {guide.bicepTemplates.map((template, index) => (
@@ -294,7 +291,7 @@ const DeploymentGuideModal: React.FC<DeploymentGuideModalProps> = ({ guide, isOp
                               <button
                                 className="copy-button"
                                 onClick={() => handleCopy(template.content, 1000 + index)}
-                                title="Copy to clipboard"
+                                title={t("Copy to clipboard")}
                               >
                                 {copiedIndex === 1000 + index ? (
                                   <Check size={14} />
@@ -316,15 +313,15 @@ const DeploymentGuideModal: React.FC<DeploymentGuideModalProps> = ({ guide, isOp
             {/* Troubleshooting */}
             {guide.troubleshooting && guide.troubleshooting.length > 0 && (
               <div className="guide-section troubleshooting-section">
-                <h4>🔧 Troubleshooting</h4>
+                <h4>{t("🔧 Troubleshooting")}</h4>
                 <div className="troubleshooting-list">
                   {guide.troubleshooting.map((item, index) => (
                     <div key={index} className="troubleshooting-item">
                       <div className="troubleshooting-problem">
-                        <strong>Problem:</strong> {item.issue}
+                        <strong>{t("Problem:")}</strong> {item.issue}
                       </div>
                       <div className="troubleshooting-solution">
-                        <strong>Solution:</strong> {item.solution}
+                        <strong>{t("Solution:")}</strong> {item.solution}
                       </div>
                     </div>
                   ))}
@@ -338,16 +335,14 @@ const DeploymentGuideModal: React.FC<DeploymentGuideModalProps> = ({ guide, isOp
             <div className="modal-actions">
               <button className="btn-secondary" onClick={handleDownload}>
                 <Download size={18} />
-                Download Guide
-              </button>
+                {' '}{t("Download Guide")}{' '}</button>
               <button className="btn-primary" onClick={onClose}>
-                Close
-              </button>
+                {' '}{t("Close")}{' '}</button>
             </div>
           </>
         ) : (
           <div className="modal-empty">
-            <p>No deployment guide available.</p>
+            <p>{t("No deployment guide available.")}</p>
           </div>
         )}
       </div>

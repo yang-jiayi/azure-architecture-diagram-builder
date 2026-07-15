@@ -3,6 +3,7 @@
 
 import React, { useState, useRef, useCallback } from 'react';
 import './ModelBadge.css';
+import { useLanguage } from '../i18n/LanguageContext';
 
 interface ModelBadgeProps {
   modelName: string;
@@ -10,6 +11,7 @@ interface ModelBadgeProps {
 }
 
 const ModelBadge: React.FC<ModelBadgeProps> = ({ modelName, elapsedTimeMs }) => {
+  const { t } = useLanguage();
   const [dragPosition, setDragPosition] = useState<{ x: number; y: number } | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const dragOffsetRef = useRef({ x: 0, y: 0 });
@@ -55,14 +57,13 @@ const ModelBadge: React.FC<ModelBadgeProps> = ({ modelName, elapsedTimeMs }) => 
       style={style}
       onMouseDown={handleMouseDown}
     >
-      <span className="model-generation-badge-icon">🤖</span>
+      <span className="model-generation-badge-icon">{t("🤖")}</span>
       <span className="model-generation-badge-text">
-        Generated with <strong>{modelName}</strong>
+        {' '}{t("Generated with")}{' '}<strong>{modelName}</strong>
       </span>
       {elapsedTimeMs != null && (
         <span className="model-generation-badge-time">
-          {(elapsedTimeMs / 1000).toFixed(1)}s
-        </span>
+          {(elapsedTimeMs / 1000).toFixed(1)}{t("s")}{' '}</span>
       )}
     </div>
   );

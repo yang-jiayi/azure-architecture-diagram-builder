@@ -13,6 +13,7 @@ import { useModelSettings, MODEL_CONFIG, getAvailableModels, ModelType, Reasonin
 import { trackImageImport } from '../services/telemetryService';
 import { buildModificationPrompt } from '../services/modificationPrompt';
 import './AIArchitectureGenerator.css';
+import { useLanguage } from '../i18n/LanguageContext';
 
 type GenerationMode = 'topology' | 'reference' | 'blueprint' | 'both';
 
@@ -52,6 +53,7 @@ interface AIArchitectureGeneratorProps {
 }
 
 const AIArchitectureGenerator: React.FC<AIArchitectureGeneratorProps> = ({ onGenerate, onReferenceArchitecture, onBlueprintArchitecture, currentArchitecture }) => {
+  const { t, translate } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const [description, setDescription] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -215,12 +217,12 @@ const AIArchitectureGenerator: React.FC<AIArchitectureGeneratorProps> = ({ onGen
 
   const handleGenerate = async () => {
     if (!description.trim()) {
-      setError('Please describe your architecture');
+      setError(translate('Please describe your architecture'));
       return;
     }
 
     if (!isAzureOpenAIConfigured()) {
-      setError('Azure OpenAI is not configured. Please check your environment variables.');
+      setError(translate('Azure OpenAI is not configured. Please check your environment variables.'));
       return;
     }
 
@@ -284,7 +286,7 @@ const AIArchitectureGenerator: React.FC<AIArchitectureGeneratorProps> = ({ onGen
           await exportReferenceArchitectureAsPng(ref);
         } catch (err) {
           console.warn('Reference architecture PNG export failed:', err);
-          setError('PNG export failed. See console for details.');
+          setError(translate('PNG export failed. See console for details.'));
         }
 
         setDescription('');
@@ -309,7 +311,7 @@ const AIArchitectureGenerator: React.FC<AIArchitectureGeneratorProps> = ({ onGen
           await exportBlueprintArchitectureAsPng(bp, { legendPosition });
         } catch (err) {
           console.warn('Blueprint architecture PNG export failed:', err);
-          setError('PNG export failed. See console for details.');
+          setError(translate('PNG export failed. See console for details.'));
         }
 
         setDescription('');
@@ -409,7 +411,7 @@ const AIArchitectureGenerator: React.FC<AIArchitectureGeneratorProps> = ({ onGen
             await exportBlueprintArchitectureAsPng(bpResult, { legendPosition });
           } catch (err) {
             console.warn('Blueprint architecture PNG export failed:', err);
-            setError('Blueprint PNG export failed. See console for details.');
+            setError(translate('Blueprint PNG export failed. See console for details.'));
           }
         }
 
@@ -447,7 +449,7 @@ const AIArchitectureGenerator: React.FC<AIArchitectureGeneratorProps> = ({ onGen
         setUploadedImageUrl(null);
       }, 45000); // Give user 45 seconds to review results or type a modification
     } catch (err: any) {
-      setError(err.message || 'Failed to generate architecture. Please try again.');
+      setError(err.message || translate('Failed to generate architecture. Please try again.'));
     } finally {
       setIsGenerating(false);
     }
@@ -467,11 +469,10 @@ const AIArchitectureGenerator: React.FC<AIArchitectureGeneratorProps> = ({ onGen
           setError('');
           setImageAnalyzed(false);
         }}
-        title="Generate architecture with AI"
+        title={t("Generate architecture with AI")}
       >
         <Sparkles size={18} />
-        Generate with AI
-      </button>
+        {' '}{t("Generate with AI")}{' '}</button>
 
       {isOpen && (
         <div className="modal-overlay" onClick={() => setIsOpen(false)}>
@@ -479,7 +480,7 @@ const AIArchitectureGenerator: React.FC<AIArchitectureGeneratorProps> = ({ onGen
             <div className="modal-header">
               <div className="modal-title">
                 <Sparkles size={20} />
-                <h2>AI Architecture Generator</h2>
+                <h2>{t("AI Architecture Generator")}</h2>
               </div>
               <button className="modal-close" onClick={() => setIsOpen(false)}>
                 <X size={20} />
@@ -491,27 +492,24 @@ const AIArchitectureGenerator: React.FC<AIArchitectureGeneratorProps> = ({ onGen
               <div className="modal-col modal-col-left">
               <p className="modal-description">
                 {mode === 'reference' ? (
-                  <>Describe the workload in plain English and AI will generate a <strong>publication-style reference architecture</strong> with stages (Ingest → Process → Serve), a foundation strip, and cross-cutting governance rails — in the style of the Azure Architecture Center.</>
+                  <>{t("Describe the workload in plain English and AI will generate a")}{' '}<strong>{t("publication-style reference architecture")}</strong> {' '}{t("with stages (Ingest → Process → Serve), a foundation strip, and cross-cutting governance rails — in the style of the Azure Architecture Center.")}</>
                 ) : mode === 'blueprint' ? (
-                  <>Describe the workload and AI will sketch a <strong>whiteboard-style blueprint</strong> with nested zones (Azure / VNet / On-prem) and numbered, labeled arrows showing the end-to-end flow — like an architect explaining a system at a whiteboard.</>
+                  <>{t("Describe the workload and AI will sketch a")}{' '}<strong>{t("whiteboard-style blueprint")}</strong> {' '}{t("with nested zones (Azure / VNet / On-prem) and numbered, labeled arrows showing the end-to-end flow — like an architect explaining a system at a whiteboard.")}</>
                 ) : mode === 'both' ? (
-                  <>Generate <strong>both</strong> a deployable topology (on the canvas) and a whiteboard-style blueprint (PNG) from the same prompt. Useful when you want a working diagram to edit and a polished visual to share.</>
+                  <>{t("Generate")}{' '}<strong>{t("both")}</strong> {' '}{t("a deployable topology (on the canvas) and a whiteboard-style blueprint (PNG) from the same prompt. Useful when you want a working diagram to edit and a polished visual to share.")}</>
                 ) : (
-                  <>Describe your Azure architecture in plain English, and AI will automatically
-                  generate a diagram with the appropriate services and connections.
-                  You can also <strong>upload an existing diagram</strong> (screenshot, whiteboard photo, or export from other tools)
-                  and AI will analyze it to create your architecture.</>
+                  <>{t("Describe your Azure architecture in plain English, and AI will automatically generate a diagram with the appropriate services and connections. You can also")}{' '}<strong>{t("upload an existing diagram")}</strong> {' '}{t("(screenshot, whiteboard photo, or export from other tools) and AI will analyze it to create your architecture.")}</>
                 )}
               </p>
 
               <div className="form-group">
-                <label htmlFor="architecture-description">Architecture Description or Modification</label>
+                <label htmlFor="architecture-description">{t("Architecture Description or Modification")}</label>
                 <textarea
                   id="architecture-description"
                   className="form-textarea"
                   placeholder={imageAnalyzed 
-                    ? "AI has analyzed your diagram. Review the description above, make any adjustments, then click Generate." 
-                    : "Describe a new architecture or request changes to the current diagram. Example: I need a web app with a frontend, API backend, SQL database, and blob storage..."}
+                    ? t("AI has analyzed your diagram. Review the description above, make any adjustments, then click Generate.")
+                    : t("Describe a new architecture or request changes to the current diagram. Example: I need a web app with a frontend, API backend, SQL database, and blob storage...")}
                   value={description}
                   onChange={(e) => {
                     setDescription(e.target.value);
@@ -542,22 +540,20 @@ const AIArchitectureGenerator: React.FC<AIArchitectureGeneratorProps> = ({ onGen
 
               {aiMetrics && (
                 <div className="similar-architectures">
-                  <h3>✓ Architecture generated successfully!</h3>
+                  <h3>{t("✓ Architecture generated successfully!")}</h3>
                   <div className="ai-metrics">
                     <span className="metric">
                       <Clock size={14} />
-                      {(aiMetrics.elapsedTimeMs / 1000).toFixed(1)}s
-                    </span>
+                      {(aiMetrics.elapsedTimeMs / 1000).toFixed(1)}{t("s")}{' '}</span>
                     <span className="metric">
                       <Zap size={14} />
-                      {aiMetrics.promptTokens.toLocaleString()} in → {aiMetrics.completionTokens.toLocaleString()} out ({aiMetrics.totalTokens.toLocaleString()} total)
-                    </span>
+                      {aiMetrics.promptTokens.toLocaleString()} {' '}{t("in →")}{' '}{aiMetrics.completionTokens.toLocaleString()} {' '}{t("out (")}{aiMetrics.totalTokens.toLocaleString()} {' '}{t("total)")}{' '}</span>
                   </div>
                 </div>
               )}
               </div>
               <div className="modal-col modal-col-right">
-              <div className="mode-toggle" role="tablist" aria-label="Generation mode">
+              <div className="mode-toggle" role="tablist" aria-label={t("Generation mode")}>
                 <button
                   role="tab"
                   aria-selected={mode === 'topology'}
@@ -567,8 +563,8 @@ const AIArchitectureGenerator: React.FC<AIArchitectureGeneratorProps> = ({ onGen
                   type="button"
                 >
                   <Network size={16} />
-                  <span className="mode-label">Topology</span>
-                  <span className="mode-sub">Deployable network diagram</span>
+                  <span className="mode-label">{t("Topology")}</span>
+                  <span className="mode-sub">{t("Deployable network diagram")}</span>
                 </button>
                 {/* Reference (swim-lane) mode hidden — Blueprint replaces it. Code path kept for now in case we want to restore. */}
                 <button
@@ -580,8 +576,8 @@ const AIArchitectureGenerator: React.FC<AIArchitectureGeneratorProps> = ({ onGen
                   type="button"
                 >
                   <PenTool size={16} />
-                  <span className="mode-label">Blueprint <span className="mode-badge-beta">BETA</span></span>
-                  <span className="mode-sub">Hand-drawn whiteboard diagram</span>
+                  <span className="mode-label">{t("Blueprint")}{' '}<span className="mode-badge-beta">{t("BETA")}</span></span>
+                  <span className="mode-sub">{t("Hand-drawn whiteboard diagram")}</span>
                 </button>
                 <button
                   role="tab"
@@ -592,12 +588,12 @@ const AIArchitectureGenerator: React.FC<AIArchitectureGeneratorProps> = ({ onGen
                   type="button"
                 >
                   <Layers size={16} />
-                  <span className="mode-label">Both <span className="mode-badge-beta">BETA</span></span>
-                  <span className="mode-sub">Topology + Blueprint</span>
+                  <span className="mode-label">{t("Both")}{' '}<span className="mode-badge-beta">{t("BETA")}</span></span>
+                  <span className="mode-sub">{t("Topology + Blueprint")}</span>
                 </button>
               </div>
               <div className="example-prompts">
-                <h3>Example Prompts</h3>
+                <h3>{t("Example Prompts")}</h3>
                 <div className="example-list">
                   {categorizedPrompts.map((group) => (
                     <div key={group.category} className="example-category">
@@ -627,7 +623,7 @@ const AIArchitectureGenerator: React.FC<AIArchitectureGeneratorProps> = ({ onGen
             <div className="modal-footer">
               <div className="ai-modal-active-model">
                 <Brain size={20} />
-                <span className="ai-modal-model-label">Model:</span>
+                <span className="ai-modal-model-label">{t("Model:")}</span>
                 <select
                   className="ai-modal-model-select"
                   value={modelSettings.model}
@@ -642,7 +638,7 @@ const AIArchitectureGenerator: React.FC<AIArchitectureGeneratorProps> = ({ onGen
                     });
                   }}
                   disabled={isGenerating}
-                  aria-label="Select AI model"
+                  aria-label={t("Select AI model")}
                 >
                   {getAvailableModels()
                     .filter((m) => !modeRequiresOpenAI(mode) || isBlueprintCapableModel(m))
@@ -654,7 +650,7 @@ const AIArchitectureGenerator: React.FC<AIArchitectureGeneratorProps> = ({ onGen
                 </select>
                 {MODEL_CONFIG[modelSettings.model].isReasoning && (
                   <>
-                    <span className="ai-modal-model-label">Reasoning:</span>
+                    <span className="ai-modal-model-label">{t("Reasoning:")}</span>
                     <select
                       className="ai-modal-model-select"
                       value={modelSettings.reasoningEffort}
@@ -662,12 +658,12 @@ const AIArchitectureGenerator: React.FC<AIArchitectureGeneratorProps> = ({ onGen
                         updateModelSettings({ reasoningEffort: e.target.value as ReasoningEffort })
                       }
                       disabled={isGenerating}
-                      aria-label="Select reasoning effort"
+                      aria-label={t("Select reasoning effort")}
                     >
-                      <option value="none">none</option>
-                      <option value="low">low</option>
-                      <option value="medium">medium</option>
-                      <option value="high">high</option>
+                      <option value="none">{t("none")}</option>
+                      <option value="low">{t("low")}</option>
+                      <option value="medium">{t("medium")}</option>
+                      <option value="high">{t("high")}</option>
                     </select>
                   </>
                 )}
@@ -686,11 +682,10 @@ const AIArchitectureGenerator: React.FC<AIArchitectureGeneratorProps> = ({ onGen
                       onChange={(e) => handleAutoSnapshotChange(e.target.checked)}
                       disabled={isGenerating}
                     />
-                    <span>Auto-save snapshot before regenerating</span>
+                    <span>{t("Auto-save snapshot before regenerating")}</span>
                   </label>
                   <p className="checkbox-hint">
-                    Automatically saves your current diagram to version history before generating a new one
-                  </p>
+                    {' '}{t("Automatically saves your current diagram to version history before generating a new one")}{' '}</p>
                 </div>
               )}
               {mode === 'both' && (
@@ -702,32 +697,30 @@ const AIArchitectureGenerator: React.FC<AIArchitectureGeneratorProps> = ({ onGen
                       onChange={(e) => handleBothInParallelChange(e.target.checked)}
                       disabled={isGenerating}
                     />
-                    <span>Run topology and blueprint in parallel</span>
+                    <span>{t("Run topology and blueprint in parallel")}</span>
                   </label>
                   <p className="checkbox-hint">
-                    Parallel ≈ half the wall-time (recommended on high-quota deployments). Uncheck to run sequentially if your model deployment has tight rate limits.
-                  </p>
+                    {' '}{t("Parallel ≈ half the wall-time (recommended on high-quota deployments). Uncheck to run sequentially if your model deployment has tight rate limits.")}{' '}</p>
                 </div>
               )}
               {(mode === 'blueprint' || mode === 'both') && (
                 <div className="auto-snapshot-option">
                   <label className="checkbox-label" style={{ alignItems: 'center', gap: 8 }}>
-                    <span>Blueprint legend position:</span>
+                    <span>{t("Blueprint legend position:")}</span>
                     <select
                       className="ai-modal-model-select"
                       value={legendPosition}
                       onChange={(e) => handleLegendPositionChange(e.target.value as 'auto' | 'bottom' | 'right')}
                       disabled={isGenerating}
-                      aria-label="Blueprint legend position"
+                      aria-label={t("Blueprint legend position")}
                     >
-                      <option value="auto">Auto (by aspect ratio)</option>
-                      <option value="bottom">Bottom (full-width canvas)</option>
-                      <option value="right">Right (taller canvas)</option>
+                      <option value="auto">{t("Auto (by aspect ratio)")}</option>
+                      <option value="bottom">{t("Bottom (full-width canvas)")}</option>
+                      <option value="right">{t("Right (taller canvas)")}</option>
                     </select>
                   </label>
                   <p className="checkbox-hint">
-                    Auto picks "bottom" for wide diagrams and "right" for square / tall ones.
-                  </p>
+                    {' '}{t("Auto picks \"bottom\" for wide diagrams and \"right\" for square / tall ones.")}{' '}</p>
                 </div>
               )}
               <div className="modal-footer-actions">
@@ -747,13 +740,11 @@ const AIArchitectureGenerator: React.FC<AIArchitectureGeneratorProps> = ({ onGen
                   {isGenerating ? (
                     <>
                       <Loader2 size={18} className="spinner" />
-                      Generating...
-                    </>
+                      {' '}{t("Generating...")}{' '}</>
                   ) : (
                     <>
                       <Sparkles size={18} />
-                      Generate Architecture
-                    </>
+                      {' '}{t("Generate Architecture")}{' '}</>
                   )}
                 </button>
               </div>

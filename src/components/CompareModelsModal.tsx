@@ -13,6 +13,7 @@ import {
   getAvailableModels,
   getModelSettings,
 } from '../stores/modelSettingsStore';
+import { useLanguage } from '../i18n/LanguageContext';
 
 /** Abbreviate model name for filenames */
 function abbreviateModelForFile(model: ModelType): string {
@@ -84,6 +85,7 @@ interface CompareModelsModalProps {
 }
 
 const CompareModelsModal: React.FC<CompareModelsModalProps> = ({ isOpen, onClose, onApply, onCaptureBatch }) => {
+  const { t } = useLanguage();
   const availableModels = getAvailableModels();
   const currentSettings = getModelSettings();
   
@@ -363,7 +365,7 @@ const CompareModelsModal: React.FC<CompareModelsModalProps> = ({ isOpen, onClose
    */
   const saveAllPngs = async () => {
     if (!onCaptureBatch) {
-      alert('PNG capture is not available in this build.');
+      alert(t("PNG capture is not available in this build."));
       return;
     }
     const successful = results.filter(r => r.status === 'success' && r.architecture);
@@ -386,7 +388,7 @@ const CompareModelsModal: React.FC<CompareModelsModalProps> = ({ isOpen, onClose
       await onCaptureBatch(items);
     } catch (err) {
       console.error('Save All PNGs failed:', err);
-      alert('Failed to save one or more PNGs. Check the console for details.');
+      alert(t("Failed to save one or more PNGs. Check the console for details."));
     } finally {
       setIsSavingPngs(false);
     }
@@ -622,7 +624,7 @@ const CompareModelsModal: React.FC<CompareModelsModalProps> = ({ isOpen, onClose
         <div className="modal-header">
           <div className="modal-title">
             <GitCompare size={20} />
-            <h2>Compare Models</h2>
+            <h2>{t("Compare Models")}</h2>
           </div>
           <button className="modal-close" onClick={onClose}>
             <X size={20} />
@@ -632,7 +634,7 @@ const CompareModelsModal: React.FC<CompareModelsModalProps> = ({ isOpen, onClose
         <div className="compare-modal-body">
           {/* Model Selection */}
           <div className="compare-section">
-            <h3 className="compare-section-title">Select Models to Compare</h3>
+            <h3 className="compare-section-title">{t("Select Models to Compare")}</h3>
             <div className="compare-model-grid">
               {availableModels.map(model => {
                 const config = MODEL_CONFIG[model];
@@ -646,7 +648,7 @@ const CompareModelsModal: React.FC<CompareModelsModalProps> = ({ isOpen, onClose
                     title={config.description}
                   >
                     <span className="compare-model-chip-name">{config.displayName}</span>
-                    {config.isReasoning && <span className="compare-model-chip-tag">reasoning</span>}
+                    {config.isReasoning && <span className="compare-model-chip-tag">{t("reasoning")}</span>}
                   </button>
                 );
               })}
@@ -655,7 +657,7 @@ const CompareModelsModal: React.FC<CompareModelsModalProps> = ({ isOpen, onClose
             {/* Reasoning effort for reasoning models */}
             {Array.from(selectedModels).some(m => MODEL_CONFIG[m].isReasoning) && (
               <div className="compare-reasoning-row">
-                <span>Reasoning Effort (for reasoning models):</span>
+                <span>{t("Reasoning Effort (for reasoning models):")}</span>
                 <div className="compare-reasoning-buttons">
                   {(['none', 'low', 'medium', 'high'] as ReasoningEffort[]).map(level => (
                     <button
@@ -674,7 +676,7 @@ const CompareModelsModal: React.FC<CompareModelsModalProps> = ({ isOpen, onClose
 
           {/* Prompt */}
           <div className="compare-section">
-            <h3 className="compare-section-title">Architecture Prompt</h3>
+            <h3 className="compare-section-title">{t("Architecture Prompt")}</h3>
             <div className="compare-sample-prompts">
               {[
                 'E-commerce platform with payments and search',
@@ -727,7 +729,7 @@ const CompareModelsModal: React.FC<CompareModelsModalProps> = ({ isOpen, onClose
             </div>
             <textarea
               className="compare-prompt"
-              placeholder="Describe the Azure architecture you want to compare across models..."
+              placeholder={t("Describe the Azure architecture you want to compare across models...")}
               value={prompt}
               onChange={e => setPrompt(e.target.value)}
               rows={4}
@@ -743,15 +745,14 @@ const CompareModelsModal: React.FC<CompareModelsModalProps> = ({ isOpen, onClose
               disabled={isRunning || !prompt.trim() || selectedModels.size < 2}
             >
               <GitCompare size={18} />
-              Compare {selectedModels.size} Models
-            </button>
+              {' '}{t("Compare")}{' '}{selectedModels.size} {' '}{t("Models")}{' '}</button>
           )}
 
           {/* Progress */}
           {isRunning && (
             <div className="compare-progress">
               <Loader2 size={16} className="spinner" />
-              <span>Running {completedCount}/{results.length} models...</span>
+              <span>{t("Running")}{' '}{completedCount}{t("/")}{results.length} {' '}{t("models...")}</span>
             </div>
           )}
 
@@ -759,57 +760,52 @@ const CompareModelsModal: React.FC<CompareModelsModalProps> = ({ isOpen, onClose
           {hasResults && (
             <div className="compare-section">
               <h3 className="compare-section-title">
-                Results
-                {!isRunning && successResults.length > 0 && (
+                {' '}{t("Results")}{' '}{!isRunning && successResults.length > 0 && (
                   <div className="compare-save-actions">
                     <button
                       className="compare-save-btn"
                       onClick={saveAllDiagrams}
                       disabled={isSavingPngs}
-                      title="Download each model's diagram as a separate JSON file"
+                      title={t("Download each model's diagram as a separate JSON file")}
                     >
                       <Download size={14} />
-                      Save All Diagrams
-                    </button>
+                      {' '}{t("Save All Diagrams")}{' '}</button>
                     {onCaptureBatch && (
                       <button
                         className="compare-save-btn"
                         onClick={saveAllPngs}
                         disabled={isSavingPngs}
-                        title="Render each model's diagram on the canvas and save as PNG (filenames match the JSON files)"
+                        title={t("Render each model's diagram on the canvas and save as PNG (filenames match the JSON files)")}
                       >
                         {isSavingPngs ? <Loader2 size={14} className="spinner" /> : <Download size={14} />}
-                        {isSavingPngs ? 'Saving PNGs...' : 'Save All PNGs'}
+                        {isSavingPngs ? t('Saving PNGs...') : t('Save All PNGs')}
                       </button>
                     )}
                     <button
                       className="compare-save-btn compare-save-report-btn"
                       onClick={saveComparisonReport}
                       disabled={isSavingPngs}
-                      title="Download a single JSON with all results for side-by-side analysis"
+                      title={t("Download a single JSON with all results for side-by-side analysis")}
                     >
                       <FileJson size={14} />
-                      Save JSON
-                    </button>
+                      {' '}{t("Save JSON")}{' '}</button>
                     <button
                       className="compare-save-btn compare-save-report-btn"
                       onClick={saveComparisonReportMd}
                       disabled={isSavingPngs}
-                      title="Download a formatted Markdown report for easy reading and sharing"
+                      title={t("Download a formatted Markdown report for easy reading and sharing")}
                     >
                       <FileText size={14} />
-                      Save Markdown
-                    </button>
+                      {' '}{t("Save Markdown")}{' '}</button>
                   </div>
                 )}
                 {!isRunning && (
                   <button
                     className="compare-rerun-btn"
                     onClick={() => { setResults([]); setCritiqueText(null); setCritiqueError(null); setCritiqueByModel(null); handleDismissAvatar(); }}
-                    title="Clear results and try again"
+                    title={t("Clear results and try again")}
                   >
-                    New Comparison
-                  </button>
+                    {' '}{t("New Comparison")}{' '}</button>
                 )}
               </h3>
               <div className="compare-results-grid">
@@ -823,11 +819,11 @@ const CompareModelsModal: React.FC<CompareModelsModalProps> = ({ isOpen, onClose
                     </div>
 
                     {result.status === 'pending' && (
-                      <div className="compare-result-pending">Waiting...</div>
+                      <div className="compare-result-pending">{t("Waiting...")}</div>
                     )}
 
                     {result.status === 'running' && (
-                      <div className="compare-result-running">Generating...</div>
+                      <div className="compare-result-running">{t("Generating...")}</div>
                     )}
 
                     {result.status === 'error' && (
@@ -840,17 +836,17 @@ const CompareModelsModal: React.FC<CompareModelsModalProps> = ({ isOpen, onClose
                         <div className="compare-result-metrics">
                           <div className={`compare-metric ${result.metrics.elapsedTimeMs === fastestTime ? 'highlight' : ''}`}>
                             <Clock size={12} />
-                            <span>{(result.metrics.elapsedTimeMs / 1000).toFixed(1)}s</span>
-                            {result.metrics.elapsedTimeMs === fastestTime && <span className="compare-badge">Fastest</span>}
+                            <span>{(result.metrics.elapsedTimeMs / 1000).toFixed(1)}{t("s")}</span>
+                            {result.metrics.elapsedTimeMs === fastestTime && <span className="compare-badge">{t("Fastest")}</span>}
                           </div>
                           <div className={`compare-metric ${result.metrics.totalTokens === leastTokens ? 'highlight' : ''}`}>
                             <Zap size={12} />
-                            <span>{result.metrics.totalTokens?.toLocaleString()} tokens</span>
-                            {result.metrics.totalTokens === leastTokens && <span className="compare-badge">Cheapest</span>}
+                            <span>{result.metrics.totalTokens?.toLocaleString()} {' '}{t("tokens")}</span>
+                            {result.metrics.totalTokens === leastTokens && <span className="compare-badge">{t("Cheapest")}</span>}
                           </div>
                           {((result.serviceCount || 0) + (result.connectionCount || 0) + (result.workflowSteps || 0)) === mostThoroughScore && successResults.length > 1 && (
                             <div className="compare-metric highlight">
-                              <span className="compare-badge badge-thorough">Most Thorough</span>
+                              <span className="compare-badge badge-thorough">{t("Most Thorough")}</span>
                             </div>
                           )}
                         </div>
@@ -859,29 +855,29 @@ const CompareModelsModal: React.FC<CompareModelsModalProps> = ({ isOpen, onClose
                         <div className="compare-result-stats">
                           <div className={`compare-stat ${result.serviceCount === mostServices ? 'highlight' : ''}`}>
                             <span className="compare-stat-value">{result.serviceCount}</span>
-                            <span className="compare-stat-label">Services</span>
-                            {result.serviceCount === mostServices && successResults.length > 1 && <span className="compare-badge badge-services">Most</span>}
+                            <span className="compare-stat-label">{t("Services")}</span>
+                            {result.serviceCount === mostServices && successResults.length > 1 && <span className="compare-badge badge-services">{t("Most")}</span>}
                           </div>
                           <div className={`compare-stat ${result.connectionCount === mostConnections ? 'highlight' : ''}`}>
                             <span className="compare-stat-value">{result.connectionCount}</span>
-                            <span className="compare-stat-label">Connections</span>
-                            {result.connectionCount === mostConnections && successResults.length > 1 && <span className="compare-badge badge-detailed">Most</span>}
+                            <span className="compare-stat-label">{t("Connections")}</span>
+                            {result.connectionCount === mostConnections && successResults.length > 1 && <span className="compare-badge badge-detailed">{t("Most")}</span>}
                           </div>
                           <div className="compare-stat">
                             <span className="compare-stat-value">{result.groupCount}</span>
-                            <span className="compare-stat-label">Groups</span>
+                            <span className="compare-stat-label">{t("Groups")}</span>
                           </div>
                           <div className="compare-stat">
                             <span className="compare-stat-value">{result.workflowSteps}</span>
-                            <span className="compare-stat-label">Workflow Steps</span>
+                            <span className="compare-stat-label">{t("Workflow Steps")}</span>
                           </div>
                         </div>
 
                         {/* Token breakdown */}
                         <div className="compare-result-tokens">
-                          <span>{result.metrics.promptTokens?.toLocaleString()} in</span>
-                          <span>→</span>
-                          <span>{result.metrics.completionTokens?.toLocaleString()} out</span>
+                          <span>{result.metrics.promptTokens?.toLocaleString()} {' '}{t("in")}</span>
+                          <span>{t("→")}</span>
+                          <span>{result.metrics.completionTokens?.toLocaleString()} {' '}{t("out")}</span>
                         </div>
 
                         {/* Apply button */}
@@ -890,8 +886,7 @@ const CompareModelsModal: React.FC<CompareModelsModalProps> = ({ isOpen, onClose
                           onClick={() => handleApply(result)}
                         >
                           <Sparkles size={14} />
-                          Use This Architecture
-                        </button>
+                          {' '}{t("Use This Architecture")}{' '}</button>
                       </>
                     )}
                   </div>
@@ -905,10 +900,9 @@ const CompareModelsModal: React.FC<CompareModelsModalProps> = ({ isOpen, onClose
             <div className="compare-section">
               <h3 className="compare-section-title">
                 <Brain size={16} style={{ marginRight: 6 }} />
-                AI Critique
-              </h3>
+                {' '}{t("AI Critique")}{' '}</h3>
               <div className="compare-critique-controls">
-                <span className="compare-critique-label">Critic model:</span>
+                <span className="compare-critique-label">{t("Critic model:")}</span>
                 <select
                   className="compare-critique-model-select"
                   value={criticModel}
@@ -925,31 +919,30 @@ const CompareModelsModal: React.FC<CompareModelsModalProps> = ({ isOpen, onClose
                   disabled={isCritiquing}
                 >
                   {isCritiquing ? <Loader2 size={14} className="spinner" /> : <Brain size={14} />}
-                  {isCritiquing ? 'Analyzing...' : (critiqueText ? 'Regenerate Critique' : 'Generate AI Critique')}
+                  {isCritiquing ? t('Analyzing...') : (critiqueText ? t('Regenerate Critique') : t('Generate AI Critique'))}
                 </button>
                 {critiqueText && !isCritiquing && (
                   <button
                     className="compare-save-btn compare-save-report-btn"
                     onClick={saveCritiqueAsMd}
-                    title="Save the AI critique as a standalone Markdown file"
+                    title={t("Save the AI critique as a standalone Markdown file")}
                   >
                     <FileText size={14} />
-                    Save Critique
-                  </button>
+                    {' '}{t("Save Critique")}{' '}</button>
                 )}
                 {critiqueText && !isCritiquing && isSpeechConfigured && (
                   <button
                     className={`compare-save-btn compare-avatar-btn${avatarStatus === 'speaking' ? ' active' : ''}`}
                     onClick={avatarStatus === 'speaking' ? handleStopPresenting : handlePresent}
                     disabled={avatarStatus === 'connecting'}
-                    title={avatarStatus === 'speaking' ? 'Stop the avatar presentation' : 'Have an AI avatar present the ranking and recommendation'}
+                    title={avatarStatus === 'speaking' ? t("Stop the avatar presentation") : t("Have an AI avatar present the ranking and recommendation")}
                   >
                     {avatarStatus === 'connecting'
                       ? <Loader2 size={14} className="spinner" />
                       : avatarStatus === 'speaking'
                       ? <StopCircle size={14} />
                       : <MonitorPlay size={14} />}
-                    {avatarStatus === 'connecting' ? 'Connecting...' : avatarStatus === 'speaking' ? 'Stop' : 'Present'}
+                    {avatarStatus === 'connecting' ? t('Connecting...') : avatarStatus === 'speaking' ? t('Stop') : t('Present')}
                   </button>
                 )}
               </div>
@@ -959,7 +952,7 @@ const CompareModelsModal: React.FC<CompareModelsModalProps> = ({ isOpen, onClose
               {critiqueText && critiqueByModel && (
                 <div className="compare-critique-output">
                   <div className="compare-critique-reviewer">
-                    Reviewed by {MODEL_CONFIG[critiqueByModel].displayName}
+                    {' '}{t("Reviewed by")}{' '}{MODEL_CONFIG[critiqueByModel].displayName}
                   </div>
                   <pre className="compare-critique-text">{critiqueText}</pre>
                 </div>
@@ -982,24 +975,23 @@ const CompareModelsModal: React.FC<CompareModelsModalProps> = ({ isOpen, onClose
             <div className="compare-avatar-panel-header" onPointerDown={onDragStart}>
               <span className="compare-avatar-panel-title">
                 {avatarStatus === 'connecting' && <Loader2 size={12} className="spinner" />}
-                {avatarStatus === 'connecting' ? ' Connecting...' :
-                 avatarStatus === 'speaking' ? '▶ Presenting' :
-                 avatarStatus === 'error' ? 'Error' : 'Ready'}
+                {avatarStatus === 'connecting' ? t('Connecting...') :
+                 avatarStatus === 'speaking' ? <>▶ {t('Presenting')}</> :
+                 avatarStatus === 'error' ? t('Error') : t('Ready')}
               </span>
               <button
                 className="compare-avatar-dismiss"
                 onClick={handleDismissAvatar}
                 onPointerDown={e => e.stopPropagation()}
-                title="Close"
+                title={t("Close")}
               >
-                ✕
-              </button>
+                {' '}{t("✕")}{' '}</button>
             </div>
             <div className="compare-avatar-video-wrap">
               {avatarStatus === 'connecting' && (
                 <div className="compare-avatar-connecting">
                   <Loader2 size={28} className="spinner" />
-                  <span>Starting avatar session…</span>
+                  <span>{t("Starting avatar session…")}</span>
                 </div>
               )}
               {avatarStatus === 'error' && (
@@ -1029,11 +1021,11 @@ const CompareModelsModal: React.FC<CompareModelsModalProps> = ({ isOpen, onClose
             {(avatarStatus === 'ready' || avatarStatus === 'speaking') && critiqueText && (
               <div className="compare-avatar-panel-controls">
                 {avatarStatus === 'speaking'
-                  ? <button className="compare-avatar-action-btn stop" onClick={handleStopPresenting}><StopCircle size={13} /> Stop</button>
-                  : <button className="compare-avatar-action-btn" onClick={handlePresent}><MonitorPlay size={13} /> Re-present</button>}
+                  ? <button className="compare-avatar-action-btn stop" onClick={handleStopPresenting}><StopCircle size={13} /> {' '}{t("Stop")}</button>
+                  : <button className="compare-avatar-action-btn" onClick={handlePresent}><MonitorPlay size={13} /> {' '}{t("Re-present")}</button>}
               </div>
             )}
-            <div className="avatar-resize-handle" onPointerDown={onResizeStart} title="Drag to resize" />
+            <div className="avatar-resize-handle" onPointerDown={onResizeStart} title={t("Drag to resize")} />
           </div>
       </div>
     </div>

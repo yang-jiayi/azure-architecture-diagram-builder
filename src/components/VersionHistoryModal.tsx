@@ -5,6 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Clock, ExternalLink, Trash2, Copy } from 'lucide-react';
 import { DiagramVersion, getAllVersions, deleteVersion, getVersion } from '../services/versionStorageService';
 import './VersionHistoryModal.css';
+import { useLanguage } from '../i18n/LanguageContext';
 
 interface VersionHistoryModalProps {
   isOpen: boolean;
@@ -19,6 +20,7 @@ const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
   onRestoreVersion,
   currentDiagramName: _currentDiagramName
 }) => {
+  const { t } = useLanguage();
   const [versions, setVersions] = useState<DiagramVersion[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedVersion, setSelectedVersion] = useState<string | null>(null);
@@ -44,7 +46,7 @@ const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
   const handleDelete = async (versionId: string, event: React.MouseEvent) => {
     event.stopPropagation();
     
-    if (!confirm('Are you sure you want to delete this version? This cannot be undone.')) {
+    if (!confirm(t("Are you sure you want to delete this version? This cannot be undone."))) {
       return;
     }
 
@@ -53,7 +55,7 @@ const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
       await loadVersions();
     } catch (error) {
       console.error('Failed to delete version:', error);
-      alert('Failed to delete version');
+      alert(t("Failed to delete version"));
     }
   };
 
@@ -63,7 +65,7 @@ const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
     try {
       const version = await getVersion(versionId);
       if (!version) {
-        alert('Version not found');
+        alert(t("Version not found"));
         return;
       }
 
@@ -84,11 +86,11 @@ const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
       const newTab = window.open(window.location.origin + window.location.pathname + '#version-' + encodedData, '_blank');
       
       if (!newTab) {
-        alert('Please allow pop-ups to open versions in new tabs');
+        alert(t("Please allow pop-ups to open versions in new tabs"));
       }
     } catch (error) {
       console.error('Failed to open version:', error);
-      alert('Failed to open version in new tab');
+      alert(t("Failed to open version in new tab"));
     }
   };
 
@@ -96,7 +98,7 @@ const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
     try {
       const version = await getVersion(versionId);
       if (!version) {
-        alert('Version not found');
+        alert(t("Version not found"));
         return;
       }
 
@@ -106,7 +108,7 @@ const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
       }
     } catch (error) {
       console.error('Failed to restore version:', error);
-      alert('Failed to restore version');
+      alert(t("Failed to restore version"));
     }
   };
 
@@ -139,9 +141,8 @@ const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
         <div className="modal-header">
           <h2>
             <Clock size={24} />
-            Version History
-          </h2>
-          <button className="modal-close" onClick={onClose} title="Close">
+            {' '}{t("Version History")}{' '}</h2>
+          <button className="modal-close" onClick={onClose} title={t("Close")}>
             <X size={24} />
           </button>
         </div>
@@ -150,16 +151,14 @@ const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
           {isLoading ? (
             <div className="version-loading">
               <div className="spinner"></div>
-              <p>Loading versions...</p>
+              <p>{t("Loading versions...")}</p>
             </div>
           ) : versions.length === 0 ? (
             <div className="version-empty">
               <Clock size={48} style={{ opacity: 0.3 }} />
-              <p>No versions saved yet</p>
+              <p>{t("No versions saved yet")}</p>
               <p className="version-empty-hint">
-                Versions are automatically created when you regenerate architecture with AI,
-                or you can manually create snapshots.
-              </p>
+                {' '}{t("Versions are automatically created when you regenerate architecture with AI, or you can manually create snapshots.")}{' '}</p>
             </div>
           ) : (
             <div className="version-list">
@@ -172,25 +171,24 @@ const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
                   <div className="version-header">
                     <div className="version-title">
                       <h4>{version.diagramName || 'Untitled Diagram'}</h4>
-                      {index === 0 && <span className="version-badge latest">Latest</span>}
+                      {index === 0 && <span className="version-badge latest">{t("Latest")}</span>}
                       {version.validationScore !== undefined && (
-                        <span className="version-badge score" title="Validation Score">
-                          {version.validationScore}/100
-                        </span>
+                        <span className="version-badge score" title={t("Validation Score")}>
+                          {version.validationScore}{t("/100")}{' '}</span>
                       )}
                     </div>
                     <div className="version-actions">
                       <button
                         className="version-action-btn"
                         onClick={(e) => handleOpenInNewTab(version.versionId, e)}
-                        title="Open in new tab for comparison"
+                        title={t("Open in new tab for comparison")}
                       >
                         <ExternalLink size={16} />
                       </button>
                       <button
                         className="version-action-btn delete"
                         onClick={(e) => handleDelete(version.versionId, e)}
-                        title="Delete this version"
+                        title={t("Delete this version")}
                       >
                         <Trash2 size={16} />
                       </button>
@@ -204,32 +202,30 @@ const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
                     </span>
                     {version.nodes && (
                       <span className="version-stat">
-                        {version.nodes.length} services
-                      </span>
+                        {version.nodes.length} {' '}{t("services")}{' '}</span>
                     )}
                     {version.edges && (
                       <span className="version-stat">
-                        {version.edges.length} connections
-                      </span>
+                        {version.edges.length} {' '}{t("connections")}{' '}</span>
                     )}
                   </div>
 
                   {version.architecturePrompt && (
                     <div className="version-prompt">
-                      <strong>Prompt:</strong> {version.architecturePrompt.substring(0, 100)}
+                      <strong>{t("Prompt:")}</strong> {version.architecturePrompt.substring(0, 100)}
                       {version.architecturePrompt.length > 100 && '...'}
                     </div>
                   )}
 
                   {version.improvementsApplied && version.improvementsApplied.length > 0 && (
                     <div className="version-improvements">
-                      <strong>Improvements:</strong>
+                      <strong>{t("Improvements:")}</strong>
                       <ul>
                         {version.improvementsApplied.slice(0, 3).map((improvement, i) => (
                           <li key={i}>{improvement}</li>
                         ))}
                         {version.improvementsApplied.length > 3 && (
-                          <li>+ {version.improvementsApplied.length - 3} more...</li>
+                          <li>{t("+")}{' '}{version.improvementsApplied.length - 3} {' '}{t("more...")}</li>
                         )}
                       </ul>
                     </div>
@@ -237,7 +233,7 @@ const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
 
                   {version.notes && (
                     <div className="version-notes">
-                      <strong>Notes:</strong> {version.notes}
+                      <strong>{t("Notes:")}</strong> {version.notes}
                     </div>
                   )}
 
@@ -247,8 +243,7 @@ const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
                       onClick={() => handleRestore(version.versionId)}
                     >
                       <Copy size={16} />
-                      Restore This Version
-                    </button>
+                      {' '}{t("Restore This Version")}{' '}</button>
                   </div>
                 </div>
               ))}
@@ -258,11 +253,9 @@ const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
 
         <div className="modal-actions">
           <div className="version-count">
-            {versions.length} {versions.length === 1 ? 'version' : 'versions'} saved
-          </div>
+            {versions.length} {versions.length === 1 ? 'version' : 'versions'} {' '}{t("saved")}{' '}</div>
           <button className="btn-secondary" onClick={onClose}>
-            Close
-          </button>
+            {' '}{t("Close")}{' '}</button>
         </div>
       </div>
     </div>

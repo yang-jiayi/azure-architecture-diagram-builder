@@ -81,9 +81,11 @@ import { classifyValidationTopics } from './services/validationConsensus';
 import type { IaCFormat } from './services/azureOpenAI';
 import FeedbackModal from './components/FeedbackModal';
 import FeedbackToast from './components/FeedbackToast';
+import LanguageSwitch from './components/LanguageSwitch';
 import { FEEDBACK_DONE_KEY } from './services/feedbackService';
 import microsoftLogoWhite from './assets/microsoft-logo-white.avif';
 import './App.css';
+import { useLanguage } from './i18n/LanguageContext';
 
 const nodeTypes = {
   azureNode: AzureNode,
@@ -141,6 +143,7 @@ function deriveTitleFromPrompt(prompt: string | undefined | null): string | unde
 }
 
 function App() {
+  const { t, translate } = useLanguage();
   const [nodes, setNodes, onNodesChangeBase] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [architecturePrompt, setArchitecturePrompt] = useState<string>('');
@@ -1058,10 +1061,10 @@ function App() {
         trackExport('png', nodes.filter(n => n.type === 'azureNode').length);
       } catch (err) {
         console.error('Error exporting diagram:', err);
-        alert('Failed to export diagram. Please try again.');
+        alert(t("Failed to export diagram. Please try again."));
       }
     }, 800);
-  }, [reactFlowInstance, recordExport, nodes]);
+  }, [reactFlowInstance, recordExport, nodes, t]);
 
   const exportAsSvg = useCallback(async () => {
     if (!reactFlowWrapper.current || !reactFlowInstance) {
@@ -1093,16 +1096,16 @@ function App() {
         trackExport('svg', nodes.filter(n => n.type === 'azureNode').length);
       } catch (err) {
         console.error('Error exporting SVG:', err);
-        alert('Failed to export SVG. Please try again.');
+        alert(t("Failed to export SVG. Please try again."));
       }
     }, 800);
-  }, [reactFlowInstance, recordExport, nodes]);
+  }, [reactFlowInstance, recordExport, nodes, t]);
 
   // Export the workflow narrative (title, prompt, services, step-by-step flow,
   // connections, optional validation/cost) as a Markdown document.
   const exportWorkflowMarkdown = useCallback(() => {
     if (nodes.filter(n => n.type === 'azureNode').length === 0) {
-      alert('Add or generate an architecture first, then export its workflow narrative.');
+      alert(t("Add or generate an architecture first, then export its workflow narrative."));
       return;
     }
     try {
@@ -1130,9 +1133,9 @@ function App() {
       trackExport('workflow-md', nodes.filter(n => n.type === 'azureNode').length);
     } catch (err) {
       console.error('Error exporting workflow markdown:', err);
-      alert('Failed to export workflow narrative. Please try again.');
+      alert(t("Failed to export workflow narrative. Please try again."));
     }
-  }, [nodes, edges, workflow, titleBlockData, architecturePrompt, generatedWithModel, validationResult, totalMonthlyCost, pricingMode, recordExport]);
+  }, [nodes, edges, workflow, titleBlockData, architecturePrompt, generatedWithModel, validationResult, totalMonthlyCost, pricingMode, recordExport, t]);
 
   // Export as an Animated SVG: same vector capture as exportAsSvg, but with
   // flowing data-flow circles injected onto each edge. Pure client-side — the
@@ -1165,10 +1168,10 @@ function App() {
         trackExport('animated-svg', nodes.filter(n => n.type === 'azureNode').length);
       } catch (err) {
         console.error('Error exporting animated SVG:', err);
-        alert('Failed to export animated SVG. Please try again.');
+        alert(t("Failed to export animated SVG. Please try again."));
       }
     }, 800);
-  }, [reactFlowInstance, recordExport, nodes]);
+  }, [reactFlowInstance, recordExport, nodes, t]);
 
   // Export a SEQUENCED "workflow animation" SVG: plays the diagram's workflow
   // steps chronologically (one edge flows at a time) with a caption per step and
@@ -1179,7 +1182,7 @@ function App() {
       return;
     }
     if (!workflow || workflow.length === 0) {
-      alert('This diagram has no workflow steps to animate. Generate a diagram with a workflow first.');
+      alert(t("This diagram has no workflow steps to animate. Generate a diagram with a workflow first."));
       return;
     }
 
@@ -1205,10 +1208,10 @@ function App() {
         trackExport('workflow-animation', nodes.filter(n => n.type === 'azureNode').length);
       } catch (err) {
         console.error('Error exporting workflow animation:', err);
-        alert('Failed to export workflow animation. Please try again.');
+        alert(t("Failed to export workflow animation. Please try again."));
       }
     }, 800);
-  }, [reactFlowInstance, recordExport, nodes, edges, workflow]);
+  }, [reactFlowInstance, recordExport, nodes, edges, workflow, t]);
 
   const exportAsDrawio = useCallback(async () => {
     try {
@@ -1218,13 +1221,13 @@ function App() {
       trackExport('drawio', nodes.filter(n => n.type === 'azureNode').length);
     } catch (err) {
       console.error('Error exporting Draw.io:', err);
-      alert('Failed to export Draw.io file. Please try again.');
+      alert(t("Failed to export Draw.io file. Please try again."));
     }
-  }, [nodes, edges, titleBlockData.architectureName, recordExport]);
+  }, [nodes, edges, titleBlockData.architectureName, recordExport, t]);
 
   const exportAsVsdx = useCallback(async () => {
     if (nodes.filter(n => n.type === 'azureNode').length === 0) {
-      alert('Add or generate an architecture first, then export to Visio.');
+      alert(t("Add or generate an architecture first, then export to Visio."));
       return;
     }
     try {
@@ -1241,9 +1244,9 @@ function App() {
       trackExport('vsdx', nodes.filter(n => n.type === 'azureNode').length);
     } catch (err) {
       console.error('Error exporting Visio VSDX:', err);
-      alert('Failed to export Visio file. Please try again.');
+      alert(t("Failed to export Visio file. Please try again."));
     }
-  }, [nodes, edges, titleBlockData.architectureName, recordExport]);
+  }, [nodes, edges, titleBlockData.architectureName, recordExport, t]);
 
   const exportAsHtml = useCallback(() => {
     try {
@@ -1254,9 +1257,9 @@ function App() {
       trackExport('html', nodes.filter(n => n.type === 'azureNode').length);
     } catch (err) {
       console.error('Error exporting HTML diagram:', err);
-      alert('Failed to export HTML diagram. Please try again.');
+      alert(t("Failed to export HTML diagram. Please try again."));
     }
-  }, [nodes, edges, titleBlockData.architectureName, recordExport]);
+  }, [nodes, edges, titleBlockData.architectureName, recordExport, t]);
 
   const exportAsPptx = useCallback(async () => {
     if (!reactFlowWrapper.current || !reactFlowInstance) return;
@@ -1281,10 +1284,10 @@ function App() {
         trackExport('pptx', nodes.filter(n => n.type === 'azureNode').length);
       } catch (err) {
         console.error('Error exporting PPTX:', err);
-        alert('Failed to export PowerPoint slide. Please try again.');
+        alert(t("Failed to export PowerPoint slide. Please try again."));
       }
     }, 800);
-  }, [reactFlowInstance, recordExport, nodes, isDarkMode, titleBlockData]);
+  }, [reactFlowInstance, recordExport, nodes, isDarkMode, titleBlockData, t]);
 
   // ── az prototype export removed (feature unused) ─────────────────────
 
@@ -1317,7 +1320,7 @@ function App() {
     
     // Check if there's any cost data
     if (breakdown.byService.length === 0 || breakdown.totalMonthlyCost === 0) {
-      alert('No costing information available. Please ensure your diagram contains Azure services with pricing data.');
+      alert(t("No costing information available. Please ensure your diagram contains Azure services with pricing data."));
       return;
     }
 
@@ -1336,12 +1339,12 @@ function App() {
     URL.revokeObjectURL(url);
     recordExport('costs', fileName);
     trackExport('csv', nodes.filter(n => n.type === 'azureNode').length);
-  }, [nodes, recordExport, pricingMode]);
+  }, [nodes, recordExport, pricingMode, t]);
 
   const exportCostBreakdownZip = useCallback(async () => {
     const breakdown = calculateCostBreakdown(nodes, undefined, pricingMode);
     if (breakdown.byService.length === 0 || breakdown.totalMonthlyCost === 0) {
-      alert('No costing information available. Please ensure your diagram contains Azure services with pricing data.');
+      alert(t("No costing information available. Please ensure your diagram contains Azure services with pricing data."));
       return;
     }
 
@@ -1644,7 +1647,7 @@ function App() {
     URL.revokeObjectURL(url);
     recordExport('costs', `${fileBase}-all-formats.zip`);
     trackExport('csv', azureServiceNodes.length);
-  }, [nodes, recordExport, pricingMode]);
+  }, [nodes, recordExport, pricingMode, t]);
 
   const applyFlowObject = useCallback(
     (flow: any) => {
@@ -1740,11 +1743,11 @@ function App() {
         applyFlowObject(flow);
       } catch (error) {
         console.error('Error loading diagram:', error);
-        alert('Error loading diagram file');
+        alert(t("Error loading diagram file"));
       }
     };
     reader.readAsText(file);
-  }, [applyFlowObject]);
+  }, [applyFlowObject, t]);
 
   // Restore a version from history
   const restoreVersion = useCallback((version: DiagramVersion) => {
@@ -1768,9 +1771,9 @@ function App() {
       trackVersionOperation('restore');
     } catch (error) {
       console.error('Failed to restore version:', error);
-      alert('Failed to restore version');
+      alert(t("Failed to restore version"));
     }
-  }, []);
+  }, [t]);
 
   // Manual snapshot save handler
   const handleSaveSnapshot = useCallback(async (notes: string) => {
@@ -1805,7 +1808,7 @@ function App() {
       let { groups } = architecture;
       
       if (!services || services.length === 0) {
-        alert('No services were identified in your description. Please try a more detailed description.');
+        alert(t("No services were identified in your description. Please try a more detailed description."));
         return;
       }
 
@@ -2316,9 +2319,9 @@ function App() {
     }, 100);
     } catch (error) {
       console.error('Error in handleAIGenerate:', error);
-      alert('Failed to generate diagram. Check console for details.');
+      alert(t("Failed to generate diagram. Check console for details."));
     }
-  }, [setNodes, setEdges, reactFlowInstance, nodes, edges, titleBlockData, architecturePrompt, validationResult, workflow, isFeedbackModalOpen, layoutEdgeStyle]);
+  }, [setNodes, setEdges, reactFlowInstance, nodes, edges, titleBlockData, architecturePrompt, validationResult, workflow, isFeedbackModalOpen, layoutEdgeStyle, t]);
 
   // ── az prototype import ──────────────────────────────────────────────
   // (Import az prototype UI removed — feature unused.)
@@ -2523,7 +2526,7 @@ function App() {
   // Premium Feature Handlers
   const handleValidateArchitecture = useCallback(async () => {
     if (nodes.length === 0) {
-      alert('Please create an architecture diagram first.');
+      alert(t("Please create an architecture diagram first."));
       return;
     }
 
@@ -2610,11 +2613,11 @@ function App() {
     } finally {
       setIsValidating(false);
     }
-  }, [nodes, edges, architecturePrompt, titleBlockData.architectureName, reactFlowInstance]);
+  }, [nodes, edges, architecturePrompt, titleBlockData.architectureName, reactFlowInstance, t]);
 
   const handleGenerateDeploymentGuide = useCallback(async () => {
     if (nodes.length === 0) {
-      alert('Please create an architecture diagram first.');
+      alert(t("Please create an architecture diagram first."));
       return;
     }
 
@@ -2665,20 +2668,20 @@ function App() {
       });
     } catch (error: any) {
       console.error('Guide generation error:', error);
-      alert(`Failed to generate deployment guide: ${error.message}`);
+      alert(t('error.deploymentGuide', { message: error.message }));
       setIsDeploymentGuideModalOpen(false);
     } finally {
       setIsGeneratingGuide(false);
     }
-  }, [nodes, edges, architecturePrompt, titleBlockData.architectureName, totalMonthlyCost]);
+  }, [nodes, edges, architecturePrompt, titleBlockData.architectureName, totalMonthlyCost, t]);
 
   return (
     <div className="app">
       <header className={`app-header${isHeaderCollapsed ? ' header-collapsed' : ''}`}>
         <div className="header-content">
           <div className="header-brand">
-            <img src={microsoftLogoWhite} alt="Microsoft" className="microsoft-logo" />
-            <h1>Azure Architecture Diagram Builder</h1>
+            <img src={microsoftLogoWhite} alt={t("Microsoft")} className="microsoft-logo" />
+            <h1>{t("Azure Architecture Diagram Builder")}</h1>
           </div>
           <div className="header-actions-wrapper">
             {/* Row 1: Project-level actions */}
@@ -2687,24 +2690,27 @@ function App() {
                 <RegionSelector onRegionChange={handleRegionChange} />
                 {totalMonthlyCost > 0 && (
                   <>
-                    <div className="cost-indicator" title={`Total estimated monthly cost for all services (${pricingMode === 'reserved1yr' ? '1-year savings plan' : 'pay-as-you-go'})`}>
-                      💰 {formatMonthlyCost(totalMonthlyCost)}
+                    <div
+                      className="cost-indicator"
+                      title={t('pricing.totalMonthly', {
+                        term: pricingMode === 'reserved1yr' ? t('1-year savings plan') : t('pay-as-you-go'),
+                      })}
+                    >
+                      {' '}{t("💰")}{' '}{formatMonthlyCost(totalMonthlyCost)}
                     </div>
-                    <div className="pricing-mode-toggle" role="group" aria-label="Pricing term">
+                    <div className="pricing-mode-toggle" role="group" aria-label={t("Pricing term")}>
                       <button
                         className={`pricing-mode-btn${pricingMode === 'payg' ? ' active' : ''}`}
                         onClick={() => setPricingMode('payg')}
-                        title="Pay-as-you-go list pricing"
+                        title={t("Pay-as-you-go list pricing")}
                       >
-                        PAYG
-                      </button>
+                        {' '}{t("PAYG")}{' '}</button>
                       <button
                         className={`pricing-mode-btn${pricingMode === 'reserved1yr' ? ' active' : ''}`}
                         onClick={() => setPricingMode('reserved1yr')}
-                        title="1-year Savings Plan pricing. Uses each meter's real 1-year savings-plan rate where available, otherwise a representative discount on reservation-eligible services. Usage-based services stay at PAYG."
+                        title={t("1-year Savings Plan pricing. Uses each meter's real 1-year savings-plan rate where available, otherwise a representative discount on reservation-eligible services. Usage-based services stay at PAYG.")}
                       >
-                        Savings 1yr
-                      </button>
+                        {' '}{t("Savings 1yr")}{' '}</button>
                     </div>
                     {(() => {
                       const f = getPricingFreshness(PRICING_DATA_AS_OF);
@@ -2713,15 +2719,15 @@ function App() {
                           className={`pricing-freshness pricing-freshness--${f.level}`}
                           title={
                             f.isStale
-                              ? `⚠️ Azure pricing data is ${f.ageLabel} (as of ${f.dateLabel}). Refresh with "npm run pricing:refresh" so estimates stay accurate.`
-                              : `Azure pricing data as of ${f.dateLabel} (${f.ageLabel}).`
+                              ? t('pricing.stale', { age: f.ageLabel, date: f.dateLabel })
+                              : t('pricing.current', { age: f.ageLabel, date: f.dateLabel })
                           }
                           role="status"
                         >
-                          {f.isStale && <span aria-hidden="true">⚠️ </span>}
-                          <span className="pricing-freshness-label">as of {f.dateLabel}</span>
+                          {f.isStale && <span aria-hidden="true">{t("⚠️")}{' '}</span>}
+                          <span className="pricing-freshness-label">{t("as of")}{' '}{f.dateLabel}</span>
                           {f.isStale && (
-                            <span className="pricing-freshness-age"> · {f.ageLabel}</span>
+                            <span className="pricing-freshness-age"> {' '}{t("·")}{' '}{f.ageLabel}</span>
                           )}
                         </div>
                       );
@@ -2731,12 +2737,11 @@ function App() {
               </div>
 
               <div className="toolbar-group">
-                <button onClick={addGroupBox} className="btn btn-secondary" title="Add grouping box">
+                <button onClick={addGroupBox} className="btn btn-secondary" title={t("Add grouping box")}>
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <rect x="3" y="3" width="18" height="18" rx="2" strokeDasharray="4 4" />
                   </svg>
-                  Add Group
-                </button>
+                  {' '}{t("Add Group")}{' '}</button>
                 <AIArchitectureGenerator 
                   onGenerate={(arch, prompt, autoSnap, refImageUrl) => {
                     clearSourceModel();
@@ -2768,12 +2773,11 @@ function App() {
                   onClick={() => setIsChatOpen((v) => !v)}
                   aria-pressed={isChatOpen}
                   title={isChatOpen
-                    ? 'Close Architecture Chat'
-                    : 'Open Architecture Chat — start or refine your diagram in plain English'}
+                    ? t("Close Architecture Chat")
+                    : t("Open Architecture Chat — start or refine your diagram in plain English")}
                 >
                   <MessagesSquare size={18} />
-                  Chat
-                </button>
+                  {' '}{t("Chat")}{' '}</button>
                 <button
                   className={`btn btn-help${helpSeen ? '' : ' nudge'}`}
                   onClick={() => {
@@ -2783,20 +2787,18 @@ function App() {
                       localStorage.setItem('help.seen', '1');
                     }
                   }}
-                  title="How to use the tool &amp; learn the features"
+                  title={t("How to use the tool & learn the features")}
                 >
                   <HelpCircle size={18} />
-                  Help
-                </button>
+                  {' '}{t("Help")}{' '}</button>
                 <button
                   className="btn btn-compare-models"
                   onClick={() => setIsCompareModelsOpen(true)}
-                  title="Compare architecture output across multiple AI models"
+                  title={t("Compare architecture output across multiple AI models")}
                 >
                   <GitCompare size={18} />
-                  Compare Models
-                </button>
-                <label className={`btn btn-secondary${isImportingTemplate ? ' btn-parsing' : ''}`} title="Import Bicep, Terraform, or ARM template to generate diagram">
+                  {' '}{t("Compare Models")}{' '}</button>
+                <label className={`btn btn-secondary${isImportingTemplate ? ' btn-parsing' : ''}`} title={t("Import Bicep, Terraform, or ARM template to generate diagram")}>
                   {isImportingTemplate ? <Loader size={18} className="spin-icon" /> : <FileCode size={18} />}
                   {isImportingTemplate ? 'Parsing...' : 'Import Template'}
                   <input
@@ -2811,15 +2813,13 @@ function App() {
               </div>
 
               <div className="toolbar-group">
-                <button onClick={saveDiagram} className="btn btn-secondary" title="Save diagram">
+                <button onClick={saveDiagram} className="btn btn-secondary" title={t("Save diagram")}>
                   <Save size={18} />
-                  Save
-                </button>
+                  {' '}{t("Save")}{' '}</button>
 
-                <label className="btn btn-secondary" title="Load diagram">
+                <label className="btn btn-secondary" title={t("Load diagram")}>
                   <Upload size={18} />
-                  Load
-                  <input
+                  {' '}{t("Load")}{' '}<input
                     type="file"
                     accept=".json"
                     onChange={loadDiagram}
@@ -2833,17 +2833,16 @@ function App() {
                   <button
                     onClick={() => setIsExportMenuOpen((v) => !v)}
                     className="btn btn-primary"
-                    title="Export"
+                    title={t("Export")}
                     aria-haspopup="menu"
                     aria-expanded={isExportMenuOpen}
                   >
                     <Download size={18} />
-                    Export
-                    <ChevronDown size={16} style={{ marginLeft: 2 }} />
+                    {' '}{t("Export")}{' '}<ChevronDown size={16} style={{ marginLeft: 2 }} />
                   </button>
 
                   {isExportMenuOpen && (
-                    <div className="toolbar-dropdown-menu" role="menu" aria-label="Export options">
+                    <div className="toolbar-dropdown-menu" role="menu" aria-label={t("Export options")}>
                       <button
                         className="toolbar-dropdown-item"
                         role="menuitem"
@@ -2851,11 +2850,10 @@ function App() {
                           setIsExportMenuOpen(false);
                           exportDiagram();
                         }}
-                        title="Export as PNG"
+                        title={t("Export as PNG")}
                       >
                         <Download size={18} />
-                        Export PNG
-                      </button>
+                        {' '}{t("Export PNG")}{' '}</button>
                       <button
                         className="toolbar-dropdown-item"
                         role="menuitem"
@@ -2865,18 +2863,17 @@ function App() {
                           if (!lastReferenceArchitecture) return;
                           exportReferenceArchitectureAsPng(lastReferenceArchitecture).catch((err) => {
                             console.error('Editorial PNG export failed:', err);
-                            alert('Editorial PNG export failed. See console for details.');
+                            alert(t("Editorial PNG export failed. See console for details."));
                           });
                         }}
                         title={
                           lastReferenceArchitecture
-                            ? 'Re-download the publication-style reference-architecture PNG'
-                            : 'Generate a diagram in Reference Architecture mode to enable this export'
+                            ? t("Re-download the publication-style reference-architecture PNG")
+                            : t("Generate a diagram in Reference Architecture mode to enable this export")
                         }
                       >
                         <Download size={18} />
-                        Export Editorial PNG
-                      </button>
+                        {' '}{t("Export Editorial PNG")}{' '}</button>
                       <button
                         className="toolbar-dropdown-item"
                         role="menuitem"
@@ -2891,18 +2888,17 @@ function App() {
                               : 'auto';
                           exportBlueprintArchitectureAsPng(lastBlueprintArchitecture, { legendPosition }).catch((err) => {
                             console.error('Blueprint PNG export failed:', err);
-                            alert('Blueprint PNG export failed. See console for details.');
+                            alert(t("Blueprint PNG export failed. See console for details."));
                           });
                         }}
                         title={
                           lastBlueprintArchitecture
-                            ? 'Re-download the hand-drawn whiteboard-style blueprint PNG'
-                            : 'Generate a diagram in Blueprint mode to enable this export'
+                            ? t("Re-download the hand-drawn whiteboard-style blueprint PNG")
+                            : t("Generate a diagram in Blueprint mode to enable this export")
                         }
                       >
                         <Download size={18} />
-                        Export Blueprint PNG
-                      </button>
+                        {' '}{t("Export Blueprint PNG")}{' '}</button>
                       <button
                         className="toolbar-dropdown-item"
                         role="menuitem"
@@ -2910,11 +2906,10 @@ function App() {
                           setIsExportMenuOpen(false);
                           exportAsSvg();
                         }}
-                        title="Export as SVG (vector format)"
+                        title={t("Export as SVG (vector format)")}
                       >
                         <Download size={18} />
-                        Export SVG
-                      </button>
+                        {' '}{t("Export SVG")}{' '}</button>
                       <button
                         className="toolbar-dropdown-item"
                         role="menuitem"
@@ -2922,11 +2917,10 @@ function App() {
                           setIsExportMenuOpen(false);
                           exportAsAnimatedSvg();
                         }}
-                        title="Export as Animated SVG — flowing data-flow arrows (open in a browser to see motion)"
+                        title={t("Export as Animated SVG — flowing data-flow arrows (open in a browser to see motion)")}
                       >
                         <Download size={18} />
-                        Export Animated SVG
-                      </button>
+                        {' '}{t("Export Animated SVG")}{' '}</button>
                       <button
                         className="toolbar-dropdown-item"
                         role="menuitem"
@@ -2937,13 +2931,12 @@ function App() {
                         }}
                         title={
                           workflow.length > 0
-                            ? 'Export an animated SVG that plays the workflow step-by-step with captions'
-                            : 'No workflow steps in this diagram to animate'
+                            ? t("Export an animated SVG that plays the workflow step-by-step with captions")
+                            : t("No workflow steps in this diagram to animate")
                         }
                       >
                         <Download size={18} />
-                        Export Workflow Animation
-                      </button>
+                        {' '}{t("Export Workflow Animation")}{' '}</button>
                       <button
                         className="toolbar-dropdown-item"
                         role="menuitem"
@@ -2952,11 +2945,10 @@ function App() {
                           setIsExportMenuOpen(false);
                           exportWorkflowMarkdown();
                         }}
-                        title="Export the workflow narrative (services, step-by-step flow, connections) as a Markdown file"
+                        title={t("Export the workflow narrative (services, step-by-step flow, connections) as a Markdown file")}
                       >
                         <FileText size={18} />
-                        Export Workflow (Markdown)
-                      </button>
+                        {' '}{t("Export Workflow (Markdown)")}{' '}</button>
                       <button
                         className="toolbar-dropdown-item"
                         role="menuitem"
@@ -2964,11 +2956,10 @@ function App() {
                           setIsExportMenuOpen(false);
                           exportAsPptx();
                         }}
-                        title="Export current diagram as a PowerPoint slide (.pptx)"
+                        title={t("Export current diagram as a PowerPoint slide (.pptx)")}
                       >
                         <Presentation size={18} />
-                        Export PPTX Slide
-                      </button>
+                        {' '}{t("Export PPTX Slide")}{' '}</button>
                       <button
                         className="toolbar-dropdown-item"
                         role="menuitem"
@@ -2976,11 +2967,10 @@ function App() {
                           setIsExportMenuOpen(false);
                           exportAsDrawio();
                         }}
-                        title="Export for Draw.io / diagrams.net (editable diagram format)"
+                        title={t("Export for Draw.io / diagrams.net (editable diagram format)")}
                       >
                         <Download size={18} />
-                        Export Draw.io
-                      </button>
+                        {' '}{t("Export Draw.io")}{' '}</button>
                       <button
                         className="toolbar-dropdown-item"
                         role="menuitem"
@@ -2989,11 +2979,10 @@ function App() {
                           setIsExportMenuOpen(false);
                           exportAsVsdx();
                         }}
-                        title="Export a native Visio drawing (.vsdx). Opens in desktop Visio and Visio for the web; also importable into diagrams.net. Generic editable shapes + connectors."
+                        title={t("Export a native Visio drawing (.vsdx). Opens in desktop Visio and Visio for the web; also importable into diagrams.net. Generic editable shapes + connectors.")}
                       >
                         <Download size={18} />
-                        Export Visio (VSDX)
-                      </button>
+                        {' '}{t("Export Visio (VSDX)")}{' '}</button>
                       <button
                         className="toolbar-dropdown-item"
                         role="menuitem"
@@ -3002,11 +2991,10 @@ function App() {
                           setIsExportMenuOpen(false);
                           exportAsHtml();
                         }}
-                        title="Export as interactive HTML with pan, zoom, and tooltips"
+                        title={t("Export as interactive HTML with pan, zoom, and tooltips")}
                       >
                         <FileCode size={18} />
-                        Export Interactive HTML
-                      </button>
+                        {' '}{t("Export Interactive HTML")}{' '}</button>
                       <div className="toolbar-dropdown-separator" role="separator" />
                       <button
                         className="toolbar-dropdown-item"
@@ -3016,11 +3004,10 @@ function App() {
                           setIsExportMenuOpen(false);
                           exportCostBreakdown();
                         }}
-                        title={totalMonthlyCost === 0 ? 'Add services to estimate costs first' : 'Export cost breakdown as CSV'}
+                        title={totalMonthlyCost === 0 ? t("Add services to estimate costs first") : t("Export cost breakdown as CSV")}
                       >
                         <DollarSign size={18} />
-                        Export Costs (CSV)
-                      </button>
+                        {' '}{t("Export Costs (CSV)")}{' '}</button>
                       <button
                         className="toolbar-dropdown-item"
                         role="menuitem"
@@ -3029,24 +3016,23 @@ function App() {
                           setIsExportMenuOpen(false);
                           exportCostBreakdownZip();
                         }}
-                        title={totalMonthlyCost === 0 ? 'Add services to estimate costs first' : 'Export CSV, JSON, summary and intelligent analysis as a ZIP'}
+                        title={totalMonthlyCost === 0 ? t("Add services to estimate costs first") : t("Export CSV, JSON, summary and intelligent analysis as a ZIP")}
                       >
                         <DollarSign size={18} />
-                        Export Costs (All Formats)
-                      </button>
+                        {' '}{t("Export Costs (All Formats)")}{' '}</button>
 
                       <div className="toolbar-dropdown-separator" role="separator" />
 
-                      <div className="toolbar-dropdown-heading">Recent exports</div>
+                      <div className="toolbar-dropdown-heading">{t("Recent exports")}</div>
                       {exportHistory.length === 0 ? (
-                        <div className="toolbar-dropdown-hint toolbar-dropdown-hint--muted">No exports yet</div>
+                        <div className="toolbar-dropdown-hint toolbar-dropdown-hint--muted">{t("No exports yet")}</div>
                       ) : (
                         <div className="toolbar-dropdown-history">
                           {exportHistory.slice(0, 6).map((item) => (
                             <div key={item.id} className="toolbar-dropdown-history-item">
                               <div className="toolbar-dropdown-history-file">{item.fileName}</div>
                               <div className="toolbar-dropdown-history-meta">
-                                {item.kind.toUpperCase()} • {formatTimeAgo(item.createdAt)}
+                                {item.kind.toUpperCase()} {' '}{t("•")}{' '}{formatTimeAgo(item.createdAt)}
                               </div>
                             </div>
                           ))}
@@ -3061,7 +3047,7 @@ function App() {
                 <button 
                   onClick={() => setIsDarkMode(!isDarkMode)} 
                   className="btn btn-secondary" 
-                  title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+                  title={isDarkMode ? t("Switch to Light Mode") : t("Switch to Dark Mode")}
                   style={{ fontSize: '20px', padding: '0.5rem 1rem' }}
                 >
                   {isDarkMode ? '☀️' : '🌙'}
@@ -3081,7 +3067,7 @@ function App() {
                     }
                   }}
                   className="btn btn-secondary"
-                  title="Clear diagram and start fresh"
+                  title={t("Clear diagram and start fresh")}
                 >
                   <RefreshCw size={18} />
                 </button>
@@ -3094,20 +3080,18 @@ function App() {
                 <button 
                   onClick={() => setIsVersionHistoryModalOpen(true)} 
                   className="btn btn-secondary" 
-                  title="View version history"
+                  title={t("View version history")}
                 >
                   <Clock size={18} />
-                  History
-                </button>
+                  {' '}{t("History")}{' '}</button>
                 <button 
                   onClick={() => setIsSaveSnapshotModalOpen(true)} 
                   className="btn btn-secondary" 
-                  title="Save current diagram as snapshot"
+                  title={t("Save current diagram as snapshot")}
                   disabled={nodes.length === 0}
                 >
                   <Camera size={18} />
-                  Snapshot
-                </button>
+                  {' '}{t("Snapshot")}{' '}</button>
               </div>
 
               <div className="toolbar-group">
@@ -3115,7 +3099,7 @@ function App() {
                   <button
                     onClick={() => setIsLayoutMenuOpen((v) => !v)}
                     className="btn btn-secondary"
-                    title="Layout presets"
+                    title={t("Layout presets")}
                     aria-haspopup="menu"
                     aria-expanded={isLayoutMenuOpen}
                   >
@@ -3125,39 +3109,37 @@ function App() {
                       <path d="M4 13h7v7H4z" />
                       <path d="M13 13h7v7h-7z" />
                     </svg>
-                    Layout
-                    <ChevronDown size={16} style={{ marginLeft: 2 }} />
+                    {' '}{t("Layout")}{' '}<ChevronDown size={16} style={{ marginLeft: 2 }} />
                   </button>
 
                   {isLayoutMenuOpen && (
-                    <div className="toolbar-dropdown-menu toolbar-dropdown-menu--layout" role="menu" aria-label="Layout options">
-                      <div className="toolbar-dropdown-heading">Preset</div>
+                    <div className="toolbar-dropdown-menu toolbar-dropdown-menu--layout" role="menu" aria-label={t("Layout options")}>
+                      <div className="toolbar-dropdown-heading">{t("Preset")}</div>
                       <select
                         className="toolbar-dropdown-select"
                         value={layoutPreset}
                         onChange={(e) => setLayoutPreset(e.target.value as LayoutPreset)}
-                        aria-label="Layout preset"
+                        aria-label={t("Layout preset")}
                       >
-                        <option value="flow-lr">Flow (L→R)</option>
-                        <option value="flow-tb">Flow (Top→Bottom)</option>
-                        <option value="swimlanes">Swimlanes by Group</option>
-                        <option value="radial">Radial</option>
+                        <option value="flow-lr">{t("Flow (L→R)")}</option>
+                        <option value="flow-tb">{t("Flow (Top→Bottom)")}</option>
+                        <option value="swimlanes">{t("Swimlanes by Group")}</option>
+                        <option value="radial">{t("Radial")}</option>
                       </select>
 
                       <div className="toolbar-dropdown-separator" role="separator" />
 
                       <div className="toolbar-dropdown-row">
                         <label className="toolbar-dropdown-label" htmlFor="layoutEngine">
-                          Engine
-                        </label>
+                          {' '}{t("Engine")}{' '}</label>
                         <select
                           id="layoutEngine"
                           className="toolbar-dropdown-select"
                           value={layoutEngine}
                           onChange={(e) => setLayoutEngine(e.target.value as LayoutEngineType)}
                         >
-                          <option value="dagre">Dagre</option>
-                          <option value="elk">ELK</option>
+                          <option value="dagre">{t("Dagre")}</option>
+                          <option value="elk">{t("ELK")}</option>
                         </select>
                       </div>
 
@@ -3165,32 +3147,30 @@ function App() {
 
                       <div className="toolbar-dropdown-row">
                         <label className="toolbar-dropdown-label" htmlFor="layoutSpacing">
-                          Spacing
-                        </label>
+                          {' '}{t("Spacing")}{' '}</label>
                         <select
                           id="layoutSpacing"
                           className="toolbar-dropdown-select"
                           value={layoutSpacing}
                           onChange={(e) => setLayoutSpacing(e.target.value as LayoutSpacing)}
                         >
-                          <option value="compact">Compact</option>
-                          <option value="comfortable">Comfortable</option>
+                          <option value="compact">{t("Compact")}</option>
+                          <option value="comfortable">{t("Comfortable")}</option>
                         </select>
                       </div>
 
                       <div className="toolbar-dropdown-row">
                         <label className="toolbar-dropdown-label" htmlFor="edgeStyle">
-                          Edge style
-                        </label>
+                          {' '}{t("Edge style")}{' '}</label>
                         <select
                           id="edgeStyle"
                           className="toolbar-dropdown-select"
                           value={layoutEdgeStyle}
                           onChange={(e) => setLayoutEdgeStyle(e.target.value as LayoutEdgeStyle)}
                         >
-                          <option value="straight">Straight</option>
-                          <option value="smooth">Smooth</option>
-                          <option value="orthogonal">Orthogonal</option>
+                          <option value="straight">{t("Straight")}</option>
+                          <option value="smooth">{t("Smooth")}</option>
+                          <option value="orthogonal">{t("Orthogonal")}</option>
                         </select>
                       </div>
 
@@ -3201,11 +3181,10 @@ function App() {
                           onChange={(e) => setLayoutEmphasizePrimaryPath(e.target.checked)}
                           disabled={!(layoutPreset === 'flow-lr' || layoutPreset === 'flow-tb')}
                         />
-                        Emphasize primary path
-                      </label>
+                        {' '}{t("Emphasize primary path")}{' '}</label>
 
                       <div className="toolbar-dropdown-hint">
-                        Current: {layoutPresetLabel[layoutPreset]} • Engine: {layoutEngine === 'elk' ? 'ELK' : 'Dagre'}
+                        {' '}{t("Current:")}{' '}{layoutPresetLabel[layoutPreset]} {' '}{t("• Engine:")}{' '}{layoutEngine === 'elk' ? 'ELK' : 'Dagre'}
                         {layoutPreset === 'radial' ? ' (centers on selected node when possible)' : ''}
                       </div>
 
@@ -3219,14 +3198,13 @@ function App() {
                           setIsLayoutMenuOpen(false);
                           applyLayout();
                         }}
-                        title={nodes.length === 0 ? 'Add services first' : 'Apply selected layout preset'}
+                        title={nodes.length === 0 ? t("Add services first") : t("Apply selected layout preset")}
                       >
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                           <path d="M21 12a9 9 0 1 1-9-9" />
                           <path d="M21 3v9h-9" />
                         </svg>
-                        Apply Layout
-                      </button>
+                        {' '}{t("Apply Layout")}{' '}</button>
                     </div>
                   )}
                 </div>
@@ -3235,7 +3213,7 @@ function App() {
                   <button
                     onClick={() => setIsBulkSelectMenuOpen((v) => !v)}
                     className="btn btn-secondary"
-                    title="Bulk select operations"
+                    title={t("Bulk select operations")}
                     aria-haspopup="menu"
                     aria-expanded={isBulkSelectMenuOpen}
                     disabled={nodes.length === 0}
@@ -3246,12 +3224,11 @@ function App() {
                       <rect x="3" y="14" width="7" height="7" rx="1" />
                       <rect x="14" y="14" width="7" height="7" rx="1" />
                     </svg>
-                    Select
-                    <ChevronDown size={16} style={{ marginLeft: 2 }} />
+                    {' '}{t("Select")}{' '}<ChevronDown size={16} style={{ marginLeft: 2 }} />
                   </button>
 
                   {isBulkSelectMenuOpen && (
-                    <div className="toolbar-dropdown-menu" role="menu" aria-label="Bulk select options">
+                    <div className="toolbar-dropdown-menu" role="menu" aria-label={t("Bulk select options")}>
                       <button
                         className="toolbar-dropdown-item"
                         role="menuitem"
@@ -3260,8 +3237,7 @@ function App() {
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                           <path d="M5 13l4 4L19 7" />
                         </svg>
-                        Select All Nodes
-                      </button>
+                        {' '}{t("Select All Nodes")}{' '}</button>
                       <button
                         className="toolbar-dropdown-item"
                         role="menuitem"
@@ -3270,13 +3246,12 @@ function App() {
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                           <circle cx="12" cy="12" r="10" />
                         </svg>
-                        Deselect All
-                      </button>
+                        {' '}{t("Deselect All")}{' '}</button>
                       
                       {getServiceTypes().length > 0 && (
                         <>
                           <div className="toolbar-dropdown-separator" role="separator" />
-                          <div className="toolbar-dropdown-heading">Select by Service Type</div>
+                          <div className="toolbar-dropdown-heading">{t("Select by Service Type")}</div>
                           {getServiceTypes().map(serviceType => (
                             <button
                               key={serviceType}
@@ -3300,20 +3275,19 @@ function App() {
                   <button
                     onClick={() => setIsStylePresetMenuOpen((v) => !v)}
                     className="btn btn-secondary"
-                    title="Change diagram style"
+                    title={t("Change diagram style")}
                     aria-haspopup="menu"
                     aria-expanded={isStylePresetMenuOpen}
                   >
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
                     </svg>
-                    Style
-                    <ChevronDown size={16} style={{ marginLeft: 2 }} />
+                    {' '}{t("Style")}{' '}<ChevronDown size={16} style={{ marginLeft: 2 }} />
                   </button>
 
                   {isStylePresetMenuOpen && (
-                    <div className="toolbar-dropdown-menu" role="menu" aria-label="Style preset options">
-                      <div className="toolbar-dropdown-heading">Visual Style</div>
+                    <div className="toolbar-dropdown-menu" role="menu" aria-label={t("Style preset options")}>
+                      <div className="toolbar-dropdown-heading">{t("Visual Style")}</div>
                       <button
                         className={`toolbar-dropdown-item ${stylePreset === 'detailed' ? 'active' : ''}`}
                         role="menuitem"
@@ -3323,8 +3297,7 @@ function App() {
                           <rect x="3" y="3" width="18" height="18" rx="2" />
                           <path d="M3 9h18M3 15h18M9 3v18" />
                         </svg>
-                        Detailed (Default)
-                      </button>
+                        {' '}{t("Detailed (Default)")}{' '}</button>
                       <button
                         className={`toolbar-dropdown-item ${stylePreset === 'presentation' ? 'active' : ''}`}
                         role="menuitem"
@@ -3334,8 +3307,7 @@ function App() {
                           <rect x="2" y="3" width="20" height="14" rx="2" />
                           <path d="M8 21h8M12 17v4" />
                         </svg>
-                        Presentation (Professional)
-                      </button>
+                        {' '}{t("Presentation (Professional)")}{' '}</button>
                       <div className="toolbar-dropdown-separator" role="separator" />
                       <div className="toolbar-dropdown-hint">
                         {stylePreset === 'detailed' && 'Shows all labels, pricing, and details'}
@@ -3356,7 +3328,7 @@ function App() {
                     });
                   }}
                   className={`btn btn-secondary${focusMode ? ' btn-active' : ''}`}
-                  title={focusMode ? 'Show panels and diagram info' : 'Hide panels and diagram info for maximum diagram space'}
+                  title={focusMode ? t("Show panels and diagram info") : t("Hide panels and diagram info for maximum diagram space")}
                   aria-pressed={focusMode}
                 >
                   <PanelLeftClose size={18} />
@@ -3366,7 +3338,7 @@ function App() {
                 <button
                   onClick={toggleCollapseAllGroups}
                   className={`btn btn-secondary${allGroupsCollapsed ? ' btn-active' : ''}`}
-                  title={allGroupsCollapsed ? 'Expand all groups to original size' : 'Collapse all groups to fit their content'}
+                  title={allGroupsCollapsed ? t("Expand all groups to original size") : t("Collapse all groups to fit their content")}
                   disabled={nodes.filter(n => n.type === 'groupNode').length === 0}
                 >
                   {allGroupsCollapsed ? <Maximize2 size={18} /> : <Minimize2 size={18} />}
@@ -3378,53 +3350,50 @@ function App() {
                 <button 
                   onClick={handleValidateArchitecture} 
                   className="btn btn-premium" 
-                  title="Validate architecture against Azure Well-Architected Framework"
+                  title={t("Validate architecture against Azure Well-Architected Framework")}
                   disabled={nodes.length === 0}
                 >
                   <Shield size={18} />
-                  Validate Architecture
-                </button>
+                  {' '}{t("Validate Architecture")}{' '}</button>
                 <button
                   className="btn btn-compare-models"
                   onClick={() => setIsCompareValidationOpen(true)}
-                  title="Compare WAF validation results across multiple AI models"
+                  title={t("Compare WAF validation results across multiple AI models")}
                   disabled={nodes.length === 0}
                 >
                   <GitCompare size={18} />
-                  Compare Validation
-                </button>
+                  {' '}{t("Compare Validation")}{' '}</button>
                 {validationResult && (
                   <button
                     onClick={() => setIsValidationModalOpen(true)}
                     className="btn btn-secondary"
-                    title="Open last validation results"
+                    title={t("Open last validation results")}
                   >
                     <Shield size={18} />
-                    Validation: {bandLabel(validationResult.overallScore)}
+                    {' '}{t("Validation:")}{' '}{translate(bandLabel(validationResult.overallScore))}
                   </button>
                 )}
                 <button 
                   onClick={handleGenerateDeploymentGuide} 
                   className="btn btn-premium" 
-                  title="Generate comprehensive deployment guide"
+                  title={t("Generate comprehensive deployment guide")}
                   disabled={nodes.length === 0}
                 >
                   <FileText size={18} />
-                  Deployment Guide
-                </button>
+                  {' '}{t("Deployment Guide")}{' '}</button>
                 {deploymentGuide && (
                   <button
                     onClick={() => setIsDeploymentGuideModalOpen(true)}
                     className="btn btn-secondary"
-                    title="Open last deployment guide"
+                    title={t("Open last deployment guide")}
                   >
                     <FileText size={18} />
-                    View Guide
-                  </button>
+                    {' '}{t("View Guide")}{' '}</button>
                 )}
               </div>
             </div>
           </div>
+          <LanguageSwitch />
           <button
             className="header-collapse-toggle"
             onClick={() => {
@@ -3434,12 +3403,12 @@ function App() {
                 return next;
               });
             }}
-            title={isHeaderCollapsed ? 'Show the toolbar' : 'Hide the toolbar for more canvas space'}
-            aria-label={isHeaderCollapsed ? 'Show the toolbar' : 'Hide the toolbar'}
+            title={isHeaderCollapsed ? t('header.showToolbar') : t('header.hideToolbarTitle')}
+            aria-label={isHeaderCollapsed ? t('header.showToolbar') : t('header.hideToolbar')}
             aria-pressed={isHeaderCollapsed}
           >
             {isHeaderCollapsed ? <PanelTopOpen size={18} /> : <PanelTopClose size={18} />}
-            <span>{isHeaderCollapsed ? 'Show Toolbar' : 'Hide Toolbar'}</span>
+            <span>{isHeaderCollapsed ? t('header.showToolbar') : t('header.hideToolbar')}</span>
           </button>
         </div>
       </header>
@@ -3478,7 +3447,7 @@ function App() {
               position="bottom-right"
               className="nav-minimap"
               style={{ bottom: 84 }}
-              ariaLabel="Mini-map — drag or scroll to navigate the canvas"
+              ariaLabel={t('canvas.miniMap')}
               nodeColor="#60a5fa"
               nodeStrokeColor="#3b82f6"
               maskColor="rgba(30, 41, 59, 0.45)"
@@ -3494,20 +3463,19 @@ function App() {
                 aren't perceived as "stuck" or too big to view. Shown only when
                 a diagram exists and until the user dismisses it. */}
             {showCanvasHint && nodes.length > 0 && (
-              <div className="canvas-nav-hint" role="note" aria-label="Canvas navigation tips">
+              <div className="canvas-nav-hint" role="note" aria-label={t("Canvas navigation tips")}>
                 <div className="canvas-nav-hint-tips">
-                  <span className="canvas-nav-hint-tip"><ZoomIn size={15} /> Scroll to zoom in / out</span>
-                  <span className="canvas-nav-hint-sep" aria-hidden="true">·</span>
-                  <span className="canvas-nav-hint-tip"><Hand size={15} /> Right-click + drag to pan</span>
-                  <span className="canvas-nav-hint-sep" aria-hidden="true">·</span>
+                  <span className="canvas-nav-hint-tip"><ZoomIn size={15} /> {' '}{t("Scroll to zoom in / out")}</span>
+                  <span className="canvas-nav-hint-sep" aria-hidden="true">{t("·")}</span>
+                  <span className="canvas-nav-hint-tip"><Hand size={15} /> {' '}{t("Right-click + drag to pan")}</span>
+                  <span className="canvas-nav-hint-sep" aria-hidden="true">{t("·")}</span>
                   <button
                     type="button"
                     className="canvas-nav-hint-fit"
                     onClick={() => reactFlowInstance?.fitView?.({ padding: 0.2, duration: 400 })}
-                    title="Zoom to fit the whole diagram in view"
+                    title={t("Zoom to fit the whole diagram in view")}
                   >
-                    <Frame size={15} /> Fit to view
-                  </button>
+                    <Frame size={15} /> {' '}{t("Fit to view")}{' '}</button>
                 </div>
                 <button
                   type="button"
@@ -3516,8 +3484,8 @@ function App() {
                     setShowCanvasHint(false);
                     try { localStorage.setItem(CANVAS_HINT_STORAGE_KEY, '1'); } catch { /* ignore */ }
                   }}
-                  title="Dismiss (won't show again)"
-                  aria-label="Dismiss navigation tips"
+                  title={t("Dismiss (won't show again)")}
+                  aria-label={t("Dismiss navigation tips")}
                 >
                   <X size={14} />
                 </button>
@@ -3530,24 +3498,20 @@ function App() {
                 services onto the canvas still works; only the button is
                 clickable. */}
             {nodes.length === 0 && !isChatOpen && (
-              <div className="canvas-empty-cta" role="note" aria-label="Get started">
+              <div className="canvas-empty-cta" role="note" aria-label={t("Get started")}>
                 <div className="canvas-empty-cta-inner">
                   <MessagesSquare size={34} className="canvas-empty-cta-icon" />
-                  <h2 className="canvas-empty-cta-title">Start with a conversation</h2>
+                  <h2 className="canvas-empty-cta-title">{t("Start with a conversation")}</h2>
                   <p className="canvas-empty-cta-desc">
-                    Describe what you want to build in plain English — I’ll draw the
-                    first version, then you refine it step by step.
-                  </p>
+                    {' '}{t("Describe what you want to build in plain English — I’ll draw the first version, then you refine it step by step.")}{' '}</p>
                   <button
                     type="button"
                     className="canvas-empty-cta-btn"
                     onClick={() => setIsChatOpen(true)}
                   >
-                    <MessagesSquare size={18} /> Start with a conversation
-                  </button>
+                    <MessagesSquare size={18} /> {' '}{t("Start with a conversation")}{' '}</button>
                   <span className="canvas-empty-cta-alt">
-                    or use <strong>Generate with AI</strong> · or drag services from the left
-                  </span>
+                    {' '}{t("or use")}{' '}<strong>{t("Generate with AI")}</strong> {' '}{t("· or drag services from the left")}{' '}</span>
                 </div>
               </div>
             )}
@@ -3592,8 +3556,7 @@ function App() {
                 }}
               >
                 <div className="prompt-text" style={{ fontSize: '1.1rem', fontWeight: 600, letterSpacing: '0.3px' }}>
-                  <strong style={{ fontSize: '1.2rem' }}>⏳ Applying recommendations...</strong> Regenerating architecture with improvements
-                </div>
+                  <strong style={{ fontSize: '1.2rem' }}>{t("⏳ Applying recommendations...")}</strong> {' '}{t("Regenerating architecture with improvements")}{' '}</div>
               </div>
             )}
 
@@ -3617,8 +3580,7 @@ function App() {
                 }}
               >
                 <div className="prompt-text" style={{ fontSize: '1.1rem', fontWeight: 600, letterSpacing: '0.3px' }}>
-                  <strong style={{ fontSize: '1.2rem' }}>📄 Parsing {importFormatLabel} Template...</strong> Analyzing resources and generating architecture diagram
-                </div>
+                  <strong style={{ fontSize: '1.2rem' }}>{t("📄 Parsing")}{' '}{importFormatLabel} {' '}{t("Template...")}</strong> {' '}{t("Analyzing resources and generating architecture diagram")}{' '}</div>
               </div>
             )}
 
@@ -3652,7 +3614,7 @@ function App() {
                 }}
               >
                 <div className="prompt-text">
-                  <strong>Generated from:</strong> {architecturePrompt}
+                  <strong>{t("Generated from:")}</strong> {architecturePrompt}
                 </div>
               </div>
             )}
@@ -3721,27 +3683,27 @@ function App() {
                 zIndex: 10000,
               }}
             >
-              <div className="context-menu-header">Edge Direction</div>
+              <div className="context-menu-header">{t("Edge Direction")}</div>
               <button
                 className="context-menu-item"
                 onClick={() => setEdgeDirection(edgeContextMenu.edgeId, 'forward')}
               >
-                <span className="menu-icon">→</span>
-                <span>One-way (Forward)</span>
+                <span className="menu-icon">{t("→")}</span>
+                <span>{t("One-way (Forward)")}</span>
               </button>
               <button
                 className="context-menu-item"
                 onClick={() => setEdgeDirection(edgeContextMenu.edgeId, 'reverse')}
               >
-                <span className="menu-icon">←</span>
-                <span>One-way (Reverse)</span>
+                <span className="menu-icon">{t("←")}</span>
+                <span>{t("One-way (Reverse)")}</span>
               </button>
               <button
                 className="context-menu-item"
                 onClick={() => setEdgeDirection(edgeContextMenu.edgeId, 'bidirectional')}
               >
-                <span className="menu-icon">↔</span>
-                <span>Bidirectional</span>
+                <span className="menu-icon">{t("↔")}</span>
+                <span>{t("Bidirectional")}</span>
               </button>
             </div>
           </>
@@ -3870,7 +3832,7 @@ Return the IMPROVED architecture in the same JSON format as before with proper g
           } catch (error) {
             console.error('❌ Failed to regenerate architecture:', error);
             setIsApplyingRecommendations(false);
-            alert('Failed to regenerate architecture. Please try again.');
+            alert(t("Failed to regenerate architecture. Please try again."));
           }
         }}
       />
@@ -3969,11 +3931,10 @@ Return the IMPROVED architecture in the same JSON format as before with proper g
       <button
         className={`feedback-fab${feedbackFabPulse ? ' pulse-once' : ''}`}
         onClick={() => setIsFeedbackModalOpen(true)}
-        title="Share feedback"
+        title={t("Share feedback")}
       >
         <MessageSquare size={18} />
-        Feedback
-      </button>
+        {' '}{t("Feedback")}{' '}</button>
       <ArchitectureChatPanel
         isOpen={isChatOpen}
         onClose={() => setIsChatOpen(false)}

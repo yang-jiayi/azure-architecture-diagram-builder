@@ -78,6 +78,51 @@
   background: rgba(255, 255, 255, 0.25);
 }
 
+.language-switch {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-self: flex-start;
+  padding: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 7px;
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.language-switch button {
+  min-height: 30px;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: #fff;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.language-switch button.active {
+  background: #fff;
+  color: #005a9e;
+}
+
+.language-switch button:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* When collapsed: hide the toolbar rows and shrink the header chrome. */
 .app-header.header-collapsed {
   padding-top: 0.35rem;
@@ -98,6 +143,10 @@
 }
 
 .app-header.header-collapsed .header-collapse-toggle {
+  align-self: center;
+}
+
+.app-header.header-collapsed .language-switch {
   align-self: center;
 }
 

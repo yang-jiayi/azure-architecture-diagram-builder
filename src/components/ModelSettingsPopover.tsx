@@ -21,14 +21,24 @@ import {
   hasFeatureOverride,
 } from '../stores/modelSettingsStore';
 import './ModelSettingsPopover.css';
+import { useLanguage } from '../i18n/LanguageContext';
+import type { TranslationKey } from '../i18n/LanguageContext';
 
 interface ModelSettingsPopoverProps {
   isOpen: boolean;
   onToggle: () => void;
 }
 
+const REASONING_LABEL_KEYS: Record<ReasoningEffort, TranslationKey> = {
+  none: 'None',
+  low: 'Low',
+  medium: 'Medium',
+  high: 'High',
+};
+
 const ModelSettingsPopover = forwardRef<HTMLDivElement, ModelSettingsPopoverProps>(
   ({ isOpen, onToggle }, ref) => {
+    const { t } = useLanguage();
     const [settings, updateSettings] = useModelSettings();
     const availableModels = getAvailableModels();
     const currentConfig = MODEL_CONFIG[settings.model];
@@ -131,14 +141,14 @@ const ModelSettingsPopover = forwardRef<HTMLDivElement, ModelSettingsPopoverProp
         <button
           onClick={onToggle}
           className="btn btn-secondary model-popover-trigger"
-          title="AI model settings"
+          title={t("AI model settings")}
           aria-haspopup="menu"
           aria-expanded={isOpen}
         >
           {getModelIcon(settings.model)}
           <span className="model-popover-label">{currentConfig.displayName}</span>
           {currentConfig.isReasoning && (
-            <span className="model-popover-reasoning">{settings.reasoningEffort}</span>
+            <span className="model-popover-reasoning">{t(REASONING_LABEL_KEYS[settings.reasoningEffort])}</span>
           )}
           {hasAnyOverride && <span className="model-popover-override-dot" />}
           <ChevronDown size={14} style={{ marginLeft: 2 }} />
@@ -148,10 +158,10 @@ const ModelSettingsPopover = forwardRef<HTMLDivElement, ModelSettingsPopoverProp
           <div
             className="toolbar-dropdown-menu toolbar-dropdown-menu--model-settings"
             role="menu"
-            aria-label="AI model settings"
+            aria-label={t("AI model settings")}
           >
             {/* Default Model */}
-            <div className="toolbar-dropdown-heading">Default Model</div>
+            <div className="toolbar-dropdown-heading">{t("Default Model")}</div>
             <div className="msp-model-buttons">
               {availableModels.map((model) => (
                 <button
@@ -170,16 +180,16 @@ const ModelSettingsPopover = forwardRef<HTMLDivElement, ModelSettingsPopoverProp
             {currentConfig.isReasoning && (
               <>
                 <div className="msp-reasoning-row">
-                  <span className="msp-reasoning-label">Reasoning</span>
+                  <span className="msp-reasoning-label">{t("Reasoning")}</span>
                   <div className="msp-reasoning-buttons">
                     {(['none', 'low', 'medium', 'high'] as ReasoningEffort[]).map((level) => (
                       <button
                         key={level}
                         className={`msp-reasoning-btn ${settings.reasoningEffort === level ? 'active' : ''}`}
                         onClick={() => handleReasoningChange(level)}
-                        title={level === 'none' ? 'No reasoning - fastest response' : undefined}
+                        title={level === 'none' ? t("No reasoning - fastest response") : undefined}
                       >
-                        {level.charAt(0).toUpperCase() + level.slice(1)}
+                        {t(REASONING_LABEL_KEYS[level])}
                       </button>
                     ))}
                   </div>
@@ -191,9 +201,8 @@ const ModelSettingsPopover = forwardRef<HTMLDivElement, ModelSettingsPopoverProp
 
             {/* Per-Feature Overrides */}
             <div className="toolbar-dropdown-heading">
-              Per-Feature Settings
-              {hasAnyOverride && (
-                <button className="msp-reset-btn" onClick={resetAllOverrides} title="Reset all to default">
+              {' '}{t("Per-Feature Settings")}{' '}{hasAnyOverride && (
+                <button className="msp-reset-btn" onClick={resetAllOverrides} title={t("Reset all to default")}>
                   <RotateCcw size={11} />
                 </button>
               )}
@@ -215,7 +224,7 @@ const ModelSettingsPopover = forwardRef<HTMLDivElement, ModelSettingsPopoverProp
                       <span className="msp-feature-name">{featureConfig.displayName}</span>
                       <span className="msp-feature-effective">
                         {MODEL_CONFIG[effectiveModel].displayName}
-                        {effectiveReasoning && ` (${effectiveReasoning})`}
+                        {effectiveReasoning && ` (${t(REASONING_LABEL_KEYS[effectiveReasoning])})`}
                       </span>
                     </div>
                     <div className="msp-feature-controls">
@@ -224,7 +233,7 @@ const ModelSettingsPopover = forwardRef<HTMLDivElement, ModelSettingsPopoverProp
                         onChange={(e) => handleFeatureModelChange(feature, e.target.value)}
                         className="msp-feature-select"
                       >
-                        <option value="default">Default</option>
+                        <option value="default">{t("Default")}</option>
                         {availableModels.map((model) => (
                           <option key={model} value={model}>
                             {MODEL_CONFIG[model].displayName}
@@ -240,10 +249,10 @@ const ModelSettingsPopover = forwardRef<HTMLDivElement, ModelSettingsPopoverProp
                           }
                           className="msp-reasoning-select"
                         >
-                          <option value="none">None</option>
-                          <option value="low">Low</option>
-                          <option value="medium">Med</option>
-                          <option value="high">High</option>
+                          <option value="none">{t("None")}</option>
+                          <option value="low">{t("Low")}</option>
+                          <option value="medium">{t("Med")}</option>
+                          <option value="high">{t("High")}</option>
                         </select>
                       )}
                     </div>
@@ -255,8 +264,7 @@ const ModelSettingsPopover = forwardRef<HTMLDivElement, ModelSettingsPopoverProp
             <div className="toolbar-dropdown-separator" role="separator" />
 
             <div className="toolbar-dropdown-hint">
-              Recommended: GPT-5.2 (medium) for generation, GPT-5.1 (none) for fast tasks
-            </div>
+              {' '}{t("Recommended: GPT-5.2 (medium) for generation, GPT-5.1 (none) for fast tasks")}{' '}</div>
           </div>
         )}
       </div>

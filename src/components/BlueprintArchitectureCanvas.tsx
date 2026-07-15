@@ -22,6 +22,7 @@ import { getServiceIconMapping } from '../data/serviceIconMapping';
 import { resolveServiceIconLoose } from '../utils/serviceIconFuzzy';
 import { loadIcon } from '../utils/iconLoader';
 import './BlueprintArchitectureCanvas.css';
+import { useLanguage } from '../i18n/LanguageContext';
 
 export interface BlueprintArchitectureCanvasProps {
   data: BlueprintArchitecture;
@@ -318,6 +319,7 @@ const BlueprintArchitectureCanvas: React.FC<BlueprintArchitectureCanvasProps> = 
   author,
   legendPosition,
 }) => {
+  const { t } = useLanguage();
   const { width: cW, height: cH } = data.canvas;
   const resolvedLegend = resolveLegendPosition(legendPosition, cW, cH);
   const hostWidth = resolvedLegend === 'right' ? cW + LEGEND_RIGHT_WIDTH + 32 : cW + 96;
@@ -351,7 +353,7 @@ const BlueprintArchitectureCanvas: React.FC<BlueprintArchitectureCanvasProps> = 
     lw: number; // label box width
   };
   const placedEdges = useMemo<PlacedEdge[]>(() => {
-    const LABEL_FONT = '14px Arial';
+    const LABEL_FONT = '14px \"Yu Gothic UI\", Arial, sans-serif';
     const LABEL_H = 18;
 
     // ── Keep-out regions that annotations must never cover ──────────────────
@@ -364,7 +366,7 @@ const BlueprintArchitectureCanvas: React.FC<BlueprintArchitectureCanvasProps> = 
     }));
     // Zone header strips (the uppercase title rendered at the zone's top-left).
     const zoneHeaderRects: Rect[] = (data.zones || []).map((z) => {
-      const w = measureTextWidth((z.label || '').toUpperCase(), '700 13px Arial');
+      const w = measureTextWidth((z.label || '').toUpperCase(), '700 13px \"Yu Gothic UI\", Arial, sans-serif');
       // letterSpacing 0.08em ≈ 1px per char; pad generously.
       const padded = w + (z.label?.length || 0) + 28;
       return {
@@ -585,7 +587,7 @@ const BlueprintArchitectureCanvas: React.FC<BlueprintArchitectureCanvasProps> = 
     >
       <header className="bp-arch-header">
         <div>
-          <div className="bp-arch-eyebrow">Blueprint Architecture</div>
+          <div className="bp-arch-eyebrow">{t("Blueprint Architecture")}</div>
           <h1 className="bp-arch-title">{data.title}</h1>
         </div>
         {author && <div className="bp-arch-author">{author}</div>}

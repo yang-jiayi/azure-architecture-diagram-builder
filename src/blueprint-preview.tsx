@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import BlueprintArchitectureCanvas from './components/BlueprintArchitectureCanvas';
 import { layoutBlueprint } from './services/blueprintLayout';
 import type { BlueprintArchitecture } from './services/blueprintArchitectureAI';
+import { LanguageProvider } from './i18n/LanguageContext';
 
 // @ts-ignore - dev-only JSON imports
 import ecommerce from '../LATEST-ARTIFACTS/blueprint-multi-region-e-commerce-platform-20260526-2149-gpt51-low.json';
@@ -12,6 +13,7 @@ import rag from '../LATEST-ARTIFACTS/blueprint-enterprise-rag-application-azure-
 import microservices from '../Blueprint-diagram-generation/blueprint-microservices-platform-azure-container-20260528-1617-gpt54-low.json';
 // @ts-ignore
 import iot from '../LATEST-ARTIFACTS/blueprint-industrial-iot-predictive-maintenance-20260526-2126-gpt51-low.json';
+import { useLanguage } from './i18n/LanguageContext';
 
 const cases = [
   { id: 'ecommerce', title: 'Multi-region e-commerce (8 nodes / 9 edges / 4 zones)', data: ecommerce },
@@ -34,14 +36,14 @@ function Case({ data, useElk }: { data: BlueprintArchitecture; useElk: boolean }
 }
 
 function App() {
+  const { t } = useLanguage();
   const [useElk, setUseElk] = useState(true);
   return (
     <>
       <div style={{ padding: '12px 16px', position: 'sticky', top: 0, background: '#fff', zIndex: 10, borderBottom: '1px solid #e2e8f0' }}>
         <label style={{ fontWeight: 600, cursor: 'pointer' }}>
           <input type="checkbox" checked={useElk} onChange={(e) => setUseElk(e.target.checked)} />{' '}
-          Auto-layout with ELK (uncheck to see original AI coordinates)
-        </label>
+          {' '}{t("Auto-layout with ELK (uncheck to see original AI coordinates)")}{' '}</label>
       </div>
       {cases.map((c) => (
         <div className="case" id={`case-${c.id}`} key={c.id}>
@@ -53,4 +55,8 @@ function App() {
   );
 }
 
-createRoot(document.getElementById('bp-preview-root')!).render(<App />);
+createRoot(document.getElementById('bp-preview-root')!).render(
+  <LanguageProvider>
+    <App />
+  </LanguageProvider>,
+);

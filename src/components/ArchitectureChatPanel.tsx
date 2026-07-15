@@ -11,6 +11,7 @@ import {
   CurrentArchitecture,
 } from '../services/modificationPrompt';
 import './ArchitectureChatPanel.css';
+import { useLanguage } from '../i18n/LanguageContext';
 
 interface ChatMessage {
   id: string;
@@ -122,6 +123,7 @@ const ArchitectureChatPanel: React.FC<ArchitectureChatPanelProps> = ({
   currentArchitecture,
   onApply,
 }) => {
+  const { t } = useLanguage();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -283,13 +285,13 @@ const ArchitectureChatPanel: React.FC<ArchitectureChatPanelProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="arch-chat-panel" role="complementary" aria-label="Architecture chat">
+    <div className="arch-chat-panel" role="complementary" aria-label={t("Architecture chat")}>
       <div className="arch-chat-header">
         <div className="arch-chat-title">
           <MessageSquare size={18} />
-          <span>Architecture Chat</span>
+          <span>{t("Architecture Chat")}</span>
         </div>
-        <button className="arch-chat-close" onClick={onClose} title="Close chat" aria-label="Close chat">
+        <button className="arch-chat-close" onClick={onClose} title={t("Close chat")} aria-label={t("Close chat")}>
           <X size={18} />
         </button>
       </div>
@@ -298,8 +300,8 @@ const ArchitectureChatPanel: React.FC<ArchitectureChatPanelProps> = ({
         <Sparkles size={13} />
         <span>
           {hasDiagram
-            ? <>Refine your diagram in plain English · <strong>{modelName}</strong></>
-            : <>Describe it, I’ll draw it — then refine in plain English · <strong>{modelName}</strong></>}
+            ? <>{t("Refine your diagram in plain English ·")}{' '}<strong>{modelName}</strong></>
+            : <>{t("Describe it, I’ll draw it — then refine in plain English ·")}{' '}<strong>{modelName}</strong></>}
         </span>
       </div>
 
@@ -347,8 +349,8 @@ const ArchitectureChatPanel: React.FC<ArchitectureChatPanelProps> = ({
                   aria-expanded={showAdvanced}
                 >
                   {showAdvanced
-                    ? <><ChevronUp size={15} /> Fewer ideas</>
-                    : <><ChevronDown size={15} /> More ideas — enterprise patterns</>}
+                    ? <><ChevronUp size={15} /> {' '}{t("Fewer ideas")}</>
+                    : <><ChevronDown size={15} /> {' '}{t("More ideas — enterprise patterns")}</>}
                 </button>
               )}
             </div>
@@ -366,7 +368,7 @@ const ArchitectureChatPanel: React.FC<ArchitectureChatPanelProps> = ({
         {isSending && (
           <div className="arch-chat-msg arch-chat-msg-assistant">
             <Loader2 size={15} className="arch-chat-msg-icon spin" />
-            <div className="arch-chat-bubble arch-chat-bubble-pending">Updating the diagram…</div>
+            <div className="arch-chat-bubble arch-chat-bubble-pending">{t("Updating the diagram…")}</div>
           </div>
         )}
 
@@ -376,14 +378,14 @@ const ArchitectureChatPanel: React.FC<ArchitectureChatPanelProps> = ({
               <Sparkles size={12} />
               {hasDiagram
                 ? (followUpsLoading && dynamicFollowUps.length === 0
-                    ? <>Finding tailored suggestions… <Loader2 size={11} className="spin" /></>
-                    : <>Suggested next steps</>)
-                : <>Start a new architecture</>}
+                    ? <>{t("Finding tailored suggestions…")}{' '}<Loader2 size={11} className="spin" /></>
+                    : <>{t("Suggested next steps")}</>)
+                : <>{t("Start a new architecture")}</>}
             </div>
             <div
               className="arch-chat-suggestions arch-chat-suggestions-inline"
               role="group"
-              aria-label={hasDiagram ? 'Suggested follow-ups' : 'Starter architectures'}
+              aria-label={hasDiagram ? t("Suggested follow-ups") : t("Starter architectures")}
             >
               {(hasDiagram ? followUps : STARTER_SUGGESTIONS).map((s) => {
                 const meta = hasDiagram ? PILLAR_META[pillarFor(s)] : null;
@@ -407,14 +409,13 @@ const ArchitectureChatPanel: React.FC<ArchitectureChatPanelProps> = ({
                   type="button"
                   className="arch-chat-chip arch-chat-chip-ask"
                   disabled={isSending || askingBest || !configured}
-                  title="Ask the model for the single highest-impact improvement"
+                  title={t("Ask the model for the single highest-impact improvement")}
                   onClick={handleAskBest}
                 >
                   {askingBest
                     ? <Loader2 size={12} className="spin arch-chat-chip-icon" />
                     : <Lightbulb size={12} className="arch-chat-chip-icon" />}
-                  What would you add?
-                </button>
+                  {' '}{t("What would you add?")}{' '}</button>
               )}
             </div>
           </div>
@@ -424,14 +425,13 @@ const ArchitectureChatPanel: React.FC<ArchitectureChatPanelProps> = ({
       <div className="arch-chat-composer">
         {!configured && (
           <div className="arch-chat-warning">
-            <AlertCircle size={14} /> Azure OpenAI is not configured.
-          </div>
+            <AlertCircle size={14} /> {' '}{t("Azure OpenAI is not configured.")}{' '}</div>
         )}
         <div className="arch-chat-input-row">
           <textarea
             ref={inputRef}
             className="arch-chat-input"
-            placeholder={hasDiagram ? 'e.g. add a load balancer in front of the VMs' : 'Describe your architecture…'}
+            placeholder={hasDiagram ? t("e.g. add a load balancer in front of the VMs") : t("Describe your architecture…")}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -442,13 +442,13 @@ const ArchitectureChatPanel: React.FC<ArchitectureChatPanelProps> = ({
             className="arch-chat-send"
             onClick={() => send(input)}
             disabled={isSending || !configured || !input.trim()}
-            title="Send (Enter)"
-            aria-label="Send"
+            title={t("Send (Enter)")}
+            aria-label={t("Send")}
           >
             {isSending ? <Loader2 size={18} className="spin" /> : <Send size={18} />}
           </button>
         </div>
-        <div className="arch-chat-hint">Enter to send · Shift+Enter for a new line · each change is auto-saved to version history</div>
+        <div className="arch-chat-hint">{t("Enter to send · Shift+Enter for a new line · each change is auto-saved to version history")}</div>
       </div>
     </div>
   );

@@ -8,6 +8,7 @@ import { generateModelFilename } from '../utils/modelNaming';
 import { scoreToBand, summarizeGaps, formatGapsSummary, formatPillarGaps } from '../services/wafMaturity';
 import { useValidationDisplayPrefs } from '../stores/validationDisplayStore';
 import './ValidationModal.css';
+import { useLanguage } from '../i18n/LanguageContext';
 
 /**
  * Props for ValidationModal component
@@ -27,6 +28,7 @@ interface ValidationModalProps {
  * Includes download functionality for markdown report.
  */
 const ValidationModal: React.FC<ValidationModalProps> = ({ validation, isOpen, onClose, isLoading, onApplyRecommendations, onRevalidate }) => {
+  const { t, translate } = useLanguage();
   // Track selected findings for applying recommendations
   const [selectedFindings, setSelectedFindings] = useState<Set<string>>(new Set());
   // Display preference: show the raw 0-100 score alongside the maturity band
@@ -139,19 +141,19 @@ const ValidationModal: React.FC<ValidationModalProps> = ({ validation, isOpen, o
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content validation-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>🔍 Architecture Validation</h2>
+          <h2>{t("🔍 Architecture Validation")}</h2>
           <div className="modal-header-actions">
             {validation && (
-              <label className="score-toggle" title="Show the underlying 0-100 numeric score alongside the maturity band">
+              <label className="score-toggle" title={t("Show the underlying 0-100 numeric score alongside the maturity band")}>
                 <input
                   type="checkbox"
                   checked={displayPrefs.showNumericScore}
                   onChange={(e) => setDisplayPrefs({ showNumericScore: e.target.checked })}
                 />
-                <span>Show numeric score</span>
+                <span>{t("Show numeric score")}</span>
               </label>
             )}
-            <button className="modal-close" onClick={onClose} title="Hide">
+            <button className="modal-close" onClick={onClose} title={t("Hide")}>
               <X size={24} />
             </button>
           </div>
@@ -161,34 +163,26 @@ const ValidationModal: React.FC<ValidationModalProps> = ({ validation, isOpen, o
           <div className="modal-loading">
             <div className="spinner"></div>
             <div className="loading-content">
-              <h3>Analyzing architecture against Azure Well-Architected Framework...</h3>
+              <h3>{t("Analyzing architecture against Azure Well-Architected Framework...")}</h3>
               <p className="loading-description">
-                Running hybrid analysis: instant rule-based checks against {'>'}65 curated WAF rules, 
-                followed by AI-powered contextual refinement for architecture-specific insights.
-              </p>
+                {' '}{t("Running hybrid analysis: instant rule-based checks against")}{' '}{'>'}{t("65 curated WAF rules, followed by AI-powered contextual refinement for architecture-specific insights.")}{' '}</p>
               <div className="pillars-info">
-                <h4>Five Pillars of Azure Well-Architected Framework:</h4>
+                <h4>{t("Five Pillars of Azure Well-Architected Framework:")}</h4>
                 <ul className="pillars-list">
                   <li>
-                    <strong>Cost Optimization</strong> - Manage costs to maximize value delivered
-                  </li>
+                    <strong>{t("Cost Optimization")}</strong> {' '}{t("- Manage costs to maximize value delivered")}{' '}</li>
                   <li>
-                    <strong>Operational Excellence</strong> - Operations processes that keep systems running in production
-                  </li>
+                    <strong>{t("Operational Excellence")}</strong> {' '}{t("- Operations processes that keep systems running in production")}{' '}</li>
                   <li>
-                    <strong>Performance Efficiency</strong> - Ability to scale and adapt to changes in load
-                  </li>
+                    <strong>{t("Performance Efficiency")}</strong> {' '}{t("- Ability to scale and adapt to changes in load")}{' '}</li>
                   <li>
-                    <strong>Reliability</strong> - Ability to recover from failures and continue to function
-                  </li>
+                    <strong>{t("Reliability")}</strong> {' '}{t("- Ability to recover from failures and continue to function")}{' '}</li>
                   <li>
-                    <strong>Security</strong> - Protect applications and data from threats
-                  </li>
+                    <strong>{t("Security")}</strong> {' '}{t("- Protect applications and data from threats")}{' '}</li>
                 </ul>
               </div>
               <p className="validation-dismiss-hint">
-                You may close this panel at any time — once complete, reopen your results using the <strong>Validation Score</strong> button in the toolbar.
-              </p>
+                {' '}{t("You may close this panel at any time — once complete, reopen your results using the")}{' '}<strong>{t("Validation Score")}</strong> {' '}{t("button in the toolbar.")}{' '}</p>
             </div>
           </div>
         ) : validation ? (
@@ -196,11 +190,7 @@ const ValidationModal: React.FC<ValidationModalProps> = ({ validation, isOpen, o
             <div className="modal-body">
             {/* Scope note - sets expectations for workshop facilitators and users */}
             <p className="validation-scope-note">
-              <strong>Scope:</strong> Designed for <strong>greenfield Azure</strong> designs. This is a
-              diagram-only, design-time signal to guide new architectures — not an audit of a deployed
-              environment, and not for direct deployment into existing, complex environments without
-              further review.
-            </p>
+              <strong>{t("Scope:")}</strong> {' '}{t("Designed for")}{' '}<strong>{t("greenfield Azure")}</strong> {' '}{t("designs. This is a diagram-only, design-time signal to guide new architectures — not an audit of a deployed environment, and not for direct deployment into existing, complex environments without further review.")}{' '}</p>
             {/* Overall Assessment - maturity band (numeric score optional) */}
             {(() => {
               const overall = scoreToBand(validation.overallScore);
@@ -213,13 +203,13 @@ const ValidationModal: React.FC<ValidationModalProps> = ({ validation, isOpen, o
                 style={{ 
                   background: `conic-gradient(${overall.color} ${validation.overallScore * 3.6}deg, #e5e7eb 0deg)` 
                 }}
-                title={displayPrefs.showNumericScore ? undefined : 'Diagram-only, design-time signal — not a deployed-environment audit'}
+                title={displayPrefs.showNumericScore ? undefined : t("Diagram-only, design-time signal — not a deployed-environment audit")}
               >
                 <div className="score-inner">
                   {displayPrefs.showNumericScore ? (
                     <>
                       <span className="score-value">{validation.overallScore}</span>
-                      <span className="score-label">/100</span>
+                      <span className="score-label">{t("/100")}</span>
                     </>
                   ) : (
                     <span className="score-band-mark" style={{ color: overall.color }}>
@@ -229,14 +219,14 @@ const ValidationModal: React.FC<ValidationModalProps> = ({ validation, isOpen, o
                 </div>
               </div>
               <div className="score-summary">
-                <h3>Overall Assessment</h3>
+                <h3>{t("Overall Assessment")}</h3>
                 <div className="maturity-headline">
                   <span className="maturity-band-pill" style={{ borderColor: overall.color, color: overall.color }}>
-                    {overall.label}
+                    {translate(overall.label)}
                   </span>
                   <span className="gaps-summary">{formatGapsSummary(gaps)}</span>
                   {displayPrefs.showNumericScore && (
-                    <span className="numeric-score-aside">{validation.overallScore}/100</span>
+                    <span className="numeric-score-aside">{validation.overallScore}{t("/100")}</span>
                   )}
                 </div>
                 <p>{validation.summary}</p>
@@ -244,17 +234,14 @@ const ValidationModal: React.FC<ValidationModalProps> = ({ validation, isOpen, o
                   <div className="ai-metrics-validation">
                     <span className="metric">
                       <Clock size={14} />
-                      {(validation.metrics.elapsedTimeMs / 1000).toFixed(1)}s
-                    </span>
+                      {(validation.metrics.elapsedTimeMs / 1000).toFixed(1)}{t("s")}{' '}</span>
                     <span className="metric">
                       <Zap size={14} />
-                      {validation.metrics.promptTokens.toLocaleString()} in → {validation.metrics.completionTokens.toLocaleString()} out ({validation.metrics.totalTokens.toLocaleString()} total)
-                    </span>
+                      {validation.metrics.promptTokens.toLocaleString()} {' '}{t("in →")}{' '}{validation.metrics.completionTokens.toLocaleString()} {' '}{t("out (")}{validation.metrics.totalTokens.toLocaleString()} {' '}{t("total)")}{' '}</span>
                     {(validation as any).hybridMetadata && (
                       <span className="metric hybrid-metric">
                         <Database size={14} />
-                        {(validation as any).hybridMetadata.localFindings} local rules ({(validation as any).hybridMetadata.localElapsedMs}ms) + AI refinement
-                      </span>
+                        {(validation as any).hybridMetadata.localFindings} {' '}{t("local rules (")}{(validation as any).hybridMetadata.localElapsedMs}{t("ms) + AI refinement")}{' '}</span>
                     )}
                   </div>
                 )}
@@ -265,7 +252,7 @@ const ValidationModal: React.FC<ValidationModalProps> = ({ validation, isOpen, o
 
             {/* Five Pillars Section - Individual assessments for each WAF pillar */}
             <div className="pillars-section">
-              <h3>Five Pillars Assessment</h3>
+              <h3>{t("Five Pillars Assessment")}</h3>
               {validation.pillars.map((pillar, index) => {
                 const pillarBand = scoreToBand(pillar.score);
                 const pillarGaps = summarizeGaps(pillar.findings);
@@ -278,7 +265,7 @@ const ValidationModal: React.FC<ValidationModalProps> = ({ validation, isOpen, o
                         className="maturity-band-pill small"
                         style={{ borderColor: pillarBand.color, color: pillarBand.color }}
                       >
-                        {pillarBand.label}
+                        {translate(pillarBand.label)}
                       </span>
                       <span className="pillar-gaps">{formatPillarGaps(pillarGaps)}</span>
                       {displayPrefs.showNumericScore && (
@@ -286,8 +273,7 @@ const ValidationModal: React.FC<ValidationModalProps> = ({ validation, isOpen, o
                           className="pillar-score"
                           style={{ color: pillarBand.color }}
                         >
-                          {pillar.score}/100
-                        </span>
+                          {pillar.score}{t("/100")}{' '}</span>
                       )}
                     </div>
                   </div>
@@ -320,13 +306,13 @@ const ValidationModal: React.FC<ValidationModalProps> = ({ validation, isOpen, o
                               )}
                             </div>
                             <div className="finding-content">
-                              <p className="finding-issue"><strong>Issue:</strong> {finding.issue}</p>
+                              <p className="finding-issue"><strong>{t("Issue:")}</strong> {finding.issue}</p>
                               <p className="finding-recommendation">
-                                <strong>Recommendation:</strong> {finding.recommendation}
+                                <strong>{t("Recommendation:")}</strong> {finding.recommendation}
                               </p>
                               {finding.resources && finding.resources.length > 0 && (
                                 <p className="finding-resources">
-                                  <strong>Affected:</strong> {finding.resources.join(', ')}
+                                  <strong>{t("Affected:")}</strong> {finding.resources.join(', ')}
                                 </p>
                               )}
                             </div>
@@ -343,7 +329,7 @@ const ValidationModal: React.FC<ValidationModalProps> = ({ validation, isOpen, o
             {/* Quick Wins Section - High-priority actionable items */}
             {validation.quickWins.length > 0 && (
               <div className="quickwins-section">
-                <h3>⚡ Quick Wins</h3>
+                <h3>{t("⚡ Quick Wins")}</h3>
                 <div className="quickwins-list">
                   {validation.quickWins.map((win, index) => (
                     <div key={index} className="quickwin-item">
@@ -364,28 +350,25 @@ const ValidationModal: React.FC<ValidationModalProps> = ({ validation, isOpen, o
           <div className="modal-actions">
             <button className="btn-secondary" onClick={handleDownload}>
               <Download size={18} />
-              Download Report
-            </button>
+              {' '}{t("Download Report")}{' '}</button>
             {onRevalidate && (
-              <button className="btn-secondary" onClick={onRevalidate} disabled={!!isLoading} title="Run validation again">
+              <button className="btn-secondary" onClick={onRevalidate} disabled={!!isLoading} title={t("Run validation again")}>
                 <RefreshCw size={18} />
-                Revalidate
-              </button>
+                {' '}{t("Revalidate")}{' '}</button>
             )}
             {selectedFindings.size > 0 && onApplyRecommendations && (
               <button className="btn-success" onClick={handleApplyRecommendations}>
                 <RefreshCw size={18} />
-                Apply {selectedFindings.size} Recommendation{selectedFindings.size > 1 ? 's' : ''}
+                {' '}{t("Apply")}{' '}{selectedFindings.size} {' '}{t("Recommendation")}{selectedFindings.size > 1 ? 's' : ''}
               </button>
             )}
             <button className="btn-primary" onClick={onClose}>
-              Hide
-            </button>
+              {' '}{t("Hide")}{' '}</button>
           </div>
         </>
         ) : (
           <div className="modal-empty">
-            <p>No validation results available.</p>
+            <p>{t("No validation results available.")}</p>
           </div>
         )}
       </div>

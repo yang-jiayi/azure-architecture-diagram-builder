@@ -1,7 +1,7 @@
 .bp-arch-canvas {
   background: #ffffff;
   padding: 32px 48px 40px;
-  font-family: 'Caveat', 'Patrick Hand', 'Segoe UI', system-ui, sans-serif;
+  font-family: 'Yu Gothic UI', 'Caveat', 'Patrick Hand', 'Segoe UI', system-ui, sans-serif;
   color: #111827;
   box-sizing: border-box;
 }
@@ -22,7 +22,7 @@
   text-transform: uppercase;
   color: #6366f1;
   margin-bottom: 4px;
-  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-family: 'Yu Gothic UI', 'Segoe UI', system-ui, sans-serif;
 }
 
 .bp-arch-title {
@@ -36,7 +36,7 @@
 .bp-arch-author {
   font-size: 12px;
   color: #6b7280;
-  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-family: 'Yu Gothic UI', 'Segoe UI', system-ui, sans-serif;
 }
 
 .bp-arch-svg {
@@ -72,7 +72,7 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px 24px;
-  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-family: 'Yu Gothic UI', 'Segoe UI', system-ui, sans-serif;
 }
 
 .bp-arch-workflow li {

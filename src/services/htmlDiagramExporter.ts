@@ -324,7 +324,7 @@ function generateHtml(layout: LayoutResult, title: string): string {
 <title>${esc(title)}</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: #f8f9fa; overflow: hidden; }
+  body { font-family: 'Yu Gothic UI', 'Segoe UI', system-ui, -apple-system, sans-serif; background: #f8f9fa; overflow: hidden; }
   .header {
     background: linear-gradient(135deg, #0078D4, #005A9E);
     color: white; padding: 12px 24px; display: flex; align-items: center; gap: 16px;
@@ -356,7 +356,7 @@ function generateHtml(layout: LayoutResult, title: string): string {
   .edges-layer { position: absolute; top: 0; left: 0; pointer-events: none; }
   .edge-path { fill: none; stroke-width: 1.5; }
   .edge-label {
-    font-family: 'Segoe UI', system-ui, sans-serif; font-size: 10px;
+    font-family: 'Yu Gothic UI', 'Segoe UI', system-ui, sans-serif; font-size: 10px;
     paint-order: stroke; stroke: white; stroke-width: 3px;
   }
   .group {

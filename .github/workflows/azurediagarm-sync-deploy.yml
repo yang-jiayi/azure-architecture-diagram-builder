@@ -1,0 +1,286 @@
+name: AzureDiagarm sync and deploy
+
+on:
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: '17 */2 * * *'
+  workflow_dispatch:
+    inputs:
+      force_deploy:
+        description: Deploy even when the source commits have not changed
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+  id-token: write
+
+concurrency:
+  group: azurediagarm-production
+  cancel-in-progress: false
+
+env:
+  UPSTREAM_REPOSITORY: https://github.com/Arturo-Quiroga-MSFT/azure-architecture-diagram-builder.git
+  IMAGE_REPOSITORY: azurediagarm/app
+
+jobs:
+  sync-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out customization fork
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Sign in to Azure with OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Install Azure CLI extensions
+        run: |
+          az config set extension.use_dynamic_install=yes_without_prompt
+          az extension add --name containerapp --upgrade --only-show-errors
+          az extension add --name cdn --upgrade --only-show-errors
+
+      - name: Merge upstream and determine whether to deploy
+        id: source
+        env:
+          FORCE_DEPLOY: ${{ inputs.force_deploy || 'false' }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          set -Eeuo pipefail
+
+          git config user.name "azurediagarm-updater"
+          git config user.email "azurediagarm-updater@users.noreply.github.com"
+          git remote remove upstream 2>/dev/null || true
+          git remote add upstream "$UPSTREAM_REPOSITORY"
+
+          fork_before="$(git rev-parse HEAD)"
+          git fetch upstream main
+          upstream_commit="$(git rev-parse upstream/main)"
+          git merge --no-edit upstream/main
+          fork_commit="$(git rev-parse HEAD)"
+
+          if [[ "$fork_before" != "$fork_commit" ]]; then
+            git push origin HEAD:main
+          fi
+
+          current_upstream="$(
+            az containerapp show \
+              --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+              --name "${{ vars.AZURE_CONTAINER_APP }}" \
+              --query "properties.template.containers[0].env[?name=='UPSTREAM_COMMIT'].value | [0]" \
+              --output tsv 2>/dev/null || true
+          )"
+          current_fork="$(
+            az containerapp show \
+              --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+              --name "${{ vars.AZURE_CONTAINER_APP }}" \
+              --query "properties.template.containers[0].env[?name=='CUSTOMIZATION_COMMIT'].value | [0]" \
+              --output tsv 2>/dev/null || true
+          )"
+
+          should_deploy=false
+          if [[ "$FORCE_DEPLOY" == "true" || "$EVENT_NAME" == "push" ]]; then
+            should_deploy=true
+          elif [[ "$current_upstream" != "$upstream_commit" || "$current_fork" != "$fork_commit" ]]; then
+            should_deploy=true
+          fi
+
+          {
+            echo "should_deploy=$should_deploy"
+            echo "upstream_commit=$upstream_commit"
+            echo "fork_commit=$fork_commit"
+            echo "upstream_short=${upstream_commit:0:12}"
+            echo "fork_short=${fork_commit:0:12}"
+          } >> "$GITHUB_OUTPUT"
+
+          if [[ -n "$current_upstream" ]] && git cat-file -e "${current_upstream}^{commit}" 2>/dev/null; then
+            git log \
+              --no-merges \
+              --date=iso-strict \
+              --pretty=format:'- %h %ad %an: %s' \
+              "${current_upstream}..${upstream_commit}" > update-details.txt
+          else
+            git log \
+              -1 \
+              --date=iso-strict \
+              --pretty=format:'- %h %ad %an: %s' \
+              "$upstream_commit" > update-details.txt
+          fi
+
+          if [[ ! -s update-details.txt ]]; then
+            printf '%s\n' "- No new upstream commits; deploying customization commit ${fork_commit:0:12}." > update-details.txt
+          fi
+
+      - name: Read Front Door identifier
+        if: steps.source.outputs.should_deploy == 'true'
+        id: frontdoor
+        run: |
+          set -Eeuo pipefail
+          front_door_id="$(
+            az afd profile show \
+              --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+              --profile-name "${{ vars.AZURE_FRONT_DOOR_PROFILE }}" \
+              --query frontDoorId \
+              --output tsv
+          )"
+          echo "id=$front_door_id" >> "$GITHUB_OUTPUT"
+
+      - name: Sign in to the shared container registry
+        if: steps.source.outputs.should_deploy == 'true'
+        run: az acr login --name "${{ vars.AZURE_CONTAINER_REGISTRY }}"
+
+      - name: Set up Docker Buildx
+        if: steps.source.outputs.should_deploy == 'true'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Define image tag
+        if: steps.source.outputs.should_deploy == 'true'
+        id: image
+        run: |
+          timestamp="$(date -u +%Y%m%d%H%M%S)"
+          tag="u${{ steps.source.outputs.upstream_short }}-c${{ steps.source.outputs.fork_short }}-$timestamp"
+          image="${{ vars.AZURE_CONTAINER_REGISTRY }}.azurecr.io/$IMAGE_REPOSITORY:$tag"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "image=$image" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push application image
+        if: steps.source.outputs.should_deploy == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.image.outputs.image }}
+          build-args: |
+            FRONT_DOOR_ID=${{ steps.frontdoor.outputs.id }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Deploy the new Container Apps revision
+        if: steps.source.outputs.should_deploy == 'true'
+        run: |
+          set -Eeuo pipefail
+          deployed_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          revision_suffix="g${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+
+          az containerapp update \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --name "${{ vars.AZURE_CONTAINER_APP }}" \
+            --image "${{ steps.image.outputs.image }}" \
+            --revision-suffix "$revision_suffix" \
+            --set-env-vars \
+              "PUBLIC_URL=${{ vars.AZURE_APP_URL }}" \
+              "UPSTREAM_COMMIT=${{ steps.source.outputs.upstream_commit }}" \
+              "CUSTOMIZATION_COMMIT=${{ steps.source.outputs.fork_commit }}" \
+              "DEPLOYED_AT=$deployed_at" \
+            --output none
+
+          for attempt in $(seq 1 60); do
+            latest="$(
+              az containerapp show \
+                --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+                --name "${{ vars.AZURE_CONTAINER_APP }}" \
+                --query properties.latestRevisionName \
+                --output tsv
+            )"
+            ready="$(
+              az containerapp show \
+                --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+                --name "${{ vars.AZURE_CONTAINER_APP }}" \
+                --query properties.latestReadyRevisionName \
+                --output tsv
+            )"
+            [[ -n "$latest" && "$latest" == "$ready" ]] && break
+            [[ "$attempt" -eq 60 ]] && {
+              echo "The new Container Apps revision did not become ready." >&2
+              exit 1
+            }
+            sleep 10
+          done
+
+      - name: Purge Front Door cache
+        if: steps.source.outputs.should_deploy == 'true'
+        run: |
+          az afd endpoint purge \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --profile-name "${{ vars.AZURE_FRONT_DOOR_PROFILE }}" \
+            --endpoint-name "${{ vars.AZURE_FRONT_DOOR_ENDPOINT }}" \
+            --content-paths '/*' \
+            --output none
+
+      - name: Verify the production endpoint
+        if: steps.source.outputs.should_deploy == 'true'
+        run: |
+          set -Eeuo pipefail
+          for attempt in $(seq 1 30); do
+            headers="$(mktemp)"
+            if curl \
+              --fail \
+              --silent \
+              --show-error \
+              --location \
+              --connect-timeout 15 \
+              --max-time 90 \
+              --user-agent 'AzureDiagarm-GitHub-Updater/1.0' \
+              --dump-header "$headers" \
+              --output /tmp/azurediagarm.html \
+              "${{ vars.AZURE_APP_URL }}/"; then
+              grep -qi '^x-robots-tag:.*noindex' "$headers"
+              grep -q 'Azure Architecture Diagram Builder' /tmp/azurediagarm.html
+              exit 0
+            fi
+            sleep 20
+          done
+          echo "Production verification failed." >&2
+          exit 1
+
+      - name: Send detailed update email
+        if: steps.source.outputs.should_deploy == 'true'
+        env:
+          AZURE_COMMUNICATION_CONNECTION_STRING: ${{ secrets.AZURE_COMMUNICATION_CONNECTION_STRING }}
+        run: |
+          set -Eeuo pipefail
+          az extension add --name communication --yes --only-show-errors
+
+          {
+            echo "Azure Architecture Diagram Builder was updated successfully."
+            echo
+            echo "URL: ${{ vars.AZURE_APP_URL }}"
+            echo "Image: ${{ steps.image.outputs.image }}"
+            echo "Upstream commit: ${{ steps.source.outputs.upstream_commit }}"
+            echo "Customization commit: ${{ steps.source.outputs.fork_commit }}"
+            echo "Workflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            echo
+            echo "Upstream update details:"
+            cat update-details.txt
+          } > email-body.txt
+
+          az communication email send \
+            --sender "${{ vars.AZURE_EMAIL_SENDER }}" \
+            --to "${{ vars.AZURE_EMAIL_RECIPIENT }}" \
+            --subject "AzureDiagarm update completed: ${{ steps.source.outputs.upstream_short }}" \
+            --text "$(cat email-body.txt)" \
+            --wait-until completed \
+            --output none
+
+      - name: Send failure email
+        if: failure()
+        continue-on-error: true
+        env:
+          AZURE_COMMUNICATION_CONNECTION_STRING: ${{ secrets.AZURE_COMMUNICATION_CONNECTION_STRING }}
+        run: |
+          az extension add --name communication --yes --only-show-errors
+          az communication email send \
+            --sender "${{ vars.AZURE_EMAIL_SENDER }}" \
+            --to "${{ vars.AZURE_EMAIL_RECIPIENT }}" \
+            --subject "AzureDiagarm update failed" \
+            --text "The AzureDiagarm sync or deployment failed. Review ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }} for details." \
+            --wait-until completed \
+            --output none

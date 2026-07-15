@@ -87,6 +87,8 @@ RUN npm run build
 # Production stage
 FROM nginx:alpine
 
+ARG FRONT_DOOR_ID
+
 # Install Node.js for the speech token server and the MCP HTTP server
 # (both use DefaultAzureCredential / managed identity where applicable).
 RUN apk add --no-cache nodejs npm
@@ -107,6 +109,10 @@ COPY --from=build /app/mcp-server/dist ./dist
 COPY --from=build /app/dist /usr/share/nginx/html
 COPY --from=build /app/Azure_Public_Service_Icons /usr/share/nginx/html/Azure_Public_Service_Icons
 COPY nginx.conf /etc/nginx/conf.d/default.conf
+RUN if [ -n "$FRONT_DOOR_ID" ]; then \
+      sed -i "s|#FDID_CHECK#|if (\$http_x_azure_fdid != \"$FRONT_DOOR_ID\") { return 403; }|" /etc/nginx/conf.d/default.conf \
+      && grep -q "return 403" /etc/nginx/conf.d/default.conf; \
+    fi
 
 # Startup: token server + MCP HTTP server in background, nginx in foreground.
 COPY start.sh /start.sh

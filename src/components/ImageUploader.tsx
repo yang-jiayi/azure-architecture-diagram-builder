@@ -4,6 +4,7 @@
 import React, { useState, useCallback, useRef } from 'react';
 import { Upload, Image, X, Loader2 } from 'lucide-react';
 import './ImageUploader.css';
+import { useLanguage } from '../i18n/LanguageContext';
 
 interface ImageUploaderProps {
   onImageAnalyzed: (description: string) => void;
@@ -25,6 +26,7 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
   disabled = false,
   analyzeImage
 }) => {
+  const { t } = useLanguage();
   const [isDragging, setIsDragging] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -125,8 +127,8 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
     <div className="image-uploader">
       <div className="image-uploader-header">
         <Image size={16} />
-        <span>Upload Diagram, Sketch, Photograph, or Napkin Drawing</span>
-        <span className="optional-badge">Optional</span>
+        <span>{t("Upload Diagram, Sketch, Photograph, or Napkin Drawing")}</span>
+        <span className="optional-badge">{t("Optional")}</span>
       </div>
       
       <div
@@ -148,18 +150,18 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
         {isAnalyzing ? (
           <div className="analyzing-state">
             <Loader2 size={32} className="spinner" />
-            <p>Analyzing diagram with AI...</p>
-            <span className="analyzing-hint">Extracting services, connections, and data flows</span>
+            <p>{t("Analyzing diagram with AI...")}</p>
+            <span className="analyzing-hint">{t("Extracting services, connections, and data flows")}</span>
           </div>
         ) : previewUrl ? (
           <div className="preview-container">
-            <img src={previewUrl} alt="Uploaded diagram" className="preview-image" />
+            <img src={previewUrl} alt={t("Uploaded diagram")} className="preview-image" />
             <div className="preview-overlay">
               <span className="file-name">{fileName}</span>
               <button 
                 className="clear-button" 
                 onClick={(e) => { e.stopPropagation(); clearImage(); }}
-                title="Remove image"
+                title={t("Remove image")}
               >
                 <X size={16} />
               </button>
@@ -168,16 +170,15 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
         ) : (
           <div className="upload-prompt">
             <Upload size={28} className="upload-icon" />
-            <p>Drop an architecture diagram here or click to browse</p>
-            <span className="upload-hint">PNG, JPG, GIF, WebP up to 20MB</span>
+            <p>{t("Drop an architecture diagram here or click to browse")}</p>
+            <span className="upload-hint">{t("PNG, JPG, GIF, WebP up to 20MB")}</span>
           </div>
         )}
       </div>
       
       {previewUrl && !isAnalyzing && (
         <p className="image-success-hint">
-          ✓ Image analyzed! The description has been added to the prompt above. Review and generate when ready.
-        </p>
+          {' '}{t("✓ Image analyzed! The description has been added to the prompt above. Review and generate when ready.")}{' '}</p>
       )}
     </div>
   );

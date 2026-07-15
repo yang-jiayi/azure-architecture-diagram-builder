@@ -15,6 +15,10 @@ const { CosmosClient } = require('@azure/cosmos');
 const crypto = require('crypto');
 
 const app = express();
+app.use((_req, res, next) => {
+  res.set('X-Robots-Tag', 'noindex, nofollow, noarchive, nosnippet, noimageindex, noai, noimageai');
+  next();
+});
 // The Azure OpenAI proxy forwards vision requests that embed base64 images, so
 // it needs a larger body limit. This route-scoped parser runs before the small
 // global parser below; the global parser then skips bodies already parsed here.

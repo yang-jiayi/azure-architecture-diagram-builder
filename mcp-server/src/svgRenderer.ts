@@ -321,11 +321,11 @@ function renderNode(node: PositionedNode, theme: Theme): string {
   // Name wraps to at most two lines to fit the card width.
   const nameLines = wrapName(node.name, 20);
   const nameSvg = nameLines.length === 1
-    ? `<text x="${textX}" y="${node.y + 30}" font-family="Segoe UI, system-ui, sans-serif"
+    ? `<text x="${textX}" y="${node.y + 30}" font-family="Yu Gothic UI, Segoe UI, system-ui, sans-serif"
             font-size="13" font-weight="600" fill="${theme.nameText}">${escapeXml(nameLines[0])}</text>`
-    : `<text x="${textX}" y="${node.y + 24}" font-family="Segoe UI, system-ui, sans-serif"
+    : `<text x="${textX}" y="${node.y + 24}" font-family="Yu Gothic UI, Segoe UI, system-ui, sans-serif"
             font-size="13" font-weight="600" fill="${theme.nameText}">${escapeXml(nameLines[0])}</text>
-       <text x="${textX}" y="${node.y + 40}" font-family="Segoe UI, system-ui, sans-serif"
+       <text x="${textX}" y="${node.y + 40}" font-family="Yu Gothic UI, Segoe UI, system-ui, sans-serif"
             font-size="13" font-weight="600" fill="${theme.nameText}">${escapeXml(nameLines[1])}</text>`;
   const badgeY = nameLines.length === 1 ? node.y + 50 : node.y + 56;
 
@@ -334,11 +334,11 @@ function renderNode(node: PositionedNode, theme: Theme): string {
   // (usage-based services), the range is shown in a muted color instead.
   const costBadge = node.estimatedCost != null && node.estimatedCost > 0
     ? `<text x="${node.x + node.width - 12}" y="${node.y + node.height - 12}" text-anchor="end"
-            font-family="Segoe UI, system-ui, sans-serif" font-size="11" font-weight="600"
+            font-family="Yu Gothic UI, Segoe UI, system-ui, sans-serif" font-size="11" font-weight="600"
             fill="${theme.costText}">~$${fmtCost(node.estimatedCost)}/mo</text>`
     : node.costRange
       ? `<text x="${node.x + node.width - 12}" y="${node.y + node.height - 12}" text-anchor="end"
-            font-family="Segoe UI, system-ui, sans-serif" font-size="10" font-style="italic"
+            font-family="Yu Gothic UI, Segoe UI, system-ui, sans-serif" font-size="10" font-style="italic"
             fill="${theme.costRangeText}">${escapeXml(node.costRange)}</text>`
       : '';
 
@@ -358,7 +358,7 @@ function renderNode(node: PositionedNode, theme: Theme): string {
       <!-- Name -->
       ${nameSvg}
       <!-- Type badge -->
-      <text x="${textX}" y="${badgeY}" font-family="Segoe UI, system-ui, sans-serif"
+      <text x="${textX}" y="${badgeY}" font-family="Yu Gothic UI, Segoe UI, system-ui, sans-serif"
             font-size="11" fill="${node.color}">
         ${escapeXml(typeAbbr)}
       </text>
@@ -496,7 +496,7 @@ function renderEdgeLabelChip(box: EdgeLabelBox, cx: number, cy: number, theme: T
     <g class="edge-label">
       <rect x="${boxX}" y="${boxY}" width="${box.boxW}" height="${box.boxH}" rx="4"
             fill="${theme.edgeLabelFill}" stroke="${style.color}" stroke-width="0.75" />
-      <text text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif"
+      <text text-anchor="middle" font-family="Yu Gothic UI, Segoe UI, system-ui, sans-serif"
             font-size="10" fill="${style.color}">${tspans}</text>
     </g>`;
 }
@@ -555,7 +555,7 @@ function renderGroup(group: PositionedGroup): string {
       <path d="M ${x} ${y + 12} q 0 -12 12 -12 h ${w - 24} q 12 0 12 12 v ${headerH - 12} h ${-w} z"
             fill="${group.color}" opacity="0.92" />
       <text x="${x + 12}" y="${y + 16}" text-anchor="start"
-            font-family="Segoe UI, system-ui, sans-serif" font-size="12" font-weight="600"
+            font-family="Yu Gothic UI, Segoe UI, system-ui, sans-serif" font-size="12" font-weight="600"
             fill="#FFFFFF">${escapeXml(group.label)}</text>
     </g>`;
 }
@@ -592,7 +592,7 @@ export function renderSvg(layout: LayoutResult, title?: string, options: RenderS
 
   const titleBar = title
     ? `<text x="${titleX}" y="24" text-anchor="middle"
-            font-family="Segoe UI, system-ui, sans-serif" font-size="16" font-weight="700"
+            font-family="Yu Gothic UI, Segoe UI, system-ui, sans-serif" font-size="16" font-weight="700"
             fill="${theme.nameText}">${escapeXml(title)}</text>`
     : '';
 
@@ -615,7 +615,7 @@ export function renderSvg(layout: LayoutResult, title?: string, options: RenderS
       const row = Math.floor(i / legendCols);
       const x = 20 + col * legendItemW;
       const y = footerTop + row * legendRowH;
-      return `<text x="${x}" y="${y}" font-family="Segoe UI, system-ui, sans-serif"
+      return `<text x="${x}" y="${y}" font-family="Yu Gothic UI, Segoe UI, system-ui, sans-serif"
                     font-size="10" fill="${theme.legendText}">${icon} ${escapeXml(cat)}</text>`;
     })
     .join('\n');
@@ -636,7 +636,7 @@ export function renderSvg(layout: LayoutResult, title?: string, options: RenderS
     : `Usage-based pricing — ${rangeNodes.length} of ${layout.nodes.length} services shown as catalog ranges`;
   const totalCostFooter = costedNodes.length > 0 || rangeNodes.length > 0
     ? `<text x="20" y="${costY}" text-anchor="start"
-            font-family="Segoe UI, system-ui, sans-serif" font-size="11" font-weight="600"
+            font-family="Yu Gothic UI, Segoe UI, system-ui, sans-serif" font-size="11" font-weight="600"
             fill="${theme.costText}">${footerText}</text>`
     : '';
 
@@ -655,7 +655,7 @@ export function renderSvg(layout: LayoutResult, title?: string, options: RenderS
             fill="${theme.metaPanelFill}" stroke="${theme.metaPanelStroke}" stroke-width="1" />
       ${metaLines
         .map((line, i) => `<text x="${panelX + 12}" y="${panelY + 20 + i * 16}"
-              font-family="Segoe UI, system-ui, sans-serif" font-size="10"
+              font-family="Yu Gothic UI, Segoe UI, system-ui, sans-serif" font-size="10"
               fill="${theme.metaText}">${escapeXml(line)}</text>`)
         .join('\n')}
     </g>`;
@@ -670,7 +670,7 @@ export function renderSvg(layout: LayoutResult, title?: string, options: RenderS
 <svg xmlns="http://www.w3.org/2000/svg" 
      viewBox="0 0 ${layout.width} ${totalWithLegend}"
      width="${layout.width}" height="${totalWithLegend}"
-     style="background: ${theme.background}; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;">
+     style="background: ${theme.background}; font-family: 'Yu Gothic UI', 'Segoe UI', system-ui, -apple-system, sans-serif;">
 
   <defs>
     <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
@@ -706,7 +706,7 @@ export function renderSvg(layout: LayoutResult, title?: string, options: RenderS
 
   <!-- Watermark -->
   <text x="${layout.width - 10}" y="${totalWithLegend - 8}" text-anchor="end"
-        font-family="Segoe UI, system-ui, sans-serif" font-size="9" fill="${theme.watermark}">
+        font-family="Yu Gothic UI, Segoe UI, system-ui, sans-serif" font-size="9" fill="${theme.watermark}">
     Generated by Azure Architecture Diagram Builder
   </text>
 </svg>`;
